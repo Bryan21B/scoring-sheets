@@ -1,0 +1,8 @@
+#!/usr/bin/env sh
+# Filet Git universel : se déclenche que le commit vienne de toi, d'un collègue
+# ou d'un agent. Voir .claude/hooks/ pour le garde-fou spécifique à l'agent.
+set -e
+
+bunx lint-staged
+bun run typecheck
+bun run scripts/check-env-sync.mjs

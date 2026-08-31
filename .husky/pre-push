@@ -1,0 +1,7 @@
+#!/usr/bin/env sh
+# Dernière barrière avant que le code quitte la machine — et il part sur `main`,
+# où il est immédiatement dans l'historique. L'e2e reste en CI, trop lent ici.
+set -e
+
+node scripts/scan-secrets.mjs
+bun run check

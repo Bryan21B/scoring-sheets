@@ -1,0 +1,74 @@
+{
+  "name": "bryan-cookie-starter",
+  "version": "0.4.0",
+  "private": true,
+  "type": "module",
+  "packageManager": "bun@1.3.14",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "biome check .",
+    "lint:fix": "biome check --write .",
+    "format": "biome format --write .",
+    "typecheck": "next typegen && tsc --noEmit",
+    "test": "bun test tests/unit",
+    "test:watch": "bun test tests/unit --watch",
+    "test:coverage": "bun test tests/unit --coverage",
+    "test:e2e": "bun run build && playwright test",
+    "test:e2e:ui": "bun run build && playwright test --ui",
+    "check": "bun run lint && bun run typecheck && bun run test",
+    "check:all": "bun run check && bun run test:e2e",
+    "db:generate": "drizzle-kit generate",
+    "db:migrate": "bun scripts/migrate.mjs",
+    "db:studio": "drizzle-kit studio",
+    "docker:build": "docker build -f Containerfile -t bryan-cookie-starter:local .",
+    "docker:migrate": "docker run --rm -v bryan-cookie-starter-data:/data bryan-cookie-starter:local node scripts/migrate.mjs",
+    "docker:run": "docker run --rm -p 3000:3000 -v bryan-cookie-starter-data:/data -e LOG_LEVEL=debug bryan-cookie-starter:local",
+    "prepare": "husky"
+  },
+  "dependencies": {
+    "@libsql/client": "^0.17.4",
+    "class-variance-authority": "^0.7.1",
+    "clsx": "^2.1.1",
+    "drizzle-orm": "^0.45.2",
+    "lucide-react": "^1.29.0",
+    "next": "16.3.0",
+    "radix-ui": "^1.6.7",
+    "react": "19.2.8",
+    "react-dom": "19.2.8",
+    "server-only": "^0.0.1",
+    "tailwind-merge": "^3.6.0",
+    "tw-animate-css": "^1.4.0",
+    "winston": "^3.19.0",
+    "zod": "^4.4.3"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^2.5.7",
+    "@playwright/test": "^1.62.1",
+    "@tailwindcss/postcss": "^4.3.3",
+    "@types/bun": "^1.3.14",
+    "@types/node": "^22.19.0",
+    "@types/react": "^19.2.18",
+    "@types/react-dom": "^19.2.4",
+    "drizzle-kit": "^0.31.10",
+    "husky": "^9.1.7",
+    "lint-staged": "^16.2.6",
+    "shadcn": "^4.16.2",
+    "tailwindcss": "^4.3.3",
+    "typescript": "^5.9.3"
+  },
+  "lint-staged": {
+    "*.{ts,tsx,js,jsx,json,jsonc,css}": [
+      "biome check --write --no-errors-on-unmatched"
+    ]
+  },
+  "trustedDependencies": [
+    "@biomejs/biome",
+    "sharp",
+    "unrs-resolver"
+  ]
+}

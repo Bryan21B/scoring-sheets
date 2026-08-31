@@ -1,0 +1,252 @@
+name: CI
+
+# Un seul pipeline. Les trois checks gardent la porte ; taguer, écrire le
+# CHANGELOG et pousser l'image sont des jobs en aval qui ne démarrent pas si
+# l'un d'eux est rouge. Il n'y a plus de PR : `main` est la seule branche.
+on:
+  push:
+    branches: [main]
+  # Aucune PR dans le flux normal, mais Dependabot ou une contribution externe
+  # en ouvrent. Le filet ne coûte rien tant qu'il n'y en a pas, et `release`
+  # comme `publish` sont neutralisés hors de `main`.
+  pull_request:
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: Calculer la prochaine version sans taguer ni publier
+        type: boolean
+        default: false
+
+# Sur une PR, un nouveau push annule le run précédent : inutile de payer pour un
+# résultat périmé. Sur `main`, jamais : ce workflow tague, pousse un commit et
+# publie une image. Annulé entre deux de ces étapes, il laisse un tag sans
+# release ou une release sans image, et aucun retry ne répare ça proprement.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+permissions:
+  contents: read
+
+jobs:
+  # Lint, types et tests unitaires : le retour rapide, celui qui doit rester
+  # sous la minute.
+  check:
+    name: Lint · types · unit
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version-file: package.json
+
+      # Les deux runtimes sont nécessaires et le sont explicitement : Bun installe
+      # et lance les tests, Node build et sert Next.js (voir docs/adr/0001).
+      # Ne pas se reposer sur le Node préinstallé du runner, dont la version bouge.
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      # setup-bun ne met en cache que le binaire téléchargé, pas les paquets.
+      # Sans ça, `bun install` retélécharge tout le registre à chaque run.
+      - name: Cache Bun install
+        uses: actions/cache@v4
+        with:
+          path: ~/.bun/install/cache
+          # Le lockfile détermine entièrement le jeu de paquets ; `runner.os` est
+          # là parce que le cache contient des binaires extraits, spécifiques à
+          # la plateforme. Le restore-keys évite un cold start à chaque bump :
+          # on repart du dernier cache et `bun install` ne récupère que le delta.
+          key: bun-${{ runner.os }}-${{ hashFiles('bun.lock') }}
+          restore-keys: bun-${{ runner.os }}-
+
+      - run: bun install --frozen-lockfile
+
+      - name: Lint (Biome)
+        run: bun run lint
+
+      - name: Typecheck
+        run: bun run typecheck
+
+      - name: Unit tests
+        run: bun run test
+
+  # E2E : séparé du job rapide parce qu'il build l'app et démarre un navigateur.
+  # Localement on ne le lance pas ; ici, rien ne se release sans lui.
+  e2e:
+    name: E2E
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version-file: package.json
+
+      # Les deux runtimes sont nécessaires et le sont explicitement : Bun installe
+      # et lance les tests, Node build et sert Next.js (voir docs/adr/0001).
+      # Ne pas se reposer sur le Node préinstallé du runner, dont la version bouge.
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      # Identique au job `check` : même clé, donc les deux jobs se partagent
+      # une seule entrée de cache au lieu d'en écrire deux.
+      - name: Cache Bun install
+        uses: actions/cache@v4
+        with:
+          path: ~/.bun/install/cache
+          key: bun-${{ runner.os }}-${{ hashFiles('bun.lock') }}
+          restore-keys: bun-${{ runner.os }}-
+
+      - run: bun install --frozen-lockfile
+
+      - name: Cache Playwright browsers
+        id: playwright-cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ hashFiles('bun.lock') }}
+
+      - name: Install Playwright browser
+        if: steps.playwright-cache.outputs.cache-hit != 'true'
+        run: bunx playwright install --with-deps chromium
+
+      - name: Install system deps for cached browser
+        if: steps.playwright-cache.outputs.cache-hit == 'true'
+        run: bunx playwright install-deps chromium
+
+      # `test:e2e` fait le build lui-même : une seule commande, identique en
+      # local et ici, et aucune façon de lancer l'e2e contre un build périmé.
+      - name: E2E tests
+        run: bun run test:e2e
+
+      - uses: actions/upload-artifact@v4
+        if: ${{ !cancelled() }}
+        with:
+          name: playwright-report
+          path: playwright-report/
+          retention-days: 7
+          # Un échec au build produit zéro rapport : c'est attendu, pas un warning.
+          if-no-files-found: ignore
+
+  # Vérifie que l'image se construit. Ne pousse rien — c'est le rôle du job
+  # `publish`, qui rebuild depuis le tag (le cache gha rend ce second build court).
+  container:
+    name: Container build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: docker/setup-buildx-action@v3
+
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./Containerfile
+          push: false
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  # Le `needs` sur les trois checks est la garantie : aucun tag, aucun CHANGELOG,
+  # aucune release ne sort d'un commit rouge. Il n'y a plus de PR pour l'attraper
+  # avant — c'est ici que ça se joue.
+  #
+  # semantic-release pousse un commit `chore(release): … [skip ci]` sur `main`.
+  # Il ne relance rien : GitHub ne déclenche aucun workflow pour un push fait
+  # avec le GITHUB_TOKEN. Le `[skip ci]` est la seconde barrière, celle qui
+  # servira le jour où un PAT remplacera ce token.
+  release:
+    name: Release
+    needs: [check, e2e, container]
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write # tag, commit du CHANGELOG, création de la release
+      issues: write # commentaire « livré en 1.2.3 » sur l'issue référencée
+      pull-requests: write # idem sur une PR Dependabot déjà mergée
+    outputs:
+      released: ${{ steps.semantic.outputs.new_release_published }}
+      tag: ${{ steps.semantic.outputs.new_release_git_tag }}
+      version: ${{ steps.semantic.outputs.new_release_version }}
+    steps:
+      # fetch-depth: 0 est obligatoire : semantic-release lit tous les commits
+      # depuis le dernier tag, et les tags eux-mêmes, pour décider du bump.
+      # persist-credentials: false suit la recette officielle : semantic-release
+      # construit sa propre URL de push authentifiée depuis GITHUB_TOKEN, et une
+      # credential ambiante masquerait un PAT si on en installe un plus tard.
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      # semantic-release est un outil Node ; il ne touche ni bun.lock ni les
+      # node_modules du repo, donc pas de `bun install` ici.
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      # Les plugins sont installés par l'action, pas déclarés en devDependencies :
+      # rien à ajouter à package.json, donc bun.lock reste intact et
+      # `bun install --frozen-lockfile` ne peut pas casser à cause de la release.
+      - id: semantic
+        uses: cycjimmy/semantic-release-action@v4
+        with:
+          semantic_version: 24
+          dry_run: ${{ inputs.dry_run == true }}
+          extra_plugins: |
+            @semantic-release/changelog@6
+            @semantic-release/git@10
+            conventional-changelog-conventionalcommits@8
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  # Ne se déclenche que si un tag vient réellement d'être créé. L'image porte la
+  # version semver ; `latest` suit mais ne sert jamais de référence de
+  # déploiement (voir docs/deployment.md).
+  publish:
+    name: Publish image
+    needs: [release]
+    if: needs.release.outputs.released == 'true' && inputs.dry_run != true
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      # Le tag pointe sur le commit de release, CHANGELOG à jour compris : c'est
+      # exactement l'arbre qu'on veut dans l'image.
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ needs.release.outputs.tag }}
+
+      - uses: docker/setup-buildx-action@v3
+
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # `value=` est obligatoire : l'événement est un push sur `main`, donc la ref
+      # n'est pas un tag et `type=semver` n'aurait rien à parser — il serait ignoré
+      # en silence et seul `latest` partirait. L'action retire le `v` : v1.2.3
+      # donne l'image 1.2.3.
+      - id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ghcr.io/${{ github.repository }}
+          tags: |
+            type=semver,pattern={{version}},value=${{ needs.release.outputs.tag }}
+            type=semver,pattern={{major}}.{{minor}},value=${{ needs.release.outputs.tag }}
+            type=raw,value=latest
+
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./Containerfile
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
