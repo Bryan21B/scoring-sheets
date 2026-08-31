@@ -10,7 +10,7 @@ overview »). Ce fichier porte donc ce qui est acquis, et rien de plus.
 
 ### Le jeu et sa configuration
 
-Tranché par [#2](https://github.com/Bryan21B/scoring-sheets/issues/2), détaillé
+Tranché par [Configuration déclarative d'un jeu : les champs qui couvrent les quatre entrées](https://github.com/Bryan21B/scoring-sheets/issues/2), détaillé
 dans `docs/specs/2026-08-31-configuration-de-jeu.md`.
 
 - **Catalogue** — les quatre entrées jouables, déclarées dans une constante
@@ -72,21 +72,21 @@ dans `docs/specs/2026-08-31-configuration-de-jeu.md`.
 ## À trancher
 
 Les cinq questions ouvertes ici à l'origine sont tranchées : deux par
-[#2](https://github.com/Bryan21B/scoring-sheets/issues/2) — le jeu est une
+[Configuration déclarative d'un jeu : les champs qui couvrent les quatre entrées](https://github.com/Bryan21B/scoring-sheets/issues/2) — le jeu est une
 entité portant ses règles, et la direction du classement dépend du jeu — les
 trois autres au cadrage de la carte
-([#1](https://github.com/Bryan21B/scoring-sheets/issues/1)) : le joueur est
+([Carte — feuille de score multi-appareils pour 6 qui prend, Uno et Dnup](https://github.com/Bryan21B/scoring-sheets/issues/1)) : le joueur est
 persistant entre parties, le score se saisit manche par manche, et il n'y a
 aucune authentification — un lien de partage par partie, non devinable.
 
 Ce qui reste à nommer :
 
 - Le vocabulaire de l'identité et de l'arrivée dans une partie — identité
-  d'appareil, roster, lien de partage → [#3](https://github.com/Bryan21B/scoring-sheets/issues/3).
+  d'appareil, roster, lien de partage → [Identité, lien de partage et arrivée dans une partie](https://github.com/Bryan21B/scoring-sheets/issues/3).
 - Les états d'une partie et les gestes de son cycle de vie →
-  [#13](https://github.com/Bryan21B/scoring-sheets/issues/13).
-- Le vocabulaire de l'audit → [#11](https://github.com/Bryan21B/scoring-sheets/issues/11).
+  [Cycle de vie d'une partie : abandon, reprise, correction, fin](https://github.com/Bryan21B/scoring-sheets/issues/13).
+- Le vocabulaire de l'audit → [Journal d'audit : ce qu'une ligne contient et quand elle s'écrit](https://github.com/Bryan21B/scoring-sheets/issues/11).
 
 Les termes retenus remontent dans « Acquis » à la fermeture de chaque ticket ;
 le schéma qui les porte se décide dans
-[#15](https://github.com/Bryan21B/scoring-sheets/issues/15).
+[Modèle de domaine et schéma Drizzle](https://github.com/Bryan21B/scoring-sheets/issues/15).
