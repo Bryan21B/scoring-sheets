@@ -43,7 +43,11 @@
       "Bash(bun add:*)",
       "Bash(bun remove:*)",
       "Bash(podman:*)",
-      "Bash(docker:*)"
+      "Bash(docker:*)",
+      "Bash(git push --force:*)",
+      "Bash(git push -f:*)",
+      "Bash(gh pr create:*)",
+      "Bash(gh pr merge:*)"
     ],
     "deny": [
       "Read(./.env)",
@@ -64,11 +68,7 @@
       "Edit(./.env.production)",
       "Edit(./.env.production.local)",
       "Edit(./drizzle/**)",
-      "Edit(./bun.lock)",
-      "Bash(git push --force:*)",
-      "Bash(git push -f:*)",
-      "Bash(gh pr create:*)",
-      "Bash(gh pr merge:*)"
+      "Edit(./bun.lock)"
     ]
   },
   "hooks": {
