@@ -13,8 +13,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "bryan-cookie-starter",
-  description: "Template de départ — remplacer titre et description au scaffold.",
+  title: "Scoring Sheets",
+  description: "Suivre les scores des parties de cartes entre amis.",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {

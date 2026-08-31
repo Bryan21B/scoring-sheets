@@ -9,18 +9,25 @@ import { migrate } from "drizzle-orm/libsql/migrator";
 import { toLibsqlUrl } from "@/db/url";
 
 /**
- * Covers the migration set in `drizzle/` and our URL coercion — our artefacts,
- * not Drizzle's.
+ * Covers our own artefacts — the migration set in `drizzle/` and the URL
+ * coercion — never Drizzle's own behaviour.
  *
- * The failure mode worth catching: a schema edit that never got a matching
- * `bun run db:generate`. It stays invisible on a developer machine whose
- * database is already migrated, and surfaces in production on a fresh volume.
+ * `src/db/schema.ts` declares no table yet, so the migration set is empty. These
+ * tests still earn their keep: `drizzle/meta/_journal.json` has to stay
+ * loadable, because `playwright.config.ts` runs `scripts/migrate.mjs` before it
+ * serves anything. A missing or corrupt journal would surface as a puzzling e2e
+ * timeout rather than as the migration failure it actually is.
+ *
+ * The failure mode to catch once tables exist: a schema edit that never got its
+ * matching `bun run db:generate`. Invisible on a machine whose database is
+ * already migrated, fatal in production against a fresh one. Assert the tables
+ * here when they land.
  */
 let dir: string;
 let client: Client;
 
 beforeEach(() => {
-  dir = mkdtempSync(join(tmpdir(), "starter-db-"));
+  dir = mkdtempSync(join(tmpdir(), "scoring-sheets-db-"));
   client = createClient({ url: `file:${join(dir, "test.db")}` });
 });
 
@@ -34,15 +41,6 @@ describe("migrations", () => {
     await expect(
       migrate(drizzle(client), { migrationsFolder: "./drizzle" }),
     ).resolves.toBeUndefined();
-  });
-
-  it("produce every table declared in the schema", async () => {
-    await migrate(drizzle(client), { migrationsFolder: "./drizzle" });
-
-    const result = await client.execute("select name from sqlite_master where type = 'table'");
-    const tables = result.rows.map((row) => row.name);
-
-    expect(tables).toContain("notes");
   });
 
   it("are idempotent, so redeploying against a migrated database is a no-op", async () => {

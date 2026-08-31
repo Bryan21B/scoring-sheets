@@ -10,10 +10,10 @@ import { env } from "@/lib/env";
  * would break the browser bundle. The `server-only` import turns that mistake
  * into a build error instead of a runtime one.
  *
- * Console transport only, by design. Log files are the container runtime's
- * problem (`podman` / journald rotation, see `docs/deployment.md`); an app that
- * writes its own files fills the disk of whatever host it lands on. `LOG_LEVEL`
- * caps the volume at the source.
+ * Console transport only, by design. Collecting and rotating logs is the
+ * platform's job — Vercel captures stdout per invocation. An app that writes its
+ * own log files fills the disk of whatever host it lands on, and on an ephemeral
+ * filesystem loses them anyway. `LOG_LEVEL` caps the volume at the source.
  */
 export const logger = createLogger({
   level: env.LOG_LEVEL === "silent" ? "error" : env.LOG_LEVEL,

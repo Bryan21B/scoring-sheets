@@ -11,9 +11,15 @@ import { z } from "zod";
  */
 const envSchema = z.object({
   NODE_ENV: z.enum(["development", "test", "production"]).default("development"),
-  /** Filesystem path to the SQLite database file. Must be overridable so a
-   * container can be handed an external volume path instead of a baked-in one. */
+  /** SQLite file path, or a `libsql://` URL for a remote Turso database. Must
+   * stay overridable: Vercel's filesystem is ephemeral, so production points this
+   * at Turso while the dev loop keeps a local file. */
   DATABASE_PATH: z.string().min(1).default("./data/app.db"),
+  /** Auth token for a remote Turso database, unset for the local file that backs
+   * the dev loop — hence optional. An empty value counts as absent (see
+   * `src/db/index.ts`), so a `.env.local` copied straight from `.env.example`
+   * still boots instead of failing a `min(1)`. */
+  TURSO_AUTH_TOKEN: z.string().optional(),
   LOG_LEVEL: z.enum(["debug", "info", "warn", "error", "silent"]).default("info"),
   PORT: z.coerce.number().int().positive().default(3000),
 });

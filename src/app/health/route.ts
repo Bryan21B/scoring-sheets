@@ -7,12 +7,13 @@ import { logger } from "@/lib/logger";
 export const dynamic = "force-dynamic";
 
 /**
- * Liveness + readiness probe consumed by the container runtime and the reverse
- * proxy (`docs/deployment.md`).
+ * Liveness + readiness probe. The e2e suite waits on it before running, and it
+ * is the one endpoint an uptime monitor should watch.
  *
- * It touches the database on purpose — a process that answers HTTP but cannot
+ * It touches the database on purpose — a deployment that answers HTTP but cannot
  * reach its own storage is not healthy, and a probe that only proves the event
- * loop is alive would happily keep such a container in rotation.
+ * loop is alive would report green straight through a misconfigured
+ * `DATABASE_PATH`, which is exactly the Turso failure worth catching.
  */
 export async function GET(): Promise<NextResponse> {
   try {

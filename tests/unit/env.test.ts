@@ -14,6 +14,14 @@ describe("parseEnv", () => {
     expect(env.DATABASE_PATH).toBe("./data/app.db");
     expect(env.LOG_LEVEL).toBe("info");
     expect(env.PORT).toBe(3000);
+    expect(env.TURSO_AUTH_TOKEN).toBeUndefined();
+  });
+
+  it("accepts an empty TURSO_AUTH_TOKEN, so .env.example stays copyable as-is", () => {
+    // `.env.example` ships the key with no value; a `min(1)` here would make a
+    // straight copy to `.env.local` fail to boot. `src/db/index.ts` is what
+    // turns the empty string back into "no token".
+    expect(() => parseEnv({ TURSO_AUTH_TOKEN: "" })).not.toThrow();
   });
 
   it("coerces PORT to a number", () => {

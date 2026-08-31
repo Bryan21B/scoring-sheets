@@ -1,6 +1,6 @@
 {
-  "name": "bryan-cookie-starter",
-  "version": "0.4.0",
+  "name": "scoring-sheets",
+  "version": "0.0.0",
   "private": true,
   "type": "module",
   "packageManager": "bun@1.3.14",
@@ -25,9 +25,6 @@
     "db:generate": "drizzle-kit generate",
     "db:migrate": "bun scripts/migrate.mjs",
     "db:studio": "drizzle-kit studio",
-    "docker:build": "docker build -f Containerfile -t bryan-cookie-starter:local .",
-    "docker:migrate": "docker run --rm -v bryan-cookie-starter-data:/data bryan-cookie-starter:local node scripts/migrate.mjs",
-    "docker:run": "docker run --rm -p 3000:3000 -v bryan-cookie-starter-data:/data -e LOG_LEVEL=debug bryan-cookie-starter:local",
     "prepare": "husky"
   },
   "dependencies": {
