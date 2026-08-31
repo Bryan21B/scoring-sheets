@@ -44,3 +44,20 @@ espace de travail, pas à créer une unité de review.
 
 Reproduire → minimiser → hypothèse → instrumenter → fix → test de non-régression.
 Ne pas déclarer « corrigé » sans avoir montré la cause racine.
+
+## Agent skills
+
+### Issue tracker
+
+Issues live as GitHub issues on `Bryan21B/scoring-sheets`, driven via the `gh` CLI;
+PRs are not a request surface. See `docs/agents/issue-tracker.md`.
+
+### Triage labels
+
+The five canonical roles, each label named after itself: `needs-triage`, `needs-info`,
+`ready-for-agent`, `ready-for-human`, `wontfix`. See `docs/agents/triage-labels.md`.
+
+### Domain docs
+
+Single-context: `CONTEXT.md` and `docs/adr/` at the repo root, design docs in
+`docs/specs/`. See `docs/agents/domain.md`.
