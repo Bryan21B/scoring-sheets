@@ -47,7 +47,8 @@ dans `docs/specs/2026-08-31-configuration-de-jeu.md`.
   décompte. C'est l'unité qu'on ouvre, qu'on remplit, puis qu'on clôt.
 - **Feuille de score** — la représentation d'une partie : qui joue, ce qui a été
   marqué, où en sont les totaux. Le nom du produit vient de là.
-- **Joueur** — un participant à une partie.
+- **Joueur** — une personne du roster, persistante entre parties. Le nom est
+  son seul identifiant humain, et il est modifiable.
 - **Manche** — un tour de jeu à l'issue duquel des points sont attribués.
 - **Instantané de règles** — les règles du jeu **résolues et figées** à
   l'ouverture de la partie : nombre de joueurs appliqué, seuil surchargé
@@ -69,6 +70,37 @@ dans `docs/specs/2026-08-31-configuration-de-jeu.md`.
   dans le même groupe. L'égalité n'est jamais départagée, et le classement se lit
   à tout moment, même partie non terminée.
 
+### L'identité et l'arrivée
+
+Tranché par [Identité, lien de partage et arrivée dans une partie](https://github.com/Bryan21B/scoring-sheets/issues/3), détaillé dans
+`docs/specs/2026-08-31-identite-et-arrivee.md`.
+
+- **Appareil** — le navigateur d'une personne, reconnu par un cookie serveur. Il
+  pointe vers **un** joueur, **globalement** et non par partie. Plusieurs
+  appareils peuvent pointer le même joueur ; aucun ne délie les autres.
+- **Lien appareil → joueur** — un pointeur **au présent**, modifiable **vers
+  l'avant seulement** : le changer ne relit pas le passé. C'est une
+  **déclaration, pas une preuve**.
+- **Roster** — la liste globale des joueurs, partagée par toutes les parties. Les
+  noms n'y sont pas uniques ; un doublon se désambiguïse à la création, dans
+  l'interface, jamais par un suffixe automatique.
+- **Participant** — un joueur inscrit dans une partie donnée. Il peut n'avoir
+  **aucun appareil** : le créateur a le droit d'ajouter des joueurs pour eux.
+- **Code de partie** — l'identifiant de partage, six caractères en Crockford
+  Base32, fait pour être **dicté à voix haute**. Il vit dans le lien et se tape à
+  la main. Jamais recyclé. Il donne la **lecture** ; l'**écriture** demande d'être
+  participant.
+- **Réclamer** — lier son appareil à un participant **déjà présent**. N'ajoute
+  personne, donc reste autorisé sur une partie figée.
+- **Rejoindre** — **ajouter** un participant. Interdit dès que la partie est figée.
+- **Salle d'attente** — l'état d'une partie tant qu'aucune manche n'est saisie :
+  on ajoute, on retire, on se choisit.
+- **Gel** — la fermeture de la liste des participants, à la **première manche
+  saisie**. Il se déduit de l'existence d'une manche, il ne se stocke pas.
+- **Spectateur** — quiconque a le code sans être participant. Lecture seule, avec
+  un bandeau qui dit pourquoi. Ce n'est pas une option offerte, c'est la
+  conséquence du gel.
+
 ## À trancher
 
 Les cinq questions ouvertes ici à l'origine sont tranchées : deux par
@@ -81,8 +113,6 @@ aucune authentification — un lien de partage par partie, non devinable.
 
 Ce qui reste à nommer :
 
-- Le vocabulaire de l'identité et de l'arrivée dans une partie — identité
-  d'appareil, roster, lien de partage → [Identité, lien de partage et arrivée dans une partie](https://github.com/Bryan21B/scoring-sheets/issues/3).
 - Les états d'une partie et les gestes de son cycle de vie →
   [Cycle de vie d'une partie : abandon, reprise, correction, fin](https://github.com/Bryan21B/scoring-sheets/issues/13).
 - Le vocabulaire de l'audit → [Journal d'audit : ce qu'une ligne contient et quand elle s'écrit](https://github.com/Bryan21B/scoring-sheets/issues/11).
