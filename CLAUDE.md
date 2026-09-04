@@ -47,6 +47,12 @@ Ne pas déclarer « corrigé » sans avoir montré la cause racine.
 
 ## Agent skills
 
+Les skills engineering de [`mattpocock/skills`](https://github.com/mattpocock/skills)
+sont vendorés dans `.claude/skills/` — 18 skills (`/tdd`, `/code-review`, `/implement`,
+`/to-spec`, `/to-tickets`, `/triage`, `/diagnosing-bugs`, `/domain-modeling`…), copiés
+depuis l'amont et éditables ici. Provenance et procédure de mise à jour :
+`.claude/skills/README.md`.
+
 ### Issue tracker
 
 Issues live as GitHub issues on `Bryan21B/scoring-sheets`, driven via the `gh` CLI;
