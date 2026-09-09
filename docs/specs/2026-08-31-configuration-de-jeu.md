@@ -255,7 +255,7 @@ amont.
 - Les états d'une partie, la correction après clôture, le joueur qui s'en va →
   [Cycle de vie d'une partie : abandon, reprise, correction, fin](https://github.com/Bryan21B/scoring-sheets/issues/13). Plus de règle de
   départage à y concevoir : reste ce qu'une victoire partagée fait au palmarès.
-- Additionner ou séparer les deux 6 qui prend au palmarès → [Historique et palmarès : les pages et leurs agrégats](https://github.com/Bryan21B/scoring-sheets/issues/14).
+- ~~Additionner ou séparer les deux 6 qui prend au palmarès~~ → tranché : **séparés par entrée, groupés sous leur famille avec un sous-total**, la famille groupant sans sommer. [Historique et palmarès : les pages et leurs agrégats](https://github.com/Bryan21B/scoring-sheets/issues/14).
 - Les valeurs de `rulesUrl` et `rulesDigestPath` → [URLs officielles des règles des quatre entrées du catalogue](https://github.com/Bryan21B/scoring-sheets/issues/6) et [Skill de condensation de règles, et les digests des quatre entrées](https://github.com/Bryan21B/scoring-sheets/issues/7).
 - La ligne à ajouter dans `AGENTS.md` § Code style — « quand un type et son
   schéma Zod décrivent la même donnée, le schéma est la source » → [Design doc consolidé, CONTEXT.md et ADR](https://github.com/Bryan21B/scoring-sheets/issues/16).

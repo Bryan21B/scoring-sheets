@@ -125,7 +125,8 @@ et un conflit se tranche **au serveur, à l'écriture**.
   gagnées ne lisent que les manches closes**.
 - **Classement** — un ordre en **groupes de rang** : deux joueurs à égalité sont
   dans le même groupe. L'égalité n'est jamais départagée, et le classement se lit
-  à tout moment, même partie non terminée.
+  à tout moment, même partie non terminée. Il ne sort **jamais d'une partie** — à
+  ne pas confondre avec la **Note**, ni avec le **Palmarès**.
 
 ### Le cycle de vie d'une partie
 
@@ -154,6 +155,39 @@ Tranché par [Cycle de vie d'une partie : abandon, reprise, correction, fin](htt
 
 Une partie se **supprime** tant que son journal est vide, jamais après : le
 journal n'est jamais purgé, et passé la première manche la sortie est l'abandon.
+
+### L'historique et le palmarès
+
+Tranché par [Historique et palmarès : les pages et leurs agrégats](https://github.com/Bryan21B/scoring-sheets/issues/14), détaillé dans
+`docs/specs/2026-09-09-historique-et-palmares.md`.
+
+Trois mots qui se marchaient dessus, et leurs portées : le **Classement** est
+l'ordre à l'intérieur d'**une** partie, la **Note** est l'estimation globale d'un
+joueur sur **toutes** les siennes, le **Palmarès** est la page qui les range.
+
+- **Historique** — la liste des parties, la plus récente d'abord par date de fin,
+  filtrable par jeu. Une partie **abandonnée** y figure, marquée et sans
+  vainqueur.
+- **Palmarès** — la liste des joueurs, ordonnée par **taux de victoires
+  normalisé**, avec le nombre de parties à côté de chaque ligne.
+- **Taux de victoires normalisé** — pour une partie,
+  `(battus + 0,5 × ex æquo) / (n − 1)`, moyenné sur les parties **terminées** du
+  joueur. Il normalise la taille de la tablée : gagner à six vaut plus que gagner
+  à deux.
+- **Hors classement** — l'état d'un joueur sous le plancher de parties : présent
+  en bas du palmarès, sans rang, parce qu'un taux sur trois parties ne veut rien
+  dire.
+- **Compteur** — un **fait** par couple joueur et entrée du catalogue : parties
+  jouées, victoires, dernière partie. Jamais une estimation, donc insensible au
+  découpage, et défini même pour une entrée **sans score** comme Dnup. Les
+  compteurs se groupent sous leur **Famille**, qui les sous-totalise sans les
+  fusionner.
+- **Note** — l'estimation globale d'un joueur, une seule pour toutes les entrées,
+  recalculée à la volée et **postérieure à la v1**. Elle n'entre jamais dans une
+  partie.
+
+**Les parties abandonnées ne pèsent sur aucun agrégat.** Le palmarès et la note ne
+lisent que les parties terminées.
 
 ### L'identité et l'arrivée
 
@@ -218,10 +252,9 @@ trois autres au cadrage de la carte
 persistant entre parties, le score se saisit manche par manche, et il n'y a
 aucune authentification — un lien de partage par partie, non devinable.
 
-Ce qui reste à nommer :
-
-- Les agrégats du palmarès et de l'historique, et ce qu'une victoire partagée ou
-  une partie abandonnée y pèsent → [Historique et palmarès : les pages et leurs agrégats](https://github.com/Bryan21B/scoring-sheets/issues/14).
+**Plus rien n'attend d'être nommé.** Tous les tickets de décision de la carte
+sont fermés ; ce qui reste est de la mise en forme d'écran et le schéma qui porte
+ces termes.
 
 Les termes retenus remontent dans « Acquis » à la fermeture de chaque ticket ;
 le schéma qui les porte se décide dans
