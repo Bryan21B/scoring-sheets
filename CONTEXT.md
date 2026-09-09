@@ -134,9 +134,12 @@ Tranché par [Cycle de vie d'une partie : abandon, reprise, correction, fin](htt
 `docs/specs/2026-09-09-cycle-de-vie.md`.
 
 - **Fin de partie** — absente ou présente ; il n'y a pas de statut à trois
-  valeurs. Présente, elle a une cause : **terminée**, qui se **dérive** de `fini`,
-  ou **abandonnée**, qui se **déclare**. Sa date est celle de la clôture de la
-  dernière manche close.
+  valeurs. Présente, elle porte une date, une cause — **terminée** ou
+  **abandonnée** — et son auteur. Elle est **écrite** dans les deux cas :
+  l'abandon parce que rien ne le déduit, la fin régulière parce que l'écriture qui
+  clôt la dernière manche calcule déjà `fini`. C'est la seule exception à « rien
+  de ce qui se recalcule n'est stocké », et le **Scellement** garantit qu'elle ne
+  peut pas diverger.
 - **Scellement** — l'état d'une partie terminée : lecture seule, définitivement.
   Aucune saisie, aucune correction, aucune suppression, aucun mouvement de
   participant. Une erreur découverte le lendemain y reste. À ne pas confondre

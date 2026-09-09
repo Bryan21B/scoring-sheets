@@ -24,16 +24,17 @@ statut à trois valeurs.
 | État | Comment il se lit | Ce qu'on peut y faire |
 |---|---|---|
 | **En cours** | pas de fin | tout |
-| **Terminée** | `fini` est vrai — **dérivé** | rien, elle est **scellée** |
+| **Terminée** | `fini` est devenu vrai, et la fin a été **estampillée** | rien, elle est **scellée** |
 | **Abandonnée** | un abandon **déclaré** — stocké | la **reprise**, et rien d'autre |
 
-**« Terminée » est dérivée, « abandonnée » est stockée.** Le journal a posé que
-rien de ce que le moteur calcule n'est stocké, et `fini` est calculé. L'abandon,
-lui, est une action : rien ne le déduit, donc il s'écrit.
+**Les deux causes s'écrivent, chacune pour sa raison.** L'abandon est une action :
+rien ne le déduit. La fin régulière, elle, est **estampillée par l'écriture qui la
+provoque** — celle qui clôt la manche, et qui calcule déjà `fini` pour savoir si
+elle montre l'écran de fin.
 
-La **date de fin**, dont le classement multijoueur a besoin pour son ordre de
-rejeu, n'a rien à stocker de plus : c'est la date de clôture de la dernière
-manche close, déjà au schéma depuis le ticket 22.
+Ce document posait d'abord « terminée est dérivée ». Le schéma a montré le prix :
+sans estampille, l'historique et le palmarès cessent d'être des requêtes SQL. Voir
+« Corrigé après coup ».
 
 Une partie ouverte trois semaines et jamais finie est simplement **une partie
 sans fin**. Ni terminée, ni abandonnée, jusqu'à ce que quelqu'un tranche.
@@ -182,8 +183,8 @@ Reste ce qu'une victoire partagée fait au palmarès →
 
 À porter dans [Modèle de domaine et schéma Drizzle](https://github.com/Bryan21B/scoring-sheets/issues/15) :
 
-- **Un abandon par partie**, absent ou présent, effaçable par la reprise. Rien
-  pour « terminée », qui se dérive.
+- **Une fin par partie** : date, cause (`terminee` ou `abandonnee`) et auteur,
+  les trois absents ou présents ensemble, et effacés ensemble par la reprise.
 - **Une date sur la clôture d'une manche**, pas seulement un booléen : c'est elle
   qui date la fin de la partie pour le classement.
 - **Un retrait par participant**, qui le sort de la complétude et du classement
@@ -195,3 +196,14 @@ Reste ce qu'une victoire partagée fait au palmarès →
 - **Si les parties abandonnées comptent au palmarès** → [Historique et palmarès](https://github.com/Bryan21B/scoring-sheets/issues/14).
 - **Ce qu'une victoire partagée fait au palmarès** → même ticket.
 - **La forme des écrans** d'abandon et de reprise → à trancher en les dessinant.
+
+## Corrigé après coup
+
+- **2026-09-09** — « terminée » ne se dérive plus, elle est **estampillée** dans
+  la transaction qui clôt la dernière manche. Motif découvert en dessinant les
+  index : dérivée, elle obligeait l'historique et le palmarès à faire tourner le
+  moteur sur toute la base à chaque affichage, ce qu'aucun index n'accélère.
+  L'écriture qui clôt la manche calculant déjà `fini`, l'estampiller n'ajoute
+  aucun calcul, et le **scellement** garantit que la valeur stockée ne peut jamais
+  diverger. Tranché par [Modèle de domaine et schéma Drizzle](https://github.com/Bryan21B/scoring-sheets/issues/15),
+  détaillé dans `docs/specs/2026-09-09-schema.md`.

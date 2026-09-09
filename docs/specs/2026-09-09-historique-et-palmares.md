@@ -163,6 +163,12 @@ ne voit pas.
 agrégats de ce document se dérivent des parties, des manches et des participants,
 et la date de fin était déjà exigée par le cycle de vie.
 
+Le schéma a toutefois changé une chose **pour** ces pages : la fin d'une partie
+est **estampillée** au lieu d'être dérivée. Sans cela, l'historique et le palmarès
+auraient été des replis applicatifs sur toute la base, qu'aucun index n'accélère ;
+avec, ce sont des requêtes ordinaires sur un index partiel. Voir
+`docs/specs/2026-09-09-schema.md`.
+
 ## Ce qui n'est pas décidé ici
 
 - **Le tête-à-tête** : ce qu'une page qui compare deux joueurs montre à dix
