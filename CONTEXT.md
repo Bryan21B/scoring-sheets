@@ -256,9 +256,9 @@ persistant entre parties, le score se saisit manche par manche, et il n'y a
 aucune authentification — un lien de partage par partie, non devinable.
 
 **Plus rien n'attend d'être nommé.** Tous les tickets de décision de la carte
-sont fermés ; ce qui reste est de la mise en forme d'écran et le schéma qui porte
-ces termes.
+sont fermés, et le design consolidé est dans
+`docs/specs/2026-09-09-feuille-de-score.md`. Ce qui reste est de la mise en forme
+d'écran, à trancher en dessinant.
 
-Les termes retenus remontent dans « Acquis » à la fermeture de chaque ticket ;
-le schéma qui les porte se décide dans
-[Modèle de domaine et schéma Drizzle](https://github.com/Bryan21B/scoring-sheets/issues/15).
+Un terme n'entre toujours ici qu'une fois **décidé**. Ce fichier reste un
+glossaire : le détail de chaque décision vit dans son spec, jamais ici.

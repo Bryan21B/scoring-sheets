@@ -84,6 +84,9 @@ Non couverts par le linter, mais tout aussi fermes :
 module propriétaire, importer ailleurs.
 - **Jamais de template literal dans `exec`/`spawn`** — construire les arguments
 en tableau (`execFileSync("git", [...])`), sinon injection de commande (CWE-78).
+- **Quand un type et son schéma Zod décrivent la même donnée, le schéma est la
+source** — dériver le type par `z.infer`, jamais l'écrire deux fois. Deux
+déclarations de la même forme divergent le jour où l'une est corrigée seule.
 
 ## Architecture
 
