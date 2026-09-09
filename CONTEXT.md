@@ -128,6 +128,18 @@ et un conflit se tranche **au serveur, à l'écriture**.
   dans le même groupe. L'égalité n'est jamais départagée, et le classement se lit
   à tout moment, même partie non terminée. Il ne sort **jamais d'une partie** — à
   ne pas confondre avec la **Note**, ni avec le **Palmarès**.
+- **Rang au podium** — ce qu'une case porte en mode `podium` : le **rang**, `1`
+  pour le premier et `2` pour le deuxième, comme le fixe
+  `docs/specs/2026-09-09-schema.md`. On y désigne des joueurs ; les jetons sont un
+  résultat, jamais une saisie, et c'est le barème `jetons` qui dit ce que le rang
+  rapporte — le décalage entre un rang qui compte depuis un et un barème indexé
+  depuis zéro ne s'écrit qu'au moteur.
+- **Effectif courant** — les joueurs qu'une partie attend encore. Le moteur le lit
+  comme l'**intersection** des attendus de ses manches, la liste des participants
+  ne faisant que rétrécir une fois la partie gelée. Un participant retiré en
+  sort : il n'entre ni au classement ni dans le franchissement du seuil, et garde
+  pourtant son total — la soirée des autres ne s'arrête pas sur le score de
+  quelqu'un qui est rentré.
 
 ### Le cycle de vie d'une partie
 
