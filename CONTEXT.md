@@ -49,7 +49,9 @@ dans `docs/specs/2026-08-31-configuration-de-jeu.md`.
   marqué, où en sont les totaux. Le nom du produit vient de là.
 - **Joueur** — une personne du roster, persistante entre parties. Le nom est
   son seul identifiant humain, et il est modifiable.
-- **Manche** — un tour de jeu à l'issue duquel des points sont attribués.
+- **Manche** — un tour de jeu à l'issue duquel des points sont attribués. Elle
+  porte un **numéro**, unique dans sa partie : deux téléphones qui ouvrent « la
+  manche suivante » en même temps rejoignent la même, ils n'en créent pas deux.
 - **Instantané de règles** — les règles du jeu **résolues et figées** à
   l'ouverture de la partie : nombre de joueurs appliqué, seuil surchargé
   appliqué. Une partie se relit toujours sous les règles qui l'ont ouverte, même
@@ -82,13 +84,35 @@ Tranché par [Qui pilote la passe avant, quand chacun compte pour soi](https://g
 - **Clôture de manche** — la déclaration qu'une manche est finie. Elle se
   **déclare**, elle ne se déduit pas de la complétude, et n'importe quel
   participant la fait. Une manche incomplète ne se clôt pas : elle se répare.
-  Ce n'est pas un **Geste** au sens du journal, qui n'en garde aucune trace.
+  Elle est **idempotente** : clore une manche déjà close ne fait rien. Ce n'est
+  pas un **Geste** au sens du journal, qui n'en garde aucune trace.
 
 Qui saisit quoi ne se déclare nulle part : cela se **dérive de la forme des
 saisies**. Aucune case n'a d'auteur attendu — elle nomme le joueur qu'elle
 *concerne*, jamais celui qui doit la taper. L'ordre de la passe avant est une
 suggestion, pas une permission : n'importe quel participant écrit n'importe
 quelle case.
+
+### L'écriture concurrente
+
+Tranché par [Écriture concurrente sur la même case : politique de conflit](https://github.com/Bryan21B/scoring-sheets/issues/12), détaillé dans
+`docs/specs/2026-09-09-ecriture-concurrente.md`.
+
+- **Écriture conditionnelle** — une case ne s'écrit qu'à condition de porter
+  encore **la valeur qui a été montrée** à celui qui écrit. Le **vide est une
+  valeur**, ce qui couvre saisir et corriger sans les distinguer. Deux écritures
+  sur des cases différentes ne sont pas un conflit et passent toutes les deux.
+- **Écrasement informé** — écrire par dessus une valeur qu'on voit. Il **passe**,
+  et le journal en garde la ligne. À distinguer de l'**écrasement périmé**, fondé
+  sur une valeur qui a changé depuis, seul cas que l'écriture conditionnelle
+  refuse. L'interface arrête ce qui repose sur une information fausse, le journal
+  garde ce qui repose sur une information vraie.
+- **Écriture sans effet** — poser sur une case la valeur qu'elle porte déjà.
+  Réussit en silence : rien n'a bougé, rien ne bouge, aucun conflit à annoncer.
+
+Aucune **présence** n'existe : le transport ne pousse rien, donc personne ne sait
+qui est connecté ni qui saisit. Un verrou d'édition est irréalisable, pas écarté,
+et un conflit se tranche **au serveur, à l'écriture**.
 
 ### Le décompte
 
