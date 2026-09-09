@@ -52,6 +52,7 @@ dans `docs/specs/2026-08-31-configuration-de-jeu.md`.
 - **Manche** — un tour de jeu à l'issue duquel des points sont attribués. Elle
   porte un **numéro**, unique dans sa partie : deux téléphones qui ouvrent « la
   manche suivante » en même temps rejoignent la même, ils n'en créent pas deux.
+  Un numéro ne se réutilise jamais — supprimer une manche laisse un **trou**.
 - **Instantané de règles** — les règles du jeu **résolues et figées** à
   l'ouverture de la partie : nombre de joueurs appliqué, seuil surchargé
   appliqué. Une partie se relit toujours sous les règles qui l'ont ouverte, même
@@ -119,10 +120,40 @@ et un conflit se tranche **au serveur, à l'écriture**.
 - **Moteur de décompte** — la fonction pure et unique qui, depuis des règles et
   des manches, produit l'**état**. Rien de ce qu'elle calcule n'est stocké.
 - **État** — totaux courants, manches gagnées, classement, nombre de manches
-  jouées, et si la partie est finie.
+  jouées, et si la partie est finie. Les **totaux lisent tout**, y compris une
+  manche en cours de saisie ; **`fini`, les manches jouées et les manches
+  gagnées ne lisent que les manches closes**.
 - **Classement** — un ordre en **groupes de rang** : deux joueurs à égalité sont
   dans le même groupe. L'égalité n'est jamais départagée, et le classement se lit
   à tout moment, même partie non terminée.
+
+### Le cycle de vie d'une partie
+
+Tranché par [Cycle de vie d'une partie : abandon, reprise, correction, fin](https://github.com/Bryan21B/scoring-sheets/issues/13), détaillé dans
+`docs/specs/2026-09-09-cycle-de-vie.md`.
+
+- **Fin de partie** — absente ou présente ; il n'y a pas de statut à trois
+  valeurs. Présente, elle a une cause : **terminée**, qui se **dérive** de `fini`,
+  ou **abandonnée**, qui se **déclare**. Sa date est celle de la clôture de la
+  dernière manche close.
+- **Scellement** — l'état d'une partie terminée : lecture seule, définitivement.
+  Aucune saisie, aucune correction, aucune suppression, aucun mouvement de
+  participant. Une erreur découverte le lendemain y reste. À ne pas confondre
+  avec le **Gel**, qui ne ferme que la liste des participants.
+- **Abandon** — terminer une partie sans vainqueur, par un acte explicite de
+  n'importe quel participant. Il vide l'écran d'accueil, que le ticket 9 a fait
+  porter par la partie en cours ; sans lui, la seule sortie serait la
+  suppression, qui détruirait le journal.
+- **Reprise** — effacer l'abandon et rendre la partie en cours. Elle n'existe que
+  pour une partie abandonnée : une partie terminée ne se rouvre pas. Le **Gel**
+  survit à la reprise, puisqu'il se déduit de l'existence d'une manche.
+- **Retrait d'un participant** — permis après le gel, pour le joueur qui s'en va.
+  Ses valeurs déjà saisies **restent**, il cesse de compter dans la **complétude**
+  des manches suivantes, et il **ne figure pas au classement final** — sans quoi
+  partir tôt ferait gagner à 6 qui prend, où le plus bas l'emporte.
+
+Une partie se **supprime** tant que son journal est vide, jamais après : le
+journal n'est jamais purgé, et passé la première manche la sortie est l'abandon.
 
 ### L'identité et l'arrivée
 
@@ -171,8 +202,11 @@ Tranché par [Journal d'audit : ce qu'une ligne contient et quand elle s'écrit]
   l'horloge du serveur. Le joueur est figé parce que repointer un appareil ne
   relit jamais le passé.
 - **Geste** — ce qu'une ligne enregistre : `saisie`, `correction`,
-  `suppressionDeManche`, `participantAjoute`, `participantRetire`. La clôture
-  n'en est pas un : elle est dérivée.
+  `suppressionDeManche`, `participantAjoute`, `participantRetire`, `abandon`,
+  `reprise`. Les deux derniers ne portent pas de case : ce sont les seuls gestes
+  qui changent **ce que les autres ont le droit de faire**. Ni la clôture d'une
+  manche ni la fin d'une partie n'en sont : la première ne déplace aucune valeur,
+  la seconde se dérive.
 
 ## À trancher
 
@@ -186,10 +220,8 @@ aucune authentification — un lien de partage par partie, non devinable.
 
 Ce qui reste à nommer :
 
-- Les états d'une partie et les gestes de son cycle de vie →
-  [Cycle de vie d'une partie : abandon, reprise, correction, fin](https://github.com/Bryan21B/scoring-sheets/issues/13). En
-  particulier l'**abandon** : le journal lui a réservé une place de geste sans la
-  remplir, faute de savoir s'il existe.
+- Les agrégats du palmarès et de l'historique, et ce qu'une victoire partagée ou
+  une partie abandonnée y pèsent → [Historique et palmarès : les pages et leurs agrégats](https://github.com/Bryan21B/scoring-sheets/issues/14).
 
 Les termes retenus remontent dans « Acquis » à la fermeture de chaque ticket ;
 le schéma qui les porte se décide dans

@@ -166,11 +166,12 @@ Pure, recalculée à chaque lecture. Rien de tout cela n'est stocké.
   6 qui prend où l'on accumule des têtes jusqu'à 66 et où le plus bas gagne.
   `direction` ne sert donc **qu'au classement**, jamais au déclenchement : deux
   champs strictement orthogonaux, une seule règle de franchissement.
-- **Totaux vivants, fin figée.** Une manche incomplète alimente `totaux` — trois
-  joueurs sur cinq ont saisi, les compteurs bougent déjà — mais elle ne compte ni
-  dans `manchesJouees` ni dans `manchesGagnees`, et ne peut **jamais** rendre
-  `fini` vrai. On voit le seuil arriver ; la partie ne ferme qu'à la clôture de
-  la manche, quand tout le monde a été saisi.
+- **Totaux vivants, fin figée.** Une manche **non close** alimente `totaux` —
+  trois joueurs sur cinq ont saisi, les compteurs bougent déjà — mais elle ne
+  compte ni dans `manchesJouees` ni dans `manchesGagnees`, et ne peut **jamais**
+  rendre `fini` vrai. On voit le seuil arriver ; la partie ne ferme qu'à la
+  **clôture** de la manche, qui est un acte déclaré et non la simple complétude
+  (voir « Corrigé après coup »).
 - **La complétude est dérivée du mode de saisie**, ce n'est pas un champ :
   `entierParJoueur` → tous les joueurs ont une valeur ; `sommeAuGagnant` → un
   gagnant désigné **et un total unique**, jamais une valeur par perdant ;
@@ -269,3 +270,12 @@ amont.
   en deux gestes et non en *n*. La borne passe de 0–500 à **0–999** dans la
   foulée : sur un total, 500 refuserait des manches réelles, et elle ne sert
   qu'à attraper une faute de frappe.
+
+- **2026-09-09 (2)** — la **clôture** d'une manche et sa **complétude** ont cessé
+  d'être le même mot, le ticket 22 ayant fait de la première un acte déclaré. Le
+  moteur choisit donc : **les totaux lisent tout**, y compris une manche en cours
+  de saisie ; **`fini`, `manchesJouees` et `manchesGagnees` lisent les manches
+  closes**, et elles seules. `evaluer(regles, manches)` reçoit en conséquence la
+  clôture de chaque manche — une entrée de plus, pas un état de plus. Tranché par
+  [Cycle de vie d'une partie : abandon, reprise, correction, fin](https://github.com/Bryan21B/scoring-sheets/issues/13),
+  détaillé dans `docs/specs/2026-09-09-cycle-de-vie.md`.
