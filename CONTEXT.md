@@ -246,6 +246,19 @@ Tranché par [Journal d'audit : ce qu'une ligne contient et quand elle s'écrit]
   manche ni la fin d'une partie n'en sont : la première ne déplace aucune valeur,
   la seconde se dérive.
 
+### La tablée
+
+Tranché par [Créer une partie et obtenir son code](https://github.com/Bryan21B/scoring-sheets/issues/27), détaillé dans
+`docs/adr/0008-la-tablee-se-declare-a-la-creation.md`.
+
+- **Tablée** — l'**effectif déclaré** à la création : combien vous serez. Il fige
+  l'instantané de règles, et il n'inscrit personne — les autres arrivent par le
+  code. C'est un nombre, jamais une liste, et c'est une **déclaration**, comme
+  l'identité : annoncer cinq et jouer à quatre fige les règles de cinq.
+- **Seuil** — la valeur de la **condition de fin**, montrée pré-remplie à la
+  valeur imprimée pour cette tablée et surchargeable par un entier ≥ 1. C'est le
+  seul champ des règles qu'une partie ouvre à la table.
+
 ## À trancher
 
 Les cinq questions ouvertes ici à l'origine sont tranchées : deux par

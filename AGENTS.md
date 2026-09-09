@@ -55,8 +55,12 @@ prod est protégée — basculer sur 1Password au lieu de coller la valeur :
 
 ## Testing instructions
 
-- **Unitaires par défaut.** `tests/unit/**/*.test.ts`, `bun test` (runner intégré,
-API compatible Jest — importer depuis `bun:test`, pas `vitest`).
+- **Unitaires par défaut.** `tests/unit/**/*.test.ts{,x}`, `bun test` (runner
+intégré, API compatible Jest — importer depuis `bun:test`, pas `vitest`).
+- **Un composant de présentation se teste en `.tsx`**, rendu par
+`renderToStaticMarkup` de `react-dom/server` : on assère sur le balisage produit,
+jamais sur l'arbre React. Ce qui impose la forme du composant — des props, pas
+d'`async`, pas d'import `server-only` — et laisse les pages n'être que du câblage.
 - **Pas de tests E2E**
 - **On ne re-teste jamais un package externe.** Pas de test sur le comportement de
 winston, Drizzle ou SQLite. On teste nos artefacts : schémas Zod, migrations
@@ -95,15 +99,18 @@ déclarations de la même forme divergent le jour où l'une est corrigée seule.
 
 ## Architecture
 
-- `src/app/` — routes App Router. `page.tsx` est la page d'accueil (placeholder
-tant que le domaine n'existe pas), `health/route.ts` la sonde de santé, qui
-touche la base à dessein.
+- `src/app/` — routes App Router. `page.tsx` est l'accueil, qui montre le
+catalogue tant qu'aucune partie n'est en cours ; `creer/[jeuId]/` la suite
+d'écrans de création et son action serveur ; `p/[code]/` la page d'une partie ;
+`health/route.ts` la sonde de santé, qui touche la base à dessein.
 - `src/components/ui/` — primitives shadcn/ui. Les ajouter avec
 `bunx shadcn@latest add <composant>`, ne pas les écrire à la main.
 - `src/db/` — `schema.ts` (les sept tables Drizzle), `triggers.sql` (les
 déclencheurs, que Drizzle Kit ne sait pas générer), `index.ts` (connexion
-libSQL, pragmas, singleton de dev), `url.ts` (pur, sans effet de bord).
-Migrations générées dans `drizzle/`, jamais éditées à la main.
+libSQL, pragmas, singleton de dev), `url.ts` (pur, sans effet de bord),
+`base.ts` (les types `Base` et `Ecriture`, sans effet de bord, pour que la
+logique reçoive la base en paramètre). Migrations générées dans `drizzle/`,
+jamais éditées à la main.
 - `src/lib/env.ts` — schéma Zod de l'environnement, parsé une fois au boot.
 - `src/lib/logger.ts` — winston, server-only, sortie JSON sur stdout.
 - `src/lib/jeux/` — le catalogue des quatre entrées (`catalogue.ts`, une
@@ -116,6 +123,15 @@ toutes les frontières qui valident.
 - `scripts/*.mjs` — outillage runtime en JS pur, exécutable sans toolchain TS :
 `migrate.mjs` (lancé avant de servir, y compris par Playwright),
 `check-env-sync.mjs` et `scan-secrets.mjs` (hooks Git).
+- `src/proxy.ts` — le proxy Next 16 (ex-`middleware`). Il pose le cookie
+d'appareil dès le premier chargement et le réémet à chaque requête ; il n'écrit
+rien en base, le lien vers un joueur ne s'écrivant qu'au moment où on se choisit.
+- `src/lib/appareil/`, `src/lib/roster/`, `src/lib/partie/` — l'identité
+d'appareil (drapeaux et valeur opaque du cookie), le roster et la
+désambiguïsation des homonymes, et la partie : code Crockford, tablée, création
+et lecture. **Toute fonction qui touche la base prend `Base` en paramètre**
+(`src/db/base.ts`), jamais le singleton de `@/db` : c'est ce qui la rend
+vérifiable contre une base jetable (`tests/unit/helpers/base-de-test.ts`).
 
 ## Gotchas
 
