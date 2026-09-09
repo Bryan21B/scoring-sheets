@@ -101,6 +101,25 @@ Tranché par [Identité, lien de partage et arrivée dans une partie](https://gi
   un bandeau qui dit pourquoi. Ce n'est pas une option offerte, c'est la
   conséquence du gel.
 
+### Le journal
+
+Tranché par [Journal d'audit : ce qu'une ligne contient et quand elle s'écrit](https://github.com/Bryan21B/scoring-sheets/issues/11), détaillé dans
+`docs/specs/2026-09-09-journal.md`.
+
+- **Case** — la valeur d'un joueur dans une manche. C'est l'unité qu'on saisit,
+  qu'on corrige, et que le journal désigne.
+- **Journal** — l'écrit d'une partie : append-only, jamais modifié, jamais purgé.
+  Il n'est **jamais lu par le moteur**, qui ne connaît que les manches ; ce n'est
+  pas une source de vérité, c'est une trace. « Audit » dit pourquoi il existe,
+  pas ce qu'il est.
+- **Ligne de journal** — l'unité du journal : un **geste** sur une case, le
+  joueur agissant **figé à l'écriture**, l'appareil d'où c'est parti, et
+  l'horloge du serveur. Le joueur est figé parce que repointer un appareil ne
+  relit jamais le passé.
+- **Geste** — ce qu'une ligne enregistre : `saisie`, `correction`,
+  `suppressionDeManche`, `participantAjoute`, `participantRetire`. La clôture
+  n'en est pas un : elle est dérivée.
+
 ## À trancher
 
 Les cinq questions ouvertes ici à l'origine sont tranchées : deux par
@@ -114,8 +133,9 @@ aucune authentification — un lien de partage par partie, non devinable.
 Ce qui reste à nommer :
 
 - Les états d'une partie et les gestes de son cycle de vie →
-  [Cycle de vie d'une partie : abandon, reprise, correction, fin](https://github.com/Bryan21B/scoring-sheets/issues/13).
-- Le vocabulaire de l'audit → [Journal d'audit : ce qu'une ligne contient et quand elle s'écrit](https://github.com/Bryan21B/scoring-sheets/issues/11).
+  [Cycle de vie d'une partie : abandon, reprise, correction, fin](https://github.com/Bryan21B/scoring-sheets/issues/13). En
+  particulier l'**abandon** : le journal lui a réservé une place de geste sans la
+  remplir, faute de savoir s'il existe.
 
 Les termes retenus remontent dans « Acquis » à la fermeture de chaque ticket ;
 le schéma qui les porte se décide dans
