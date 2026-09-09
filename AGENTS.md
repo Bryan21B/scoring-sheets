@@ -9,10 +9,15 @@ Feuilles de score pour parties de cartes entre amis. Une partie réunit des
 joueurs autour d'un jeu, se déroule en manches, et chaque manche attribue des
 points ; l'app tient les totaux et l'historique à la place du carnet et du stylo.
 
-**Le domaine n'est pas encore modélisé.** `src/db/schema.ts` ne déclare aucune
-table et `drizzle/` ne porte aucune migration — c'est un état voulu, pas un
-oubli. Poser le modèle passe par un design doc dans `docs/specs/` (boucle de
-travail dans `CLAUDE.md`), pas par une table écrite au fil de l'eau. Le
+**Le domaine est modélisé en base.** `src/db/schema.ts` déclare les sept tables
+— `joueur`, `appareil`, `partie`, `participant`, `manche`, `saisie`, `journal` —
+d'après `docs/specs/2026-09-09-schema.md`, qui reste la source de vérité pour les
+colonnes, les clés, les `CHECK` et les index. Les invariants qu'aucune table ne
+peut porter — l'append-only du journal, l'estampille de version — sont tenus par
+des déclencheurs dans `src/db/triggers.sql` (`docs/adr/0007`).
+
+Faire évoluer le modèle passe par un design doc dans `docs/specs/` (boucle de
+travail dans `CLAUDE.md`), pas par une colonne ajoutée au fil de l'eau. Le
 vocabulaire se fixe dans `CONTEXT.md` au fur et à mesure qu'il se décide.
 
 ## Setup / Dev environment
@@ -95,7 +100,8 @@ tant que le domaine n'existe pas), `health/route.ts` la sonde de santé, qui
 touche la base à dessein.
 - `src/components/ui/` — primitives shadcn/ui. Les ajouter avec
 `bunx shadcn@latest add <composant>`, ne pas les écrire à la main.
-- `src/db/` — `schema.ts` (Drizzle, vide pour l'instant), `index.ts` (connexion
+- `src/db/` — `schema.ts` (les sept tables Drizzle), `triggers.sql` (les
+déclencheurs, que Drizzle Kit ne sait pas générer), `index.ts` (connexion
 libSQL, pragmas, singleton de dev), `url.ts` (pur, sans effet de bord).
 Migrations générées dans `drizzle/`, jamais éditées à la main.
 - `src/lib/env.ts` — schéma Zod de l'environnement, parsé une fois au boot.
@@ -127,10 +133,15 @@ plusieurs environnements expose une fonction paramétrable — c'est pourquoi
 `src/lib/env.ts` exporte `parseEnv(source)` en plus de la constante `env`.
 - **Un test ne doit jamais importer `@/db`** : le module ouvre une connexion à
 l'import. Importer `@/db/url` pour le pur, ou construire un client dédié.
-- `**drizzle/` ne porte qu'un journal vide, et doit rester chargeable.**
-`playwright.config.ts` lance `scripts/migrate.mjs` avant de servir : supprimer
-le dossier ferait échouer l'e2e sur un timeout obscur plutôt que sur l'erreur
-de migration réelle.
+- `**drizzle/` doit rester chargeable.** `playwright.config.ts` lance
+`scripts/migrate.mjs` avant de servir : supprimer le dossier ferait échouer
+l'e2e sur un timeout obscur plutôt que sur l'erreur de migration réelle.
+- **Une migration ne suffit pas à décrire la base.** `scripts/migrate.mjs`
+applique `drizzle/` *puis* `src/db/triggers.sql` — Drizzle Kit n'a pas de
+primitive de déclencheur, donc l'append-only du journal et l'estampille de
+version n'existent que par ce second geste. Appeler `migrate()` de Drizzle
+directement, dans un test ou ailleurs, donne une base sans déclencheurs :
+passer par le script. Voir `docs/adr/0007`.
 - `**.env.example` et `src/lib/env.ts` doivent rester synchrones** — le hook
 pre-commit refuse le commit sinon.
 - `**main` distant prend un commit d'avance après chaque release.** semantic-release

@@ -3,8 +3,9 @@
 Glossaire du vocabulaire métier. Un terme n'entre ici qu'une fois **décidé** :
 un mot qui flotte dans le code et un mot qui flotte ici coûtent le même prix.
 
-Le domaine n'est pas encore entièrement modélisé (cf. `AGENTS.md`, « Project
-overview »). Ce fichier porte donc ce qui est acquis, et rien de plus.
+Le vocabulaire est tranché et le modèle est en base (cf. `AGENTS.md`, « Project
+overview », et `docs/specs/2026-09-09-schema.md`). Ce fichier porte ce qui est
+acquis, et rien de plus : le détail de chaque décision vit dans son spec.
 
 ## Acquis
 

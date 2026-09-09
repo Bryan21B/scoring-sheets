@@ -1,0 +1,620 @@
+{
+  "version": "6",
+  "dialect": "sqlite",
+  "id": "4ee9db0a-581d-4ce2-a917-beded32121e3",
+  "prevId": "00000000-0000-0000-0000-000000000000",
+  "tables": {
+    "appareil": {
+      "name": "appareil",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "joueur_id": {
+          "name": "joueur_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "vu_le": {
+          "name": "vu_le",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "cree_le": {
+          "name": "cree_le",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        }
+      },
+      "indexes": {
+        "appareil_joueur_id_idx": {
+          "name": "appareil_joueur_id_idx",
+          "columns": [
+            "joueur_id"
+          ],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {
+        "appareil_joueur_id_joueur_id_fk": {
+          "name": "appareil_joueur_id_joueur_id_fk",
+          "tableFrom": "appareil",
+          "tableTo": "joueur",
+          "columnsFrom": [
+            "joueur_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {}
+    },
+    "joueur": {
+      "name": "joueur",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "integer",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": true
+        },
+        "nom": {
+          "name": "nom",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "cree_le": {
+          "name": "cree_le",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {}
+    },
+    "journal": {
+      "name": "journal",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "integer",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "partie_id": {
+          "name": "partie_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "geste": {
+          "name": "geste",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "joueur_agissant_id": {
+          "name": "joueur_agissant_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "appareil_id": {
+          "name": "appareil_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "manche_numero": {
+          "name": "manche_numero",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "joueur_concerne_id": {
+          "name": "joueur_concerne_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "detail": {
+          "name": "detail",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "ecrit_le": {
+          "name": "ecrit_le",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        }
+      },
+      "indexes": {
+        "journal_partie_id_ecrit_le_idx": {
+          "name": "journal_partie_id_ecrit_le_idx",
+          "columns": [
+            "partie_id",
+            "\"ecrit_le\" desc"
+          ],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {
+        "journal_partie_id_partie_id_fk": {
+          "name": "journal_partie_id_partie_id_fk",
+          "tableFrom": "journal",
+          "tableTo": "partie",
+          "columnsFrom": [
+            "partie_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "journal_joueur_agissant_id_joueur_id_fk": {
+          "name": "journal_joueur_agissant_id_joueur_id_fk",
+          "tableFrom": "journal",
+          "tableTo": "joueur",
+          "columnsFrom": [
+            "joueur_agissant_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "journal_appareil_id_appareil_id_fk": {
+          "name": "journal_appareil_id_appareil_id_fk",
+          "tableFrom": "journal",
+          "tableTo": "appareil",
+          "columnsFrom": [
+            "appareil_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "journal_joueur_concerne_id_joueur_id_fk": {
+          "name": "journal_joueur_concerne_id_joueur_id_fk",
+          "tableFrom": "journal",
+          "tableTo": "joueur",
+          "columnsFrom": [
+            "joueur_concerne_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {}
+    },
+    "manche": {
+      "name": "manche",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "integer",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "partie_id": {
+          "name": "partie_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "numero": {
+          "name": "numero",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "close_le": {
+          "name": "close_le",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "close_par": {
+          "name": "close_par",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        }
+      },
+      "indexes": {
+        "manche_partie_id_numero_unique": {
+          "name": "manche_partie_id_numero_unique",
+          "columns": [
+            "partie_id",
+            "numero"
+          ],
+          "isUnique": true
+        }
+      },
+      "foreignKeys": {
+        "manche_partie_id_partie_id_fk": {
+          "name": "manche_partie_id_partie_id_fk",
+          "tableFrom": "manche",
+          "tableTo": "partie",
+          "columnsFrom": [
+            "partie_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "manche_close_par_joueur_id_fk": {
+          "name": "manche_close_par_joueur_id_fk",
+          "tableFrom": "manche",
+          "tableTo": "joueur",
+          "columnsFrom": [
+            "close_par"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {}
+    },
+    "participant": {
+      "name": "participant",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "integer",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": true
+        },
+        "partie_id": {
+          "name": "partie_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "joueur_id": {
+          "name": "joueur_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "retire_le": {
+          "name": "retire_le",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        }
+      },
+      "indexes": {
+        "participant_partie_id_joueur_id_unique": {
+          "name": "participant_partie_id_joueur_id_unique",
+          "columns": [
+            "partie_id",
+            "joueur_id"
+          ],
+          "isUnique": true
+        },
+        "participant_joueur_id_idx": {
+          "name": "participant_joueur_id_idx",
+          "columns": [
+            "joueur_id"
+          ],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {
+        "participant_partie_id_partie_id_fk": {
+          "name": "participant_partie_id_partie_id_fk",
+          "tableFrom": "participant",
+          "tableTo": "partie",
+          "columnsFrom": [
+            "partie_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "participant_joueur_id_joueur_id_fk": {
+          "name": "participant_joueur_id_joueur_id_fk",
+          "tableFrom": "participant",
+          "tableTo": "joueur",
+          "columnsFrom": [
+            "joueur_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {}
+    },
+    "partie": {
+      "name": "partie",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "integer",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": true
+        },
+        "code": {
+          "name": "code",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "jeu_id": {
+          "name": "jeu_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "regles": {
+          "name": "regles",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "version": {
+          "name": "version",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": 0
+        },
+        "fin_le": {
+          "name": "fin_le",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "fin_cause": {
+          "name": "fin_cause",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "fin_par": {
+          "name": "fin_par",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "cree_le": {
+          "name": "cree_le",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        }
+      },
+      "indexes": {
+        "partie_code_unique": {
+          "name": "partie_code_unique",
+          "columns": [
+            "code"
+          ],
+          "isUnique": true
+        },
+        "partie_fin_le_idx": {
+          "name": "partie_fin_le_idx",
+          "columns": [
+            "\"fin_le\" desc"
+          ],
+          "isUnique": false,
+          "where": "\"partie\".\"fin_le\" is not null"
+        },
+        "partie_jeu_id_idx": {
+          "name": "partie_jeu_id_idx",
+          "columns": [
+            "jeu_id"
+          ],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {
+        "partie_fin_par_joueur_id_fk": {
+          "name": "partie_fin_par_joueur_id_fk",
+          "tableFrom": "partie",
+          "tableTo": "joueur",
+          "columnsFrom": [
+            "fin_par"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "partie_fin_coherente": {
+          "name": "partie_fin_coherente",
+          "value": "(\"partie\".\"fin_le\" is null) = (\"partie\".\"fin_cause\" is null) and (\"partie\".\"fin_le\" is null) = (\"partie\".\"fin_par\" is null)"
+        },
+        "partie_fin_cause_connue": {
+          "name": "partie_fin_cause_connue",
+          "value": "\"partie\".\"fin_cause\" is null or \"partie\".\"fin_cause\" in ('terminee', 'abandonnee')"
+        }
+      }
+    },
+    "saisie": {
+      "name": "saisie",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "integer",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "manche_id": {
+          "name": "manche_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "joueur_id": {
+          "name": "joueur_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "valeur": {
+          "name": "valeur",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        }
+      },
+      "indexes": {
+        "saisie_manche_id_joueur_id_unique": {
+          "name": "saisie_manche_id_joueur_id_unique",
+          "columns": [
+            "manche_id",
+            "joueur_id"
+          ],
+          "isUnique": true
+        }
+      },
+      "foreignKeys": {
+        "saisie_manche_id_manche_id_fk": {
+          "name": "saisie_manche_id_manche_id_fk",
+          "tableFrom": "saisie",
+          "tableTo": "manche",
+          "columnsFrom": [
+            "manche_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "saisie_joueur_id_joueur_id_fk": {
+          "name": "saisie_joueur_id_joueur_id_fk",
+          "tableFrom": "saisie",
+          "tableTo": "joueur",
+          "columnsFrom": [
+            "joueur_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "saisie_valeur_positive": {
+          "name": "saisie_valeur_positive",
+          "value": "\"saisie\".\"valeur\" is null or \"saisie\".\"valeur\" >= 0"
+        }
+      }
+    }
+  },
+  "views": {},
+  "enums": {},
+  "_meta": {
+    "schemas": {},
+    "tables": {},
+    "columns": {}
+  },
+  "internal": {
+    "indexes": {
+      "journal_partie_id_ecrit_le_idx": {
+        "columns": {
+          "\"ecrit_le\" desc": {
+            "isExpression": true
+          }
+        }
+      },
+      "partie_fin_le_idx": {
+        "columns": {
+          "\"fin_le\" desc": {
+            "isExpression": true
+          }
+        }
+      }
+    }
+  }
+}
