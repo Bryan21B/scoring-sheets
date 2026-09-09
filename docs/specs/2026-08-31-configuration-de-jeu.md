@@ -124,7 +124,7 @@ par nombre de joueurs, parce qu'elle est déjà appliquée quand il reçoit l'ob
 | id | direction | saisie | fin | joueurs | unité |
 |---|---|---|---|---|---|
 | `6-qui-prend` | bas | `entierParJoueur` 0–200 | seuil 66 | 2–10 | tête(s) de bœuf |
-| `6-qui-prend-cartes-speciales` | bas | idem, par spread | manchesFixes 2 | 2–10 | tête(s) de bœuf |
+| `6-qui-prend-cartes-speciales` | bas | idem, par spread | manchesFixes 2 | 2–8 | tête(s) de bœuf |
 | `uno` | haut | `sommeAuGagnant` 0–999 | seuil 500 | 2–10 | point(s) |
 | `dnup` | haut | `podium` `[2, 1]` | seuil 4, `{ 2: manchesGagnees 2 }` | 2–5 | jeton(s) |
 
@@ -278,3 +278,13 @@ amont.
   clôture de chaque manche — une entrée de plus, pas un état de plus. Tranché par
   [Cycle de vie d'une partie : abandon, reprise, correction, fin](https://github.com/Bryan21B/scoring-sheets/issues/13),
   détaillé dans `docs/specs/2026-09-09-cycle-de-vie.md`.
+
+- **2026-09-09 (3)** — `6-qui-prend-cartes-speciales` se joue **à 2–8 joueurs**.
+  Le tableau du catalogue ci-dessus portait 2–10, hérité du jeu de base par
+  spread ; le livret 03-2019 n'imprime « pour 2 à 8 joueurs » que sur la
+  variante. C'est exactement le risque du spread — il hérite aussi de ce qui ne
+  se transmet pas — et le `joueursMax` se redéclare donc dans l'entrée. La
+  cellule est corrigée ci-dessus. Relevé par [Skill de condensation de règles, et les digests des quatre entrées](https://github.com/Bryan21B/scoring-sheets/issues/7),
+  écrit en code par [Catalogue des quatre entrées et résolution des règles](https://github.com/Bryan21B/scoring-sheets/issues/25).
+  Le 2–10 du jeu de base n'est, lui, ni confirmé ni contredit par la source : le
+  livret ne l'affiche nulle part, seule la boîte tranche.

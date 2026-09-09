@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { formatZodIssues } from "@/lib/zod";
 
 /**
  * Runtime environment contract.
@@ -41,10 +42,9 @@ export function parseEnv(source: Record<string, string | undefined> = process.en
   const parsed = envSchema.safeParse(source);
 
   if (!parsed.success) {
-    const issues = parsed.error.issues
-      .map((issue) => `  - ${issue.path.join(".") || "(root)"}: ${issue.message}`)
-      .join("\n");
-    throw new Error(`Invalid environment variables:\n${issues}\n\nSee .env.example.`);
+    throw new Error(
+      `Invalid environment variables:\n${formatZodIssues(parsed.error)}\n\nSee .env.example.`,
+    );
   }
 
   return parsed.data;

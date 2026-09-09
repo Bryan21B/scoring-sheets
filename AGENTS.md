@@ -106,6 +106,13 @@ libSQL, pragmas, singleton de dev), `url.ts` (pur, sans effet de bord).
 Migrations générées dans `drizzle/`, jamais éditées à la main.
 - `src/lib/env.ts` — schéma Zod de l'environnement, parsé une fois au boot.
 - `src/lib/logger.ts` — winston, server-only, sortie JSON sur stdout.
+- `src/lib/jeux/` — le catalogue des quatre entrées (`catalogue.ts`, une
+constante, jamais une table), le schéma des règles résolues et sa relecture
+depuis la colonne JSON (`regles.ts`), et la résolution qui produit l'instantané
+d'une partie (`resolution.ts`). Deux schémas Zod : le catalogue porte
+`finSelonJoueurs`, les règles résolues jamais.
+- `src/lib/zod.ts` — mise en forme des défauts d'un parse Zod, partagée par
+toutes les frontières qui valident.
 - `scripts/*.mjs` — outillage runtime en JS pur, exécutable sans toolchain TS :
 `migrate.mjs` (lancé avant de servir, y compris par Playwright),
 `check-env-sync.mjs` et `scan-secrets.mjs` (hooks Git).
