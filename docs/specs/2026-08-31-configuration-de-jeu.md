@@ -125,7 +125,7 @@ par nombre de joueurs, parce qu'elle est déjà appliquée quand il reçoit l'ob
 |---|---|---|---|---|---|
 | `6-qui-prend` | bas | `entierParJoueur` 0–200 | seuil 66 | 2–10 | tête(s) de bœuf |
 | `6-qui-prend-cartes-speciales` | bas | idem, par spread | manchesFixes 2 | 2–10 | tête(s) de bœuf |
-| `uno` | haut | `sommeAuGagnant` 0–500 | seuil 500 | 2–10 | point(s) |
+| `uno` | haut | `sommeAuGagnant` 0–999 | seuil 500 | 2–10 | point(s) |
 | `dnup` | haut | `podium` `[2, 1]` | seuil 4, `{ 2: manchesGagnees 2 }` | 2–5 | jeton(s) |
 
 Les deux premières partagent `famille: "6-qui-prend"`. La variante se déclare par
@@ -173,8 +173,8 @@ Pure, recalculée à chaque lecture. Rien de tout cela n'est stocké.
   la manche, quand tout le monde a été saisi.
 - **La complétude est dérivée du mode de saisie**, ce n'est pas un champ :
   `entierParJoueur` → tous les joueurs ont une valeur ; `sommeAuGagnant` → un
-  gagnant désigné et une valeur pour chacun des autres ; `podium` → un premier et
-  un deuxième désignés.
+  gagnant désigné **et un total unique**, jamais une valeur par perdant ;
+  `podium` → un premier et un deuxième désignés.
 - **Le gagnant d'une manche est dérivé**, jamais saisi, et défini pour les trois
   modes : `podium` → le premier ; `sommeAuGagnant` → le gagnant désigné ;
   `entierParJoueur` → le meilleur score de la manche selon `direction`. Égalité
@@ -258,3 +258,14 @@ amont.
 - Les valeurs de `rulesUrl` et `rulesDigestPath` → [URLs officielles des règles des quatre entrées du catalogue](https://github.com/Bryan21B/scoring-sheets/issues/6) et [Skill de condensation de règles, et les digests des quatre entrées](https://github.com/Bryan21B/scoring-sheets/issues/7).
 - La ligne à ajouter dans `AGENTS.md` § Code style — « quand un type et son
   schéma Zod décrivent la même donnée, le schéma est la source » → [Design doc consolidé, CONTEXT.md et ADR](https://github.com/Bryan21B/scoring-sheets/issues/16).
+
+## Corrigé après coup
+
+- **2026-09-09** — `sommeAuGagnant` collecte **un total unique** crédité au
+  gagnant, pas une valeur par perdant. Ce document disait l'inverse, et le digest
+  Uno écrit plus tard disait déjà juste ; c'est ici que la contradiction a été
+  tranchée, par [Qui pilote la passe avant, quand chacun compte pour soi](https://github.com/Bryan21B/scoring-sheets/issues/22).
+  Motif : presque personne ne compte les points à Uno, donc une manche s'y saisit
+  en deux gestes et non en *n*. La borne passe de 0–500 à **0–999** dans la
+  foulée : sur un total, 500 refuserait des manches réelles, et elle ne sert
+  qu'à attraper une faute de frappe.

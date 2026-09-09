@@ -270,7 +270,7 @@ le décompte classique en français, et range explicitement l'autre en second.
 >
 > **Autre façon de calculer les points** — […]
 
-C'est exactement `sommeAuGagnant` 0–500, direction haute, seuil 500. La règle
+C'est exactement `sommeAuGagnant`, direction haute, seuil 500. La règle
 alternative existe bien dans le document, mais sous un titre qui la désigne comme
 alternative — elle n'est jamais la règle par défaut chez Mattel.
 

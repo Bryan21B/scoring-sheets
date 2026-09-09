@@ -32,8 +32,8 @@ dans `docs/specs/2026-08-31-configuration-de-jeu.md`.
 
 - **Mode de saisie** — la forme d'une manche, et la transformation de ce qui est
   entré vers ce qui est marqué. Trois modes : `entierParJoueur` (un entier par
-  joueur), `sommeAuGagnant` (les cartes restantes de chaque perdant, dont la
-  somme est créditée au gagnant), `podium` (des désignations ordonnées, qui
+  joueur), `sommeAuGagnant` (un gagnant désigné et **un total unique** crédité à
+  lui, jamais une valeur par perdant), `podium` (des désignations ordonnées, qui
   distribuent des jetons fixes).
 - **Condition de fin** — ce qui clôt la partie : un `seuil` de points atteint, un
   nombre de manches fixe, ou un nombre de manches gagnées. Le seuil se franchit
@@ -59,6 +59,36 @@ dans `docs/specs/2026-08-31-configuration-de-jeu.md`.
   bouger les totaux mais ne peut jamais terminer la partie.
 - **Gagnant de manche** — dérivé du mode de saisie, jamais saisi. Une égalité sur
   une manche ne fait aucun gagnant.
+
+### La saisie d'une manche
+
+Tranché par [Qui pilote la passe avant, quand chacun compte pour soi](https://github.com/Bryan21B/scoring-sheets/issues/22).
+
+- **Désignation** — nommer un joueur : « qui est sorti ? » à Uno, « premier ? »
+  et « deuxième ? » à Dnup. L'information est publique, toute la table l'a vue,
+  et une seule personne la pose.
+- **Valeur** — un nombre compté devant soi, que la case concerne. Les têtes de
+  bœuf à 6 qui prend en sont le seul cas : c'est le seul mode qui en porte
+  plusieurs par manche.
+- **Passe avant** — le parcours de saisie d'une manche, un écran à la fois.
+  Elle enchaîne les désignations d'abord, puis les valeurs. Elle **démarre sur
+  soi** et s'arrête là : elle ne pousse jamais vers l'écran d'un autre joueur.
+  Sans appareil rattaché à un participant de la partie, elle démarre sur la
+  première case manquante.
+- **Récapitulatif** — l'écran qui suit la passe avant. Il porte les totaux, les
+  cases encore vides **nommées** par le joueur qu'elles concernent, et la
+  correction. C'est de là qu'on saisit pour quelqu'un d'autre, y compris pour un
+  participant sans appareil.
+- **Clôture de manche** — la déclaration qu'une manche est finie. Elle se
+  **déclare**, elle ne se déduit pas de la complétude, et n'importe quel
+  participant la fait. Une manche incomplète ne se clôt pas : elle se répare.
+  Ce n'est pas un **Geste** au sens du journal, qui n'en garde aucune trace.
+
+Qui saisit quoi ne se déclare nulle part : cela se **dérive de la forme des
+saisies**. Aucune case n'a d'auteur attendu — elle nomme le joueur qu'elle
+*concerne*, jamais celui qui doit la taper. L'ordre de la passe avant est une
+suggestion, pas une permission : n'importe quel participant écrit n'importe
+quelle case.
 
 ### Le décompte
 
