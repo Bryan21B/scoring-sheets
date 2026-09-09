@@ -27,6 +27,13 @@ installés. Conséquence : `/ask-matt` route vers `/grill-me` et `/handoff`, qui
 dans `productivity/` et sont donc absents. Utiliser `/grill-with-docs` à la place de
 `/grill-me`.
 
+## Skills propres à ce repo
+
+Ils ne viennent pas de l'amont et ne doivent pas être écrasés par une mise à jour :
+
+- `condenser-des-regles/` — condense un livret d'éditeur en digest de décompte
+  dans `docs/regles/`. Issue [#7](https://github.com/Bryan21B/scoring-sheets/issues/7).
+
 ## Config repo
 
 `/setup-matt-pocock-skills` a déjà tourné sur ce repo : la config vit dans

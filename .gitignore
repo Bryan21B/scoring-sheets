@@ -54,3 +54,10 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# livrets de règles des éditeurs — copyright Asmodee / Gigamic, le dépôt est
+# public. Seuls l'URL éditeur et l'empreinte sha256 sont versionnés, dans
+# docs/research/2026-08-31-urls-regles-officielles.md, et les digests dans
+# docs/regles/. Cette règle reste sans effet sur les deux PDF déjà suivis :
+# les retirer de l'index, et l'arbitrage de l'historique, relèvent de l'issue #19.
+/rules
