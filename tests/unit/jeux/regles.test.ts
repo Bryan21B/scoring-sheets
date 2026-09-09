@@ -70,9 +70,11 @@ describe("parseRegles", () => {
     expect(() => parseRegles(json({ ...instantane, unite }))).toThrow();
   });
 
-  it("refuse finSelonJoueurs, déjà appliqué au moment où l'instantané se fige", () => {
-    const finSelonJoueurs = { 2: { type: "manchesGagnees", valeur: 2 } };
+  it("refuse varianteSelonJoueurs, déjà appliqué au moment où l'instantané se fige", () => {
+    const varianteSelonJoueurs = {
+      2: { saisie: { mode: "podium", jetons: [0] }, fin: { type: "manchesGagnees", valeur: 2 } },
+    };
 
-    expect(() => parseRegles(json({ ...instantane, finSelonJoueurs }))).toThrow();
+    expect(() => parseRegles(json({ ...instantane, varianteSelonJoueurs }))).toThrow();
   });
 });

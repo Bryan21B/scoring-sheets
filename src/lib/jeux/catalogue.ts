@@ -1,13 +1,32 @@
 import { z } from "zod";
-import { finSchema, reglesSchema } from "@/lib/jeux/regles";
+import { finSchema, reglesSchema, saisieSchema } from "@/lib/jeux/regles";
+
+/**
+ * Ce qu'un effectif change aux règles : la variante que le livret imprime pour
+ * cette taille de table, et rien de plus.
+ *
+ * **Un seul objet par effectif**, et non un champ surchargeable par axe. À Dnup,
+ * « à deux » change la saisie *et* la fin — c'est une variante à part, pas un
+ * seuil déplacé — et deux tables séparées, l'une pour la fin l'autre pour la
+ * saisie, laisseraient corriger l'une sans l'autre. C'est exactement le défaut
+ * qui a figé des jetons dans des parties à deux joueurs.
+ *
+ * Les champs surchargeables sont **énumérés** plutôt qu'ouverts : le reste des
+ * règles ne dépend d'aucun effectif, et une variante n'a pas à pouvoir déplacer
+ * les bornes de joueurs sous les pieds de la résolution qui vient de les lire.
+ */
+const varianteSchema = z.strictObject({
+  saisie: saisieSchema.optional(),
+  fin: finSchema.optional(),
+});
 
 /**
  * Une entrée du catalogue : une identité, une présentation, et des règles.
  *
- * `finSelonJoueurs` n'existe **qu'ici** — c'est toute la raison d'avoir deux
- * schémas plutôt qu'un. Il est appliqué au moment où les règles se résolvent,
- * si bien que le moteur ne peut pas le voir : sa signature ne reçoit que
- * `Regles`, et rien qui dépende encore du nombre de joueurs.
+ * `varianteSelonJoueurs` n'existe **qu'ici** — c'est toute la raison d'avoir
+ * deux schémas plutôt qu'un. Il est appliqué au moment où les règles se
+ * résolvent, si bien que le moteur ne peut pas le voir : sa signature ne reçoit
+ * que `Regles`, et rien qui dépende encore du nombre de joueurs.
  *
  * Ce schéma est la **source** de `EntreeCatalogue`. Le catalogue lui-même n'est
  * pas parsé à la déclaration : c'est du code, le compilateur le garde. Ce qui
@@ -25,10 +44,10 @@ export const entreeCatalogueSchema = z.strictObject({
   rulesUrl: z.url().nullable(),
   rulesDigestPath: z.string().min(1).nullable(),
   regles: reglesSchema.extend({
-    /** Le jeu change de condition de fin à certains effectifs — Dnup à deux
+    /** Le jeu devient une autre variante à certains effectifs — Dnup à deux
      * joueurs se joue sans jetons, en manches gagnées. La clé est le nombre de
-     * joueurs exact ; les effectifs absents gardent `fin`. */
-    finSelonJoueurs: z.record(z.coerce.number().int().positive(), finSchema).optional(),
+     * joueurs exact ; les effectifs absents gardent les règles de base. */
+    varianteSelonJoueurs: z.record(z.coerce.number().int().positive(), varianteSchema).optional(),
   }),
 });
 
@@ -111,8 +130,18 @@ const DNUP = {
     joueursMin: 2,
     joueursMax: 5,
     // À deux joueurs, Dnup est une autre variante : pas de jetons du tout, la
-    // partie se gagne à deux manches.
-    finSelonJoueurs: { 2: { type: "manchesGagnees", valeur: 2 } },
+    // partie se gagne à deux manches. Il reste un rang à désigner — poser sa
+    // dernière carte gagne la manche sur-le-champ, il n'y a pas de deuxième
+    // sorti — et ce rang ne rapporte rien : `[0]` est le barème d'un jeu qui ne
+    // compte pas de points, là où `[]` rendrait toute manche complète, la
+    // désignation comprise, et laisserait clore une manche que personne n'a
+    // gagnée.
+    varianteSelonJoueurs: {
+      2: {
+        saisie: { mode: "podium", jetons: [0] },
+        fin: { type: "manchesGagnees", valeur: 2 },
+      },
+    },
   },
 } as const satisfies EntreeCatalogue;
 

@@ -40,7 +40,12 @@ export type Fin = z.infer<typeof finSchema>;
  */
 const bornes = { min: z.literal(0), max: z.number().int().positive() };
 
-const saisieSchema = z.discriminatedUnion("mode", [
+/**
+ * Exporté pour la seule variante selon l'effectif du catalogue, qui remplace la
+ * saisie entière : une forme recopiée là-bas dériverait de celle-ci le jour où
+ * l'une est corrigée seule.
+ */
+export const saisieSchema = z.discriminatedUnion("mode", [
   z.strictObject({ mode: z.literal("entierParJoueur"), ...bornes }),
   z.strictObject({ mode: z.literal("sommeAuGagnant"), ...bornes }),
   z.strictObject({
@@ -53,7 +58,7 @@ const saisieSchema = z.discriminatedUnion("mode", [
  * Les règles **résolues** : le seul bloc que le moteur reçoit, et celui que la
  * partie fige à son ouverture.
  *
- * Ni `finSelonJoueurs` ni la présentation n'y entrent — le schéma est strict, et
+ * Ni `varianteSelonJoueurs` ni la présentation n'y entrent — le schéma est strict, et
  * c'est ce qui le garantit. La surcharge par nombre de joueurs est déjà
  * appliquée quand l'objet se construit ; le nom, la famille, l'unité et les
  * liens de règles se relisent du catalogue à l'affichage, ce qui laisse un id

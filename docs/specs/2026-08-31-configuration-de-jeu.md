@@ -13,7 +13,7 @@ Quatre entrées au catalogue, et elles ne s'accordent sur presque rien :
 | 6 qui prend | têtes de bœuf par joueur | le plus bas gagne | 66 têtes |
 | 6 qui prend, variante | idem | le plus bas gagne | exactement 2 manches |
 | Uno | somme des cartes restantes des autres, au gagnant | le plus haut gagne | 500 points |
-| Dnup | 2 jetons au 1er sorti, 1 au 2e, 0 aux autres | le plus haut gagne | 4 jetons — **mais à 2 joueurs, 2 manches gagnées** |
+| Dnup | 2 jetons au 1er sorti, 1 au 2e, 0 aux autres | le plus haut gagne | 4 jetons — **mais à 2 joueurs, aucun jeton n'existe : 2 manches gagnées** |
 
 Le cadrage de la carte a tranché qu'un `Jeu` est **une entité portant une
 configuration déclarative, lue par un moteur de décompte unique**. Ce document
@@ -61,7 +61,7 @@ flowchart LR
   ETAT["État<br/>totaux · classement · fini"]
   UI["Affichage"]
 
-  CAT -->|"à la création :<br/>nb de joueurs + surcharge de fin.valeur"| RES
+  CAT -->|"à la création :<br/>variante de l'effectif + surcharge de fin.valeur"| RES
   RES -->|"figées, jamais relues du catalogue"| SNAP
   SNAP -->|"Zod à la relecture"| MOT
   MAN --> MOT
@@ -111,13 +111,16 @@ type EntreeCatalogue = {
   unite: { un: string; plusieurs: string };
   rulesUrl: string | null;
   rulesDigestPath: string | null;
-  regles: Regles & { finSelonJoueurs?: Record<number, Fin> };
+  regles: Regles & {
+    varianteSelonJoueurs?: Record<number, { saisie?: Saisie; fin?: Fin }>;
+  };
 };
 ```
 
-`finSelonJoueurs` n'existe **qu'au catalogue**. Deux schémas Zod, donc : celui du
-catalogue, et celui des règles résolues. Le moteur ne peut pas voir la surcharge
-par nombre de joueurs, parce qu'elle est déjà appliquée quand il reçoit l'objet.
+`varianteSelonJoueurs` n'existe **qu'au catalogue**. Deux schémas Zod, donc :
+celui du catalogue, et celui des règles résolues. Le moteur ne peut pas voir la
+surcharge par nombre de joueurs, parce qu'elle est déjà appliquée quand il reçoit
+l'objet.
 
 ### Le catalogue
 
@@ -126,7 +129,8 @@ par nombre de joueurs, parce qu'elle est déjà appliquée quand il reçoit l'ob
 | `6-qui-prend` | bas | `entierParJoueur` 0–200 | seuil 66 | 2–10 | tête(s) de bœuf |
 | `6-qui-prend-cartes-speciales` | bas | idem, par spread | manchesFixes 2 | 2–8 | tête(s) de bœuf |
 | `uno` | haut | `sommeAuGagnant` 0–999 | seuil 500 | 2–10 | point(s) |
-| `dnup` | haut | `podium` `[2, 1]` | seuil 4, `{ 2: manchesGagnees 2 }` | 2–5 | jeton(s) |
+| `dnup` | haut | `podium` `[2, 1]` | seuil 4 | 2–5 | jeton(s) |
+| `dnup`, variante à 2 joueurs | haut | `podium` `[0]` | manchesGagnees 2 | 2 | jeton(s) |
 
 Les deux premières partagent `famille: "6-qui-prend"`. La variante se déclare par
 spread de l'entrée de base — c'est du TypeScript, l'héritage est déjà dans le
@@ -196,7 +200,7 @@ Pure, recalculée à chaque lecture. Rien de tout cela n'est stocké.
 contre les ids du catalogue à l'écriture.
 
 La partie stocke l'**instantané complet** des règles résolues — surcharge et
-`finSelonJoueurs` déjà appliquées. C'est le seul rempart contre une édition
+`varianteSelonJoueurs` déjà appliquées. C'est le seul rempart contre une édition
 rétroactive : le catalogue vit dans une constante TypeScript, éditable sans
 migration, et rien d'autre n'empêcherait une correction de barème de réécrire
 des parties terminées qui nourrissent le palmarès et un futur classement Elo.
@@ -288,3 +292,14 @@ amont.
   écrit en code par [Catalogue des quatre entrées et résolution des règles](https://github.com/Bryan21B/scoring-sheets/issues/25).
   Le 2–10 du jeu de base n'est, lui, ni confirmé ni contredit par la source : le
   livret ne l'affiche nulle part, seule la boîte tranche.
+
+- **2026-09-09 (4)** — `finSelonJoueurs` devient **`varianteSelonJoueurs`**, et
+  surcharge la `saisie` autant que la `fin`. Ce document ne portait que la
+  condition de fin, si bien que Dnup résolu à deux joueurs gardait un barème
+  `[2, 1]` dans une variante où **les jetons n'existent pas** — et l'instantané
+  l'aurait figé pour toujours. Un effectif nomme désormais une variante entière,
+  déclarée d'un bloc : à deux, Dnup se saisit en `podium` `[0]` — on désigne
+  toujours celui qui sort, sa désignation ne rapporte rien — et se gagne à deux
+  manches. Tranché par [Dnup à deux joueurs fige des jetons qui n'existent pas](https://github.com/Bryan21B/scoring-sheets/issues/42),
+  détaillé dans `docs/adr/0009-la-variante-selon-l-effectif.md`, qui porte aussi
+  le recensement : aucune partie n'existait, donc rien à corriger.

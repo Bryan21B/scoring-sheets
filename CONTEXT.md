@@ -28,6 +28,13 @@ dans `docs/specs/2026-08-31-configuration-de-jeu.md`.
   Ce qui n'y est pas ne peut pas influencer un calcul.
 - **Unité** — le mot qui nomme les points d'un jeu, au singulier et au pluriel :
   tête(s) de bœuf, point(s), jeton(s). De la présentation, jamais des règles.
+- **Variante selon l'effectif** — ce qu'une taille de table change aux règles
+  d'une entrée : la saisie, la fin, ou les deux, déclarées d'un bloc. Elle vit au
+  catalogue, s'applique à la résolution, et n'entre jamais dans l'instantané.
+  Dnup à deux joueurs en est le seul cas : **aucun jeton n'existe** et la partie
+  se gagne à deux manches. Tranché par
+  [Dnup à deux joueurs fige des jetons qui n'existent pas](https://github.com/Bryan21B/scoring-sheets/issues/42),
+  détaillé dans `docs/adr/0009-la-variante-selon-l-effectif.md`.
 
 ### Ce que les règles décrivent
 

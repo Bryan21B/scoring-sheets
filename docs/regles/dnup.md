@@ -74,8 +74,11 @@ entrer en conflit entre eux comme avec ceux de l'adversaire. Le joueur à l'éto
 n'a **qu'un seul tour** au premier tour de table. Poser sa dernière carte gagne
 la manche sur-le-champ, et **le premier à 2 manches gagnées** gagne la partie.
 
-C'est la seule entrée du catalogue dont la **condition de fin change avec le
-nombre de joueurs**, ce que porte le champ `finSelonJoueurs`.
+C'est la seule entrée du catalogue dont les **règles changent avec le nombre de
+joueurs**, ce que porte le champ `varianteSelonJoueurs` : à deux, la fin devient
+`manchesGagnees 2` **et** le barème tombe à `[0]` — on désigne toujours celui qui
+sort, puisque c'est lui qui gagne la manche, mais sa sortie ne rapporte aucun
+jeton.
 
 ## Pièges
 

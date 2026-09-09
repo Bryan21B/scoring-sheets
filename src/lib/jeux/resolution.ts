@@ -24,7 +24,7 @@ export type OuvertureDePartie = {
  * Résout les règles d'une entrée pour une table donnée, et rend l'instantané
  * que la partie fige.
  *
- * C'est le seul endroit où `finSelonJoueurs` et la surcharge de seuil sont
+ * C'est le seul endroit où `varianteSelonJoueurs` et la surcharge de seuil sont
  * lues : après cet appel, plus rien ne dépend du nombre de joueurs ni du
  * catalogue. Deux gestes le garantissent — l'instantané se construit champ par
  * champ plutôt que par rest, si bien qu'un champ ajouté au catalogue demain n'y
@@ -32,12 +32,18 @@ export type OuvertureDePartie = {
  * l'exécution et qu'une partie qui tiendrait le catalogue par référence
  * pourrait le réécrire pour toutes les autres.
  *
+ * La variante se lit **une seule fois**, et chacun de ses champs remplace le
+ * sien : à Dnup, deux joueurs prennent la saisie sans jetons et la fin en
+ * manches gagnées du même coup. Surcharger la fin sans la saisie figerait dans
+ * la partie un barème que la table ne jouera jamais, et l'instantané ne se
+ * rattrape pas.
+ *
  * @throws si l'effectif sort des bornes du jeu, ou si la surcharge n'est pas un
  * entier ≥ 1. Les deux sont des refus secs : une partie ouverte sur des règles
  * approximatives se découvre au moment du décompte, quand il est trop tard.
  */
 export function resoudreRegles(entree: EntreeCatalogue, ouverture: OuvertureDePartie): Regles {
-  const { classement, saisie, fin, joueursMin, joueursMax, finSelonJoueurs } = entree.regles;
+  const { classement, saisie, fin, joueursMin, joueursMax, varianteSelonJoueurs } = entree.regles;
   const { nombreDeJoueurs, finValeur } = ouverture;
 
   const effectifSchema = z.number().int().min(joueursMin).max(joueursMax);
@@ -48,10 +54,12 @@ export function resoudreRegles(entree: EntreeCatalogue, ouverture: OuvertureDePa
     );
   }
 
+  const variante = varianteSelonJoueurs?.[nombreDeJoueurs];
+
   return structuredClone({
     classement,
-    saisie,
-    fin: surcharger(finSelonJoueurs?.[nombreDeJoueurs] ?? fin, finValeur),
+    saisie: variante?.saisie ?? saisie,
+    fin: surcharger(variante?.fin ?? fin, finValeur),
     joueursMin,
     joueursMax,
   });

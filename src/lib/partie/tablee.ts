@@ -11,7 +11,7 @@ import { resoudreRegles } from "@/lib/jeux/resolution";
  * manches gagnées. Montrer 4 jetons là serait montrer une règle qui ne sera pas
  * appliquée.
  *
- * Passe par `resoudreRegles` plutôt que de relire `finSelonJoueurs` : deux
+ * Passe par `resoudreRegles` plutôt que de relire `varianteSelonJoueurs` : deux
  * lectures de la même surcharge divergeraient le jour où l'une est corrigée
  * seule. Le refus hors bornes y est une exception ; ici c'est un `null`, parce
  * que l'écran de la tablée traverse cet état à chaque frappe dans le champ du

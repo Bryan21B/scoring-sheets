@@ -504,10 +504,36 @@ describe("les manches gagnées", () => {
     );
   });
 
+  it("ne créditent aucun jeton à Dnup à deux joueurs", () => {
+    // Le cas qui a ouvert le ticket 42 : deux manches gagnées par la même
+    // personne rendaient des totaux de 4 et 2, pour une variante dont le livret
+    // ne compte aucun jeton. Les manches gagnées ferment la partie ; les totaux
+    // restent à zéro, y compris pour un rang de plus que le barème n'en paie —
+    // à deux, il n'y a pas de deuxième sorti.
+    const gagneeParUn = manche(
+      [1, 2],
+      [
+        [1, 1],
+        [2, 2],
+      ],
+      true,
+    );
+
+    const etat = evaluer(dnupADeux, [gagneeParUn, gagneeParUn]);
+
+    expect(etat.totaux).toEqual(
+      new Map([
+        [1, 0],
+        [2, 0],
+      ]),
+    );
+    expect(etat.fini).toBe(true);
+  });
+
   it("ferment Dnup à deux joueurs sur deux manches gagnées", () => {
-    // À deux, Dnup est une autre variante : pas de jetons du tout, la partie se
-    // gagne à deux manches — et c'est la condition de fin qui change, pas le
-    // mode de saisie.
+    // À deux, Dnup est une autre variante : la partie se gagne à deux manches,
+    // et la saisie change avec elle — on désigne toujours un rang, mais il ne
+    // rapporte aucun jeton.
     const gagneeParUn = manche(
       [1, 2],
       [

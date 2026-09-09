@@ -15,8 +15,9 @@ et elles ne se rencontrent pas bien.
   rétroactive du barème, et `partie.regles` est `NOT NULL` : il n'y a pas de
   partie sans instantané.
 - **Résoudre les règles demande un effectif.** `resoudreRegles` refuse hors de
-  `[joueursMin, joueursMax]`, et applique `finSelonJoueurs` — à Dnup, deux
-  joueurs se passent de jetons et jouent en manches gagnées.
+  `[joueursMin, joueursMax]`, et applique `varianteSelonJoueurs` (nommé
+  `finSelonJoueurs` à la date de cet ADR, élargi à la saisie par l'ADR `0009`) —
+  à Dnup, deux joueurs se passent de jetons et jouent en manches gagnées.
 
 Or **créer une partie, c'est y être**, et rien d'autre : le créateur est seul
 participant à l'ouverture, les autres arrivent par le code. Un effectif déduit du
@@ -77,7 +78,7 @@ par le code, en salle d'attente. C'est un nombre, pas un roster.
 - **La création est refusée hors des bornes du jeu**, ce qui est le critère
   demandé, et le refus est **sec** : la phrase de `resoudreRegles` s'affiche
   au-dessus du formulaire, et rien n'est écrit.
-- **Le seuil imprimé est juste dès le premier affichage**, `finSelonJoueurs`
+- **Le seuil imprimé est juste dès le premier affichage**, `varianteSelonJoueurs`
   compris.
 - **Prix assumé : l'effectif déclaré peut mentir.** Annoncer cinq et jouer à
   quatre fige les règles de cinq. C'est cohérent avec « le nombre de joueurs est
@@ -85,6 +86,6 @@ par le code, en salle d'attente. C'est un nombre, pas un roster.
   basculer la condition de fin en plein jeu — mais cela veut dire que l'effectif
   est une **déclaration**, comme l'identité. Si le réel montre qu'on se trompe
   souvent, c'est ici qu'il faudra revenir, pas dans le moteur.
-- **`finImprimee` est le seul endroit qui relit `finSelonJoueurs` pour
+- **`finImprimee` est le seul endroit qui relit `varianteSelonJoueurs` pour
   l'affichage**, et il passe par `resoudreRegles` : deux lectures de la même
   surcharge divergeraient le jour où l'une est corrigée seule.

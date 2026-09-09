@@ -72,7 +72,14 @@ describe("CATALOGUE", () => {
       fin: { type: "seuil", valeur: 4 },
       joueursMin: 2,
       joueursMax: 5,
-      finSelonJoueurs: { 2: { type: "manchesGagnees", valeur: 2 } },
+      // À deux, le livret décrit une variante entière et pas un seuil déplacé :
+      // la saisie et la fin changent ensemble, donc elles se déclarent ensemble.
+      varianteSelonJoueurs: {
+        2: {
+          saisie: { mode: "podium", jetons: [0] },
+          fin: { type: "manchesGagnees", valeur: 2 },
+        },
+      },
     });
   });
 

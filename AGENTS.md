@@ -117,7 +117,8 @@ jamais éditées à la main.
 constante, jamais une table), le schéma des règles résolues et sa relecture
 depuis la colonne JSON (`regles.ts`), et la résolution qui produit l'instantané
 d'une partie (`resolution.ts`). Deux schémas Zod : le catalogue porte
-`finSelonJoueurs`, les règles résolues jamais. Le moteur de décompte
+`varianteSelonJoueurs` — ce qu'un effectif change à la saisie et à la fin, Dnup
+à deux joueurs en étant le seul cas — les règles résolues jamais. Le moteur de décompte
 (`moteur.ts`) ferme le dossier : pur, sans base, il ne reçoit que des règles
 résolues et des manches, et n'importe donc ni `@/db` ni le catalogue — un test
 le vérifie sur la source.
