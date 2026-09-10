@@ -43,6 +43,17 @@ async function saisirUneManche(partieId: number): Promise<void> {
 }
 
 /**
+ * Le geste qui **dégèle** : supprimer la manche 1.
+ *
+ * C'est le détour assumé quand on réalise après coup que Paul n'a jamais été
+ * ajouté, et c'est lui qui met le gel à l'épreuve : rien ne le stocke, donc
+ * rien n'a à être remis à zéro ici.
+ */
+async function supprimerLesManches(partieId: number): Promise<void> {
+  await base.delete(manche).where(eq(manche.partieId, partieId));
+}
+
+/**
  * La tablée telle que l'écran la montre, dans l'ordre d'inscription.
  *
  * Relue par la lecture publique et non par un `select` sur `participant` : ce
@@ -121,6 +132,36 @@ describe("le gel de la liste", () => {
     await saisirUneManche(chezMarie.partieId);
 
     expect((await lireSalleDAttente(base, chezPaul.partieId, creerIdAppareil())).gelee).toBe(false);
+  });
+
+  it("se défait quand la manche 1 disparaît, parce que rien ne le stocke", async () => {
+    // Le test qui distingue le gel déduit d'une colonne d'état : une colonne
+    // resterait à « gelée » après la suppression, et le détour ne rouvrirait
+    // plus rien.
+    const chezMarie = await ouvrirUnePartie("Marie", creerIdAppareil());
+
+    await saisirUneManche(chezMarie.partieId);
+    await supprimerLesManches(chezMarie.partieId);
+
+    expect((await lireSalleDAttente(base, chezMarie.partieId, creerIdAppareil())).gelee).toBe(
+      false,
+    );
+  });
+
+  it("rend le détour praticable : supprimer la manche 1, ajouter Paul", async () => {
+    // Le prix assumé de l'interdiction de rejoindre en cours de partie. S'il
+    // ne se paie pas, l'interdiction n'a plus de porte de sortie.
+    const chezMarie = await ouvrirUnePartie("Marie", creerIdAppareil());
+
+    await saisirUneManche(chezMarie.partieId);
+    await supprimerLesManches(chezMarie.partieId);
+    const resultat = await rejoindrePartie(base, chezMarie.partieId, {
+      idAppareil: creerIdAppareil(),
+      identite: { mode: "nouveau", nom: "Paul" },
+    });
+
+    expect(resultat.statut).toBe("rejoint");
+    expect(await nomsDesParticipants(chezMarie.code)).toEqual(["Marie", "Paul"]);
   });
 });
 

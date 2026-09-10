@@ -67,6 +67,13 @@ async function schemaObjects(client: Client, type: "table" | "index"): Promise<s
   return result.rows.map((row) => String(row.name));
 }
 
+/** The columns one table carries, in declaration order. */
+async function columnNames(client: Client, table: string): Promise<string[]> {
+  const result = await client.execute(`PRAGMA table_info(${table})`);
+
+  return result.rows.map((row) => String(row.name));
+}
+
 let dir: string;
 let databasePath: string;
 let client: Client;
@@ -140,6 +147,35 @@ describe("migrations", () => {
       "participant",
       "partie",
       "saisie",
+    ]);
+  });
+});
+
+describe("the freeze of the participant list, deduced and never stored", () => {
+  it("gives partie no state column: a manche is the only thing that freezes it", async () => {
+    // Asserted as the whole column list rather than as an absence, so the day
+    // someone adds `gele` this test says so instead of quietly tolerating it.
+    // The freeze is `SELECT 1 FROM manche WHERE partie_id = ?` and nothing else
+    // — see `estGelee` in `src/lib/partie/salle-attente.ts`.
+    expect(await columnNames(client, "partie")).toEqual([
+      "id",
+      "code",
+      "jeu_id",
+      "regles",
+      "version",
+      "fin_le",
+      "fin_cause",
+      "fin_par",
+      "cree_le",
+    ]);
+  });
+
+  it("gives participant none either: leaving is a date, not a status", async () => {
+    expect(await columnNames(client, "participant")).toEqual([
+      "id",
+      "partie_id",
+      "joueur_id",
+      "retire_le",
     ]);
   });
 });
