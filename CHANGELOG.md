@@ -1,5 +1,15 @@
 # Changelog
 
+## [0.3.0](https://github.com/Bryan21B/scoring-sheets/compare/v0.2.0...v0.3.0) (2026-09-10)
+
+### Fonctionnalités
+
+* **manche:** Saisir sa case sous condition, et l'écrire au journal ([95b7930](https://github.com/Bryan21B/scoring-sheets/commit/95b7930504aa89e28452db255534d5269021c9c3)), closes [#29](https://github.com/Bryan21B/scoring-sheets/issues/29)
+
+### Corrections
+
+* **jeux:** Surcharger la saisie autant que la fin selon l'effectif ([3fd1b89](https://github.com/Bryan21B/scoring-sheets/commit/3fd1b89e687500a9553961423e9573531432f04e)), closes [#42](https://github.com/Bryan21B/scoring-sheets/issues/42)
+
 ## [0.2.0](https://github.com/Bryan21B/scoring-sheets/compare/v0.1.0...v0.2.0) (2026-09-09)
 
 ### Fonctionnalités
