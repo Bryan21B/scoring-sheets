@@ -15,6 +15,15 @@ export const LEA: JoueurConnu = { id: 3, nom: "Léa" };
 export const TABLEE = [MARIE, PAUL, LEA] as const;
 
 /**
+ * Celle qui est au roster **sans être de la partie**.
+ *
+ * Elle vit ici plutôt que dans chaque écran qui en a besoin : deux Zoé
+ * déclarées séparément prendraient deux identifiants, et un test finirait par
+ * chercher la place de l'une dans le balisage de l'autre.
+ */
+export const ZOE: JoueurConnu = { id: 4, nom: "Zoé" };
+
+/**
  * Les cases de la tablée, une par joueur, dans l'ordre.
  *
  * Les valeurs manquantes sont vides, ce qui laisse écrire `casesDeLaTablee(8)`

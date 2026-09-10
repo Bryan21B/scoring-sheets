@@ -73,8 +73,14 @@ export function EcranDePartie({
    * l'oublierait afficherait une partie muette après un geste refusé.
    */
   erreur: string | undefined;
-  /** `<SondageDePartie>`, passé par la page. Voir plus haut. */
-  sondage?: ReactNode;
+  /**
+   * `<SondageDePartie>`, passé par la page. Voir plus haut.
+   *
+   * Exigé, à la différence de l'accueil : là-bas il n'y a parfois aucune partie
+   * à sonder, ici il y en a toujours une, et un écran sans sondage serait une
+   * feuille de score qui ne bouge plus sous les autres téléphones.
+   */
+  sondage: ReactNode;
 }): ReactElement {
   return (
     <Ecran>

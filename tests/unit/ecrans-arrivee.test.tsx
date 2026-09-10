@@ -7,11 +7,9 @@ import { trouverEntree } from "@/lib/jeux/catalogue";
 import { resoudreRegles } from "@/lib/jeux/resolution";
 import type { VueDePartie } from "@/lib/partie/lecture";
 import type { Arrivee } from "@/lib/partie/salle-attente";
-import type { JoueurConnu } from "@/lib/roster/noms";
+import { MARIE, ZOE } from "./helpers/tablee";
 
 const UNO = trouverEntree("uno");
-const MARIE: JoueurConnu = { id: 1, nom: "Marie" };
-const ZOE: JoueurConnu = { id: 3, nom: "Zoé" };
 
 /** Une partie d'Uno où Marie est seule, telle que la page la reçoit. */
 const PARTIE: VueDePartie = {
@@ -50,7 +48,7 @@ describe("la salle d'attente, quand l'appareil est déjà lié", () => {
     const html = rendre(proposeZoe);
 
     expect(html).toContain('name="joueurId"');
-    expect(html).toContain('value="3"');
+    expect(html).toContain(`value="${ZOE.id}"`);
     expect(html).toContain('action="/p/rejoindre"');
     expect(html).toContain('type="submit"');
   });
@@ -205,7 +203,7 @@ describe("ajouter quelqu'un qui n'a pas de téléphone", () => {
     const html = rendre(marieEstLa);
     const ajout = html.slice(html.indexOf('action="/p/ajouter"'));
 
-    expect(ajout).toContain('value="3"');
+    expect(ajout).toContain(`value="${ZOE.id}"`);
     expect(ajout).toContain("Zoé");
   });
 

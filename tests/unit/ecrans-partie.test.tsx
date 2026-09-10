@@ -7,14 +7,10 @@ import { resoudreRegles } from "@/lib/jeux/resolution";
 import type { LigneDeGrille, VueDeGrille } from "@/lib/manche/lecture";
 import type { VueDePartie } from "@/lib/partie/lecture";
 import type { EtatDeSalle } from "@/lib/partie/salle-attente";
-import type { JoueurConnu } from "@/lib/roster/noms";
-import { MARIE, TABLEE } from "./helpers/tablee";
+import { MARIE, TABLEE, ZOE } from "./helpers/tablee";
 
 const SIX_QUI_PREND = trouverEntree("6-qui-prend");
 const REGLES = resoudreRegles(SIX_QUI_PREND, { nombreDeJoueurs: 3 });
-
-/** Zoé est au roster sans être de la partie : c'est elle, la spectatrice. */
-const ZOE: JoueurConnu = { id: 9, nom: "Zoé" };
 
 const PARTIE: VueDePartie = {
   id: 1,
