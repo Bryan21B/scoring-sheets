@@ -9,9 +9,11 @@ import {
 import { TropDeTentatives } from "@/components/code-inconnu";
 import { PartieEntete } from "@/components/partie-entete";
 import { SalleDAttente } from "@/components/salle-attente";
+import { TiroirDuJournal } from "@/components/tiroir-journal";
 import { Button } from "@/components/ui/button";
 import { db } from "@/db";
 import { cleDeLaRequete, lireLAppareil } from "@/lib/appareil/requete";
+import { lireLeTiroir } from "@/lib/journal/lecture";
 import { messageDeRefusSchema, premierParametre } from "@/lib/partie/identite-url";
 import { chercherPartieParCode, limiteDeRecherche } from "@/lib/partie/recherche";
 import { lireSalleDAttente } from "@/lib/partie/salle-attente";
@@ -105,6 +107,11 @@ export default async function PageDePartie(props: PageProps<"/p/[code]">): Promi
         rejoindre={rejoindreAction}
         ajouter={ajouterParticipantAction}
         retirer={retirerParticipantAction}
+      />
+
+      <TiroirDuJournal
+        code={partie.code}
+        tiroir={await lireLeTiroir(db, partie.id, await props.searchParams)}
       />
     </Ecran>
   );

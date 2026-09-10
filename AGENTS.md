@@ -142,8 +142,13 @@ vérifiable contre une base jetable (`tests/unit/helpers/base-de-test.ts`).
 idempotente par l'unicité `(partie, numéro)` (`ouverture.ts`), l'écriture
 **conditionnée sur la valeur montrée** et sa ligne de journal dans la **même
 transaction** (`saisie.ts`, `journal/ligne.ts`), la lecture d'une manche et le
-passage au moteur (`lecture.ts`), et les deux fonctions pures des écrans — par
-où la passe avant démarre (`passe-avant.ts`), ce que le pavé accepte (`pave.ts`).
+passage au moteur (`manche/lecture.ts`), et les deux fonctions pures des écrans
+— par où la passe avant démarre (`passe-avant.ts`), ce que le pavé accepte
+(`pave.ts`). Le **tiroir** est la lecture du journal : sa part pure — adresse,
+portée, étiquette d'appareil, horodatage — dans `journal/tiroir.ts`, sa requête
+dans `journal/lecture.ts`, son écran dans `src/components/tiroir-journal.tsx`.
+Deux `lecture.ts` cohabitent donc, l'un par manche et l'autre par journal : les
+qualifier de leur dossier est ce qui les garde distincts.
 
 ## Gotchas
 

@@ -27,16 +27,17 @@ export type Agissant = z.infer<typeof agissantSchema>;
 /**
  * Ce qu'une ligne `saisie` garde en plus des colonnes : la valeur posée.
  *
- * Non exporté : rien ne le relit encore. Le schéma est ici la **source** du
- * type — la charge utile ne s'écrit pas deux fois — et il deviendra une vraie
- * frontière le jour où le tiroir relira ce JSON depuis la base.
+ * Le schéma est la **source** du type — la charge utile ne s'écrit pas deux
+ * fois — et il est devenu une vraie frontière le jour où le tiroir a relu ce
+ * JSON depuis la base : `src/lib/journal/lecture.ts` le repasse à la lecture,
+ * parce qu'une colonne `TEXT` ne promet rien de ce qu'on y a mis.
  */
-const detailDeSaisieSchema = z.strictObject({
+export const detailDeSaisieSchema = z.strictObject({
   valeur: z.number().int().nonnegative(),
 });
 
 /** Ce qu'une ligne `correction` garde : d'où l'on venait, et où l'on va. */
-const detailDeCorrectionSchema = z.strictObject({
+export const detailDeCorrectionSchema = z.strictObject({
   ancienne: z.number().int().nonnegative(),
   nouvelle: z.number().int().nonnegative(),
 });
