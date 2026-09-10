@@ -1,5 +1,15 @@
 # Changelog
 
+## [0.4.0](https://github.com/Bryan21B/scoring-sheets/compare/v0.3.0...v0.4.0) (2026-09-10)
+
+### Fonctionnalités
+
+* **partie:** Rejoindre une partie par son code, en salle d'attente ([5f150c8](https://github.com/Bryan21B/scoring-sheets/commit/5f150c858b4b19a253f17468fe2d70d0f246e720)), closes [#28](https://github.com/Bryan21B/scoring-sheets/issues/28)
+
+### Corrections
+
+* **outils:** Nommer les chemins à linter, pour que Biome tourne aussi dans un worktree ([579eda5](https://github.com/Bryan21B/scoring-sheets/commit/579eda59fb242a858431d6a68d92a4858b1b6661))
+
 ## [0.3.0](https://github.com/Bryan21B/scoring-sheets/compare/v0.2.0...v0.3.0) (2026-09-10)
 
 ### Fonctionnalités
