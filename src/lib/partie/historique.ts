@@ -88,9 +88,10 @@ type PartieFinie = {
  * Une ligne de plus que demandé est lue, et elle n'est jamais rendue : c'est
  * elle, et non un `count(*)`, qui répond à « y en a-t-il d'autres ? ».
  */
-async function lireLaPage(base: Lecture, filtre: FiltreDHistorique): Promise<PartieFinie[]> {
+export function requeteDesPartiesFinies(base: Lecture, filtre: FiltreDHistorique) {
   const finies = isNotNull(partie.finLe);
-  const lignes = await base
+
+  return base
     .select({
       id: partie.id,
       code: partie.code,
@@ -103,6 +104,17 @@ async function lireLaPage(base: Lecture, filtre: FiltreDHistorique): Promise<Par
     .where(filtre.jeuId === null ? finies : and(finies, eq(partie.jeuId, filtre.jeuId)))
     .orderBy(desc(partie.finLe))
     .limit(filtre.combien + 1);
+}
+
+/**
+ * La page relue et validée : le jeu résolu, la fin recomposée.
+ *
+ * Séparée de {@link requeteDesPartiesFinies} pour que le plan d'exécution se
+ * vérifie sur la requête elle-même, sans avoir à la réécrire dans un test — une
+ * requête recopiée à la main prouverait qu'un index existe, jamais qu'il sert.
+ */
+async function lireLaPage(base: Lecture, filtre: FiltreDHistorique): Promise<PartieFinie[]> {
+  const lignes = await requeteDesPartiesFinies(base, filtre);
 
   return lignes.map((ligne) => {
     const jeuId = jeuIdSchema.safeParse(ligne.jeuId);
