@@ -1,24 +1,49 @@
-import { CatalogueListe } from "@/components/catalogue-liste";
-import { RejoindreParCode } from "@/components/rejoindre-par-code";
+import type { ReactElement } from "react";
+import { ouvrirLaMancheSuivanteAction } from "@/app/p/[code]/actions";
+import { Accueil } from "@/components/accueil";
+import { PollDePartie } from "@/components/poll-de-partie";
+import { db } from "@/db";
 import { CATALOGUE } from "@/lib/jeux/catalogue";
+import { lireLaGrille } from "@/lib/manche/lecture";
+import { lirePartieEnCours } from "@/lib/partie/en-cours";
 
 /**
- * L'accueil, tant qu'aucune partie n'est en cours : **le catalogue**.
- *
- * Il n'y a pas d'écran d'accueil à composer par-dessus — la première question
- * d'une soirée est « on joue à quoi ? », et l'y poser directement supprime un
- * écran de cérémonie qui n'existerait que pour être traversé.
- *
- * Le champ « j'ai un code » vient **après** le catalogue : ouvrir une partie est
- * le geste de celui qui arrive sur cette page, rejoindre celui de qui a reçu un
- * lien — et qui, dans ce cas, ne passe pas par ici.
+ * Jamais mise en cache, et `use cache` y est **interdit** : l'accueil montre une
+ * partie qui bouge sous cinq téléphones, et un cache partagé servirait du
+ * périmé aux autres joueurs sans qu'aucune invalidation ne les atteigne. Voir
+ * `docs/adr/0003-polling-plutot-que-push.md`.
  */
-export default function Accueil() {
+export const dynamic = "force-dynamic";
+
+/**
+ * L'accueil : **la partie en cours**, ou le catalogue quand rien ne tourne.
+ *
+ * Ce n'est que du câblage — la forme des deux écrans vit dans `Accueil`, la
+ * question « qu'est-ce qui tourne ? » dans `lirePartieEnCours`, et les totaux
+ * dans le moteur. Rien ne se décide ici.
+ *
+ * La grille et l'estampille sortent de la **même passe de rendu** : le poll
+ * compare à `partie.version` telle qu'elle était quand ces valeurs-ci ont été
+ * lues, si bien qu'une écriture arrivée entre les deux se rattrape au battement
+ * suivant plutôt que de passer inaperçue.
+ */
+export default async function PageDAccueil(): Promise<ReactElement> {
+  const entrees = Object.values(CATALOGUE);
+  const partie = await lirePartieEnCours(db);
+
+  if (partie === null) {
+    return <Accueil entrees={entrees} enCours={null} />;
+  }
+
   return (
-    <main className="mx-auto flex w-full max-w-2xl flex-1 flex-col gap-6 px-4 py-8">
-      <h1 className="font-semibold text-2xl tracking-tight">On joue à quoi ?</h1>
-      <CatalogueListe entrees={Object.values(CATALOGUE)} />
-      <RejoindreParCode />
-    </main>
+    <Accueil
+      entrees={entrees}
+      enCours={{
+        partie,
+        grille: await lireLaGrille(db, partie.id, partie.regles),
+        ouvrirLaMancheSuivante: ouvrirLaMancheSuivanteAction.bind(null, partie.code),
+      }}
+      poll={<PollDePartie code={partie.code} version={partie.version} />}
+    />
   );
 }

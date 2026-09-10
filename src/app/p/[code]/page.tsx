@@ -7,13 +7,16 @@ import {
   retirerParticipantAction,
 } from "@/app/p/actions";
 import { TropDeTentatives } from "@/components/code-inconnu";
+import { GrilleDeScore } from "@/components/grille-score";
+import { MancheSuivante } from "@/components/manche-suivante";
 import { PartieEntete } from "@/components/partie-entete";
+import { PollDePartie } from "@/components/poll-de-partie";
 import { SalleDAttente } from "@/components/salle-attente";
 import { TiroirDuJournal } from "@/components/tiroir-journal";
-import { Button } from "@/components/ui/button";
 import { db } from "@/db";
 import { cleDeLaRequete, lireLAppareil } from "@/lib/appareil/requete";
 import { lireLeTiroir } from "@/lib/journal/lecture";
+import { lireLaGrille } from "@/lib/manche/lecture";
 import { messageDeRefusSchema, premierParametre } from "@/lib/partie/identite-url";
 import { chercherPartieParCode, limiteDeRecherche } from "@/lib/partie/recherche";
 import { lireSalleDAttente } from "@/lib/partie/salle-attente";
@@ -46,6 +49,11 @@ function Ecran({ children }: { children: ReactNode }): ReactElement {
  * tant qu'aucune manche n'existe la tablée bouge, et c'est **la première manche
  * saisie** qui la gèle. Il n'y a donc pas de bouton « démarrer » — « saisir la
  * manche suivante » en tient lieu, sans jamais l'annoncer.
+ *
+ * Elle porte **la même grille et le même poll que l'accueil** : c'est la même
+ * partie, et deux façons de la montrer divergeraient. La grille n'apparaît
+ * qu'une fois une manche ouverte — avant, c'est la salle d'attente qui a
+ * quelque chose à dire, pas un tableau de tirets.
  *
  * La recherche est **limitée en débit** : 2³⁰ combinaisons pour quelques
  * centaines de parties font un enjeu nul, mais un script tire un million de
@@ -82,6 +90,7 @@ export default async function PageDePartie(props: PageProps<"/p/[code]">): Promi
   const erreur = messageDeRefusSchema.safeParse(
     premierParametre((await props.searchParams).erreur),
   );
+  const grille = await lireLaGrille(db, partie.id, partie.regles);
 
   return (
     <Ecran>
@@ -92,13 +101,16 @@ export default async function PageDePartie(props: PageProps<"/p/[code]">): Promi
       ) : null}
       <PartieEntete partie={partie} />
 
-      {/* Appuyer deux fois, ou à deux téléphones, ne crée pas deux manches :
-          l'unicité (partie, numéro) fait rejoindre la même. */}
-      <form action={ouvrirLaMancheSuivanteAction.bind(null, partie.code)} method="post">
-        <Button type="submit" size="lg" className="w-full">
-          Saisir la manche suivante
-        </Button>
-      </form>
+      {grille.manches.length > 0 ? (
+        <GrilleDeScore
+          joueurs={partie.participants}
+          manches={grille.manches}
+          totaux={grille.etat.totaux}
+          unite={partie.jeu.unite}
+        />
+      ) : null}
+
+      <MancheSuivante action={ouvrirLaMancheSuivanteAction.bind(null, partie.code)} />
 
       <SalleDAttente
         partie={partie}
@@ -113,6 +125,8 @@ export default async function PageDePartie(props: PageProps<"/p/[code]">): Promi
         code={partie.code}
         tiroir={await lireLeTiroir(db, partie.id, await props.searchParams)}
       />
+
+      <PollDePartie code={partie.code} version={partie.version} />
     </Ecran>
   );
 }

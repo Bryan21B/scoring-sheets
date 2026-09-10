@@ -1,11 +1,13 @@
 import { describe, expect, it } from "bun:test";
 import { renderToStaticMarkup } from "react-dom/server";
+import { Accueil, type EnCours } from "@/components/accueil";
 import { GrilleDeScore } from "@/components/grille-score";
 import { MancheSuivante } from "@/components/manche-suivante";
-import { trouverEntree } from "@/lib/jeux/catalogue";
+import { CATALOGUE, trouverEntree } from "@/lib/jeux/catalogue";
 import { evaluer, type Manche } from "@/lib/jeux/moteur";
 import { resoudreRegles } from "@/lib/jeux/resolution";
 import type { LigneDeGrille } from "@/lib/manche/lecture";
+import type { VueDePartie } from "@/lib/partie/lecture";
 import { LEA, MARIE, PAUL, TABLEE } from "./helpers/tablee";
 
 const SIX_QUI_PREND = trouverEntree("6-qui-prend");
@@ -128,5 +130,89 @@ describe("« saisir la manche suivante »", () => {
     const html = renderToStaticMarkup(<MancheSuivante action="/p/A1B2C3/manche" />);
 
     expect(html).toContain("Saisir la manche suivante");
+  });
+});
+
+const PARTIE: VueDePartie = {
+  id: 1,
+  code: "A1B2C3",
+  jeu: SIX_QUI_PREND,
+  regles: REGLES,
+  version: 4,
+  participants: [...TABLEE],
+};
+
+/** L'accueil, avec ou sans partie qui tourne. */
+function accueil(enCours: EnCours | null): string {
+  return renderToStaticMarkup(
+    <Accueil entrees={Object.values(CATALOGUE)} enCours={enCours} poll={null} />,
+  );
+}
+
+/** Ce que la page passe quand une soirée est en cours. */
+function enCours(...lignes: readonly LigneDeGrille[]): EnCours {
+  return {
+    partie: PARTIE,
+    grille: { manches: lignes, etat: evaluer(REGLES, []) },
+    ouvrirLaMancheSuivante: "/p/A1B2C3/manche",
+  };
+}
+
+describe("l'accueil sans partie en cours", () => {
+  it("rend tout l'écran au catalogue", () => {
+    const html = accueil(null);
+
+    expect(html).toContain("6 qui prend");
+    expect(html).toContain("Uno");
+    expect(html).toContain("Dnup");
+    expect(html).not.toContain("<details");
+  });
+
+  it("ne montre ni grille ni manche à saisir : il n'y a pas de partie", () => {
+    const html = accueil(null);
+
+    expect(html).not.toContain("<table");
+    expect(html).not.toContain("Saisir la manche suivante");
+  });
+});
+
+describe("l'accueil quand une partie tourne", () => {
+  it("montre cette partie, sa grille en tête", () => {
+    const html = accueil(enCours(ligne(1, 8, 15, 0)));
+
+    expect(html).toContain("<table");
+    expect(html).toContain("A1B2C3");
+  });
+
+  it("met « saisir la manche suivante » à un appui", () => {
+    expect(accueil(enCours(ligne(1, 8, 15, 0)))).toContain("Saisir la manche suivante");
+  });
+
+  it("fait passer le catalogue au second rang, sans le perdre", () => {
+    // Le coût est assumé : le catalogue disparaît de la *vue* tant qu'une
+    // partie tourne. Le supprimer de la page serait un autre prix — il n'y a
+    // pas d'autre écran d'où ouvrir une partie.
+    const html = accueil(enCours(ligne(1, 8)));
+
+    expect(html).toContain("<details");
+    expect(html).toContain("Uno");
+    expect(html.indexOf("<table")).toBeLessThan(html.indexOf("<details"));
+  });
+
+  it("laisse rejoindre une deuxième partie en cours par son code", () => {
+    // C'est le bouton derrière lequel elle est : l'accueil n'en montre qu'une.
+    expect(accueil(enCours(ligne(1, 8)))).toContain('name="code"');
+  });
+
+  it("mène à la page de la partie, où vivent la tablée et le reste", () => {
+    expect(accueil(enCours(ligne(1, 8)))).toContain('href="/p/A1B2C3"');
+  });
+
+  it("montre la partie même avant sa première manche, sans grille vide", () => {
+    const html = accueil(enCours());
+
+    expect(html).toContain("A1B2C3");
+    expect(html).toContain("Saisir la manche suivante");
+    expect(html).not.toContain("<table");
   });
 });
