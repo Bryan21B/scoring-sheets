@@ -48,7 +48,7 @@ function cadre(caseASaisir: CaseDeManche): CadreDeSaisie {
   };
 }
 
-function ecranDeRefus(refus: RefusDEcriture): string {
+function ecranDeRefus(refus: RefusDEcriture, enCours = false): string {
   return renderToStaticMarkup(
     <EcranDeRefus
       action={ADRESSE}
@@ -58,6 +58,7 @@ function ecranDeRefus(refus: RefusDEcriture): string {
       unite={SIX_QUI_PREND.unite}
       journal={JOURNAL}
       recapitulatif={RECAPITULATIF}
+      enCours={enCours}
     />,
   );
 }
@@ -245,7 +246,10 @@ describe("l'affichage optimiste de la saisie", () => {
   });
 
   it("ne laisse pas retaper par dessus une écriture en vol", () => {
-    expect(passeAvant({ joueur: PAUL, valeur: 12 }, true)).toContain("disabled");
+    // L'attribut rendu, et non la sous-chaîne « disabled » : les classes
+    // Tailwind du bouton la portent déjà, et l'assertion passerait toujours.
+    expect(passeAvant({ joueur: PAUL, valeur: 12 }, true)).toContain('disabled=""');
+    expect(passeAvant({ joueur: PAUL, valeur: 12 })).not.toContain('disabled=""');
   });
 });
 
@@ -292,6 +296,13 @@ describe("l'écran de refus", () => {
 
   it("laisse en rester là sans réappliquer", () => {
     expect(ecranDeRefus(Refus)).toContain(`href="${RECAPITULATIF}"`);
+  });
+
+  // Le même garde-fou que le pavé : réappuyer reposerait la valeur sur une
+  // condition qui n'est déjà plus celle qu'on vient de lire.
+  it("se ferme pendant que la réapplication est en vol", () => {
+    expect(ecranDeRefus(Refus, true)).toContain('disabled=""');
+    expect(ecranDeRefus(Refus)).not.toContain('disabled=""');
   });
 });
 

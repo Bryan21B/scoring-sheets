@@ -1,7 +1,8 @@
 "use client";
 
-import type { ComponentProps, ReactElement } from "react";
+import type { ReactElement } from "react";
 import { useState } from "react";
+import type { Action } from "@/components/champs";
 import { Button } from "@/components/ui/button";
 import type { EntreeCatalogue } from "@/lib/jeux/catalogue";
 import type { CaseDeManche } from "@/lib/manche/lecture";
@@ -50,7 +51,7 @@ export function PasseAvant({
   recapitulatif,
   enCours = false,
 }: {
-  action: ComponentProps<"form">["action"];
+  action: Action;
   mancheId: number;
   mancheNumero: number;
   caseASaisir: CaseDeManche;

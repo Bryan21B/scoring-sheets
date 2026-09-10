@@ -118,7 +118,7 @@ describe("clore demande d'être de la partie", () => {
 
     const cloture = cloturerLaManche(base, { mancheId, parJoueurId: await unEtranger() });
 
-    expect(cloture).rejects.toBeInstanceOf(RefusDeCloture);
+    await expect(cloture).rejects.toBeInstanceOf(RefusDeCloture);
     expect((await ligneDeManche())?.closeLe).toBeNull();
   });
 

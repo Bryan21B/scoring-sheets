@@ -22,17 +22,6 @@ export type RefusDEcriture = {
 };
 
 /**
- * L'action serveur d'une saisie, telle que `useActionState` la veut.
- *
- * Ici plutôt que dans le module d'action : une action serveur n'exporte que des
- * fonctions asynchrones, et l'écran qui la reçoit en prop a besoin de sa forme.
- */
-export type ActionDEcriture = (
-  precedent: RefusDEcriture | null,
-  formulaire: FormData,
-) => Promise<RefusDEcriture | null>;
-
-/**
  * Le refus à montrer, ou `null` quand il n'y a rien à arrêter.
  *
  * Les deux issues qui passent ne montrent **aucun écran** : l'écrasement informé

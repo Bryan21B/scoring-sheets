@@ -2,9 +2,9 @@
 
 import type { ReactElement } from "react";
 import { useActionState } from "react";
-import type { Action } from "@/components/champs";
+import type { Action, ActionServeur } from "@/components/champs";
 import { Button } from "@/components/ui/button";
-import type { ActionDeCloture, EtatDeCloture } from "@/lib/manche/annonce";
+import type { EtatDeCloture } from "@/lib/manche/annonce";
 import type { FinDePartie } from "@/lib/partie/fin";
 
 /**
@@ -97,7 +97,7 @@ export function ClotureDeManche({
   mancheId,
   partie,
 }: {
-  action: ActionDeCloture;
+  action: ActionServeur<EtatDeCloture>;
   mancheId: number;
   partie: string;
 }): ReactElement {

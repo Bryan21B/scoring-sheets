@@ -7,6 +7,7 @@ import { Recapitulatif } from "@/components/recapitulatif";
 import { db } from "@/db";
 import { evaluerLaPartie, lireLaManche } from "@/lib/manche/lecture";
 import { numeroDeMancheSchema } from "@/lib/manche/ouverture";
+import { adresseDePartie } from "@/lib/partie/adresse";
 import { lirePartieParCode } from "@/lib/partie/lecture";
 
 /** Jamais mise en cache : c'est ici qu'on vient voir bouger les totaux. */
@@ -43,7 +44,7 @@ export default async function PageDeRecapitulatif(
 
   const etat = await evaluerLaPartie(db, partie.id, partie.regles);
 
-  const adresseDeLaPartie = `/p/${partie.code}`;
+  const adresseDeLaPartie = adresseDePartie(partie.code);
 
   return (
     <Ecran>

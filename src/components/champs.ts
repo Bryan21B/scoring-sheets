@@ -19,6 +19,18 @@ import type { ComponentProps } from "react";
  */
 export type Action = ComponentProps<"form">["action"];
 
+/**
+ * Une action serveur qui **rend un état à l'écran**, telle que `useActionState`
+ * la veut : l'état précédent, le formulaire, le nouvel état.
+ *
+ * Générique et posée ici, à côté de {@link Action}, parce que c'est la même
+ * chose vue de l'autre bout : un `form` dont le geste a quelque chose à
+ * répondre. Les modules de domaine n'ont pas à porter une forme dictée par
+ * React, et deux copies de cette signature — une par écran qui refuse quelque
+ * chose — divergeraient le jour où l'une gagne un paramètre.
+ */
+export type ActionServeur<Etat> = (precedent: Etat, formulaire: FormData) => Promise<Etat>;
+
 /** Le champ texte d'un nom de joueur. */
 export const CHAMP_NOM =
   "h-10 w-full rounded-lg border border-border bg-background px-3 text-base outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50";

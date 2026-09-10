@@ -118,21 +118,27 @@ async function lireLeContexte(tx: Ecriture, mancheId: number): Promise<ContexteD
 /**
  * Vérifie que celui qui clôt est **de cette partie**.
  *
- * C'est la seule garde de ce module qui regarde **qui agit**, et elle diverge
- * volontairement de `ecrireLaCase`, qui ne regarde jamais le joueur agissant.
- * La différence n'est pas la confiance, c'est **où la valeur atterrit** : là,
- * l'agissant ne va qu'au **journal**, une trace, et le conditionner
- * inventerait une autorisation que ce design n'a pas — l'identité est une
- * déclaration, jamais une preuve, voir
- * `docs/adr/0004-identite-declarative-sans-authentification.md`. Ici,
- * `parJoueurId` se grave dans `manche.close_par` **et** dans `partie.fin_par`,
- * l'estampille que l'historique et le palmarès liront pour toujours — la même
- * nature de donnée que `saisie.joueur_id`, que `verifierLeParticipant` garde
- * déjà pour la même raison.
+ * Elle applique la règle d'ADR 0004, qui n'est pas propre à la clôture : « le
+ * lien donne la **lecture** ; l'**écriture** demande d'être participant ».
  *
- * C'est donc de l'**intégrité et non de l'autorisation** : rien n'empêche
- * quiconque de se déclarer Marie, mais un joueur qui n'est d'aucune façon de
- * cette table ne peut pas y être gravé comme celui qui l'a terminée.
+ * Ce n'est **pas de l'autorisation**, et le même ADR interdit d'en faire une :
+ * l'identité est une déclaration, jamais une preuve, et rien n'empêche
+ * quiconque de repointer son téléphone vers Marie pour passer cette garde. Ce
+ * qui se vérifie ici est une **appartenance** — le joueur déclaré est-il de
+ * cette tablée — et une appartenance se lit en base, elle.
+ *
+ * L'asymétrie avec `ecrireLaCase`, qui ne regarde jamais le joueur agissant,
+ * est un **manque connu et non une décision** : les deux chemins d'écriture
+ * devraient porter la même garde. On ne la lui ajoute pas ici parce que sa
+ * JSDoc documente aujourd'hui l'inverse, et qu'y toucher depuis ce ticket
+ * ferait décider à trois endroits une règle qui n'en a qu'un. La différence
+ * n'est donc pas à défendre : elle est à refermer.
+ *
+ * Ce qu'elle protège en attendant : `parJoueurId` se grave dans
+ * `manche.close_par` **et** dans `partie.fin_par`, l'estampille que
+ * l'historique et le palmarès liront pour toujours. Le journal, lui, porte
+ * l'avertissement qui dit qu'il ne sait pas qui a agi ; l'estampille n'en porte
+ * aucun.
  *
  * Le cas est ordinaire, pas forgé : le code donne la **lecture** à qui l'a, si
  * bien qu'un téléphone rattaché à un joueur d'une autre soirée arrive sur le

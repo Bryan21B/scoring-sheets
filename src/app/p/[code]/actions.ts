@@ -5,11 +5,12 @@ import { notFound, redirect } from "next/navigation";
 import { db } from "@/db";
 import { NOM_COOKIE_APPAREIL } from "@/lib/appareil/cookie";
 import { lireLeJoueurDeLAppareil } from "@/lib/appareil/lecture";
-import { type EtatDeCloture, etatDeCloture, refusAMontrer } from "@/lib/manche/annonce";
+import { type EtatDeCloture, finAAnnoncer, refusAMontrer } from "@/lib/manche/annonce";
 import { CLOTURE_HORS_TABLEE, cloturerLaManche } from "@/lib/manche/cloture";
 import { ouvrirLaMancheSuivante } from "@/lib/manche/ouverture";
 import { type RefusDEcriture, refusDe } from "@/lib/manche/refus";
 import { ecrireLaCase } from "@/lib/manche/saisie";
+import { adresseDePartie } from "@/lib/partie/adresse";
 import type { VueDePartie } from "@/lib/partie/lecture";
 import { lirePartieParCode } from "@/lib/partie/lecture";
 
@@ -133,7 +134,7 @@ export async function cloturerLaMancheAction(
   let annonce: EtatDeCloture;
 
   try {
-    annonce = etatDeCloture(
+    annonce = finAAnnoncer(
       await cloturerLaManche(db, {
         mancheId: formulaire.get("mancheId"),
         parJoueurId: joueurId,
@@ -151,5 +152,5 @@ export async function cloturerLaMancheAction(
     return annonce;
   }
 
-  redirect(`/p/${partie.code}`);
+  redirect(adresseDePartie(partie.code));
 }

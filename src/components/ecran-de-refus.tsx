@@ -45,6 +45,7 @@ export function EcranDeRefus({
   unite,
   journal,
   recapitulatif,
+  enCours = false,
 }: {
   action: Action;
   mancheId: number;
@@ -56,6 +57,14 @@ export function EcranDeRefus({
   journal: string;
   /** L'adresse où l'on va quand on renonce à réappliquer. */
   recapitulatif: string;
+  /**
+   * Vrai pendant que la réapplication est en vol.
+   *
+   * Le bouton se ferme alors, pour la raison qui ferme le pavé : réappuyer
+   * reposerait la même valeur sur une condition qui n'est déjà plus celle
+   * qu'on vient de lire, et le second envoi serait refusé pour de bon.
+   */
+  enCours?: boolean;
 }): ReactElement {
   const repose = reappliquer(refus);
 
@@ -85,7 +94,7 @@ export function EcranDeRefus({
           <input type="hidden" name="joueurConcerneId" value={joueur.id} />
           <input type="hidden" name="valeurMontree" value={repose.valeurMontree} />
           <input type="hidden" name="valeur" value={repose.valeur} />
-          <Button type="submit" size="lg" className="w-full">
+          <Button type="submit" size="lg" className="w-full" disabled={enCours}>
             {`Réappliquer ${refus.valeurTapee}`}
           </Button>
         </form>

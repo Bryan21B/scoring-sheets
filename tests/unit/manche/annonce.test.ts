@@ -1,5 +1,5 @@
 import { describe, expect, it } from "bun:test";
-import { etatDeCloture, refusAMontrer } from "@/lib/manche/annonce";
+import { finAAnnoncer, refusAMontrer } from "@/lib/manche/annonce";
 import { RefusDeCloture } from "@/lib/manche/cloture";
 import type { FinDePartie } from "@/lib/partie/fin";
 
@@ -10,11 +10,11 @@ describe("ce que la clôture annonce", () => {
   // L'alerte de seuil ne sort que d'ici : une page qui la recalculerait la
   // ferait s'allumer puis s'éteindre au gré des corrections.
   it("n'annonce rien d'une clôture qui ne termine pas la partie", () => {
-    expect(etatDeCloture({ statut: "close", fin: null })).toBeNull();
+    expect(finAAnnoncer({ statut: "close", fin: null })).toBeNull();
   });
 
   it("annonce la fin quand la clôture vient de l'estampiller", () => {
-    expect(etatDeCloture({ statut: "close", fin: FIN })).toEqual({
+    expect(finAAnnoncer({ statut: "close", fin: FIN })).toEqual({
       statut: "finie",
       cause: "terminee",
     });
@@ -23,20 +23,20 @@ describe("ce que la clôture annonce", () => {
   // Le second à appuyer n'a rien refermé, mais la partie est finie et il doit
   // le voir : c'est `fin` qui décide, jamais le statut de la clôture.
   it("annonce la fin au second qui appuie, dont la clôture n'a rien écrit", () => {
-    expect(etatDeCloture({ statut: "dejaClose", fin: FIN })).toEqual({
+    expect(finAAnnoncer({ statut: "dejaClose", fin: FIN })).toEqual({
       statut: "finie",
       cause: "terminee",
     });
   });
 
   it("n'annonce rien d'une manche déjà close dans une partie qui continue", () => {
-    expect(etatDeCloture({ statut: "dejaClose", fin: null })).toBeNull();
+    expect(finAAnnoncer({ statut: "dejaClose", fin: null })).toBeNull();
   });
 
   it("dit la cause telle que l'estampille la porte, sans la deviner", () => {
     const abandonnee = { ...FIN, cause: "abandonnee" } as const;
 
-    expect(etatDeCloture({ statut: "dejaClose", fin: abandonnee })).toEqual({
+    expect(finAAnnoncer({ statut: "dejaClose", fin: abandonnee })).toEqual({
       statut: "finie",
       cause: "abandonnee",
     });

@@ -2,27 +2,30 @@ import { RefusDeCloture, type ResultatDeCloture } from "@/lib/manche/cloture";
 import type { FinDePartie } from "@/lib/partie/fin";
 
 /**
+ * La fin qu'une clôture vient de provoquer, telle que l'estampille la porte.
+ *
+ * `cause` se relit et ne se devine pas : la clôture régulière estampille
+ * `terminee`, mais celui qui appuie sur une manche d'une partie abandonnée
+ * relit une fin qui n'est pas la sienne, et la lui annoncer autrement serait
+ * lui mentir.
+ */
+export type FinAnnoncee = { statut: "finie"; cause: FinDePartie["cause"] };
+
+/** Un refus de clôture, écrit pour être lu au-dessus de l'écran d'où il part. */
+export type RefusAnnonce = { statut: "refusee"; message: string };
+
+/**
  * Ce que l'écran de clôture a reçu du serveur, ou `null` quand il n'a rien à
  * annoncer.
  *
  * Trois états et pas quatre : la clôture qui ne termine rien **ne dit rien** —
  * quelqu'un vient d'agir, la manche est close, on passe à la suivante.
- */
-export type EtatDeCloture =
-  | { statut: "finie"; cause: FinDePartie["cause"] }
-  | { statut: "refusee"; message: string }
-  | null;
-
-/**
- * L'action serveur d'une clôture, telle que `useActionState` la veut.
  *
- * Ici plutôt que dans le module d'action : une action serveur n'exporte que des
- * fonctions asynchrones, et l'écran qui la reçoit en prop a besoin de sa forme.
+ * À n'importer que **par type** depuis un composant client : ce module lit
+ * `RefusDeCloture` à l'exécution, donc le module de clôture, donc Drizzle et le
+ * schéma. Une valeur importée d'ici emporterait la base dans le téléphone.
  */
-export type ActionDeCloture = (
-  precedent: EtatDeCloture,
-  formulaire: FormData,
-) => Promise<EtatDeCloture>;
+export type EtatDeCloture = FinAnnoncee | RefusAnnonce | null;
 
 /**
  * Ce que la clôture annonce, **lu de la fin estampillée et de rien d'autre**.
@@ -40,7 +43,7 @@ export type ActionDeCloture = (
  * deux fois serait le punir d'avoir compté. Voir
  * `docs/specs/2026-09-09-cycle-de-vie.md`.
  */
-export function etatDeCloture(resultat: ResultatDeCloture): EtatDeCloture {
+export function finAAnnoncer(resultat: ResultatDeCloture): FinAnnoncee | null {
   return resultat.fin === null ? null : { statut: "finie", cause: resultat.fin.cause };
 }
 
@@ -53,6 +56,6 @@ export function etatDeCloture(resultat: ResultatDeCloture): EtatDeCloture {
  * personne autour de la table tout en racontant la base — et `null` renvoie
  * l'appelant à les laisser remonter.
  */
-export function refusAMontrer(erreur: unknown): EtatDeCloture {
+export function refusAMontrer(erreur: unknown): RefusAnnonce | null {
   return erreur instanceof RefusDeCloture ? { statut: "refusee", message: erreur.message } : null;
 }

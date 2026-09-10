@@ -2,12 +2,12 @@
 
 import type { ReactElement } from "react";
 import { useActionState } from "react";
-import type { Action } from "@/components/champs";
+import type { Action, ActionServeur } from "@/components/champs";
 import { EcranDeRefus } from "@/components/ecran-de-refus";
 import { PasseAvant } from "@/components/passe-avant";
 import type { EntreeCatalogue } from "@/lib/jeux/catalogue";
 import type { CaseDeManche } from "@/lib/manche/lecture";
-import type { ActionDEcriture, RefusDEcriture } from "@/lib/manche/refus";
+import type { RefusDEcriture } from "@/lib/manche/refus";
 
 /**
  * Ce que les deux écrans d'une saisie partagent : la case, et où elle mène.
@@ -20,12 +20,15 @@ export type CadreDeSaisie = {
   mancheId: number;
   mancheNumero: number;
   caseASaisir: CaseDeManche;
-  /** La borne haute du mode, telle que l'instantané de règles la fige. */
   max: number;
   unite: EntreeCatalogue["unite"];
-  /** L'adresse où la passe avant se termine — un écran, pas cinq. */
   recapitulatif: string;
-  /** L'adresse du tiroir, où l'on va voir qui, si on tient à le savoir. */
+  /**
+   * L'adresse du tiroir, où l'on va voir qui, si on tient à le savoir.
+   *
+   * Le seul champ que le pavé ne connaît pas : les autres sont les siens, et
+   * {@link PasseAvant} les documente là où ils servent.
+   */
   journal: string;
 };
 
@@ -57,6 +60,7 @@ export function VueDeSaisie({
         mancheId={cadre.mancheId}
         joueur={cadre.caseASaisir.joueur}
         refus={refus}
+        enCours={enCours}
         unite={cadre.unite}
         journal={cadre.journal}
         recapitulatif={cadre.recapitulatif}
@@ -95,7 +99,7 @@ export function SaisieDeCase({
   action,
 }: {
   cadre: CadreDeSaisie;
-  action: ActionDEcriture;
+  action: ActionServeur<RefusDEcriture | null>;
 }): ReactElement {
   const [refus, agir, enCours] = useActionState(action, null);
 
