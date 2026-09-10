@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it } from "bun:test";
 import { eq } from "drizzle-orm";
 import type { Base } from "@/db/base";
-import { journal, manche, partie as partieTable } from "@/db/schema";
+import { journal, manche, partie as partieTable, saisie } from "@/db/schema";
 import { cloturerLaManche, RefusDeCloture } from "@/lib/manche/cloture";
 import { ouvrirLaMancheSuivante } from "@/lib/manche/ouverture";
 import { ecrireLaCase } from "@/lib/manche/saisie";
@@ -17,6 +17,9 @@ let base: Base;
 let partie: PartieDeTest;
 let mancheId: number;
 
+/** Le rang de tête au podium, tel que la colonne `valeur` le porte. */
+const RANG_PREMIER = 1;
+
 /** Marie tient le téléphone ; Paul et Léa sont à côté. */
 function marie(): number {
   return joueurDeLaPartie(partie, 0);
@@ -27,17 +30,22 @@ function paul(): number {
   return joueurDeLaPartie(partie, 1);
 }
 
-/** Remplit la manche courante pour toute la tablée : elle devient complète. */
-async function remplirLaManche(valeurs: readonly number[]): Promise<void> {
+/** Remplit une manche pour toute la tablée d'une partie : elle devient complète. */
+async function remplir(cible: PartieDeTest, id: number, valeurs: readonly number[]): Promise<void> {
   for (const [rang, valeur] of valeurs.entries()) {
     await ecrireLaCase(base, {
-      mancheId,
-      joueurConcerneId: joueurDeLaPartie(partie, rang),
+      mancheId: id,
+      joueurConcerneId: joueurDeLaPartie(cible, rang),
       valeurMontree: null,
       valeur,
-      agissant: { joueurId: marie(), appareilId: partie.idAppareil },
+      agissant: { joueurId: joueurDeLaPartie(cible, 0), appareilId: cible.idAppareil },
     });
   }
+}
+
+/** Remplit la manche courante pour toute la tablée : elle devient complète. */
+async function remplirLaManche(valeurs: readonly number[]): Promise<void> {
+  await remplir(partie, mancheId, valeurs);
 }
 
 /** La ligne de manche telle que la base la porte. */
@@ -147,5 +155,64 @@ describe("la clôture qui termine la partie estampille la fin", () => {
 
     expect(resultat.fin).toBeNull();
     expect((await ligneDePartie())?.finLe).toBeNull();
+  });
+
+  // Deux clôtures de la même manche : la seconde ne referme rien, et surtout
+  // n'estampille pas une deuxième fois.
+  it("n'estampille qu'une fois quand deux participants closent la même manche", async () => {
+    await remplirLaManche([70, 3, 0]);
+    const parMarie = await cloturerLaManche(base, { mancheId, parJoueurId: marie() });
+
+    const parPaul = await cloturerLaManche(base, { mancheId, parJoueurId: paul() });
+
+    expect(parPaul.statut).toBe("dejaClose");
+    expect(parPaul.fin).toEqual(parMarie.fin);
+    expect((await ligneDePartie())?.finPar).toBe(marie());
+  });
+});
+
+// Les trois conditions de fin sont trois branches du moteur, jamais trois
+// chemins d'écriture : elles passent toutes par la clôture.
+describe("les autres conditions de fin passent par la même porte", () => {
+  it("termine sur un nombre de manches fixe, sans regarder les totaux", async () => {
+    const courte = await ouvrirUnePartieDeTest(base, {
+      jeuId: "6-qui-prend-cartes-speciales",
+      finValeur: "2",
+      noms: ["Anna", "Bruno", "Chloé"],
+    });
+    const premier = joueurDeLaPartie(courte, 0);
+
+    const une = await ouvrirLaMancheSuivante(base, courte.partieId);
+    await remplir(courte, une.id, [1, 2, 3]);
+    const apresUne = await cloturerLaManche(base, { mancheId: une.id, parJoueurId: premier });
+
+    const deux = await ouvrirLaMancheSuivante(base, courte.partieId);
+    await remplir(courte, deux.id, [1, 2, 3]);
+    const apresDeux = await cloturerLaManche(base, { mancheId: deux.id, parJoueurId: premier });
+
+    expect(apresUne.fin).toBeNull();
+    expect(apresDeux.fin?.cause).toBe("terminee");
+  });
+
+  it("termine sur un nombre de manches gagnées, sans traitement particulier", async () => {
+    // Dnup à deux : podium sans jetons, la partie se gagne à deux manches.
+    const dnup = await ouvrirUnePartieDeTest(base, {
+      jeuId: "dnup",
+      noms: ["Zoé", "Tom"],
+      finValeur: "2",
+    });
+    const zoe = joueurDeLaPartie(dnup, 0);
+    const fins = [];
+
+    for (const _ of [1, 2]) {
+      const tour = await ouvrirLaMancheSuivante(base, dnup.partieId);
+      // Le mode `podium` ne se saisit pas case par case : la ligne s'écrit
+      // directement, l'écran de désignation suivant son propre ticket.
+      await base.insert(saisie).values({ mancheId: tour.id, joueurId: zoe, valeur: RANG_PREMIER });
+      fins.push((await cloturerLaManche(base, { mancheId: tour.id, parJoueurId: zoe })).fin);
+    }
+
+    expect(fins[0]).toBeNull();
+    expect(fins[1]?.cause).toBe("terminee");
   });
 });
