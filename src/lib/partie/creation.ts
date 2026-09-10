@@ -1,15 +1,17 @@
 import { eq } from "drizzle-orm";
 import { z } from "zod";
 import type { Base, Ecriture } from "@/db/base";
-import { appareil, joueur, participant, partie } from "@/db/schema";
+import { idRendu } from "@/db/insertion";
+import { participant, partie } from "@/db/schema";
 import { idAppareilSchema } from "@/lib/appareil/cookie";
+import { lierLAppareil } from "@/lib/appareil/lien";
 import { type EntreeCatalogue, jeuIdSchema, trouverEntree } from "@/lib/jeux/catalogue";
 import { finValeurSchema, type Regles } from "@/lib/jeux/regles";
 import { resoudreRegles } from "@/lib/jeux/resolution";
 import { type CodeDePartie, genererCodeUnique } from "@/lib/partie/code";
 import { identiteSchema } from "@/lib/partie/identite";
-import { listerLeRoster } from "@/lib/roster/lecture";
-import { evaluerNom, type Homonymie } from "@/lib/roster/noms";
+import { assurerLeJoueur, resoudreIdentite } from "@/lib/roster/choix";
+import type { Homonymie } from "@/lib/roster/noms";
 
 /**
  * Tout ce que l'écran de la tablée envoie, et la seule porte d'entrée de la
@@ -57,43 +59,6 @@ export class RefusDeCreation extends Error {
   override readonly name = "RefusDeCreation";
 }
 
-/** Le créateur, une fois l'identité confrontée au roster. */
-type CreateurResolu =
-  | { statut: "connu"; joueurId: number }
-  | { statut: "aCreer"; nom: string }
-  | Homonymie;
-
-/**
- * Résout l'identité déclarée contre le roster, sans rien écrire.
- *
- * @throws si le joueur choisi dans la liste n'existe pas — le formulaire ne
- * peut proposer que des lignes lues à l'instant, donc un id absent est un envoi
- * forgé ou périmé, pas un choix. D'où une `Error` nue et non un
- * {@link RefusDeCreation} : il n'y a rien à en dire à l'écran.
- */
-async function resoudreCreateur(
-  base: Base,
-  identite: Creation["identite"],
-): Promise<CreateurResolu> {
-  if (identite.mode === "roster") {
-    const [connu] = await base
-      .select({ id: joueur.id })
-      .from(joueur)
-      .where(eq(joueur.id, identite.joueurId))
-      .limit(1);
-
-    if (!connu) {
-      throw new Error(`Aucun joueur ${identite.joueurId} au roster.`);
-    }
-
-    return { statut: "connu", joueurId: connu.id };
-  }
-
-  const decision = evaluerNom(identite.nom, await listerLeRoster(base));
-
-  return decision.statut === "creer" ? { statut: "aCreer", nom: decision.nom } : decision;
-}
-
 /**
  * Fige les règles, en traduisant le refus de `resoudreRegles` en refus lisible.
  *
@@ -111,24 +76,6 @@ function figerLesRegles(entree: EntreeCatalogue, donnees: Creation): Regles {
   } catch (cause) {
     throw new RefusDeCreation(cause instanceof Error ? cause.message : String(cause), { cause });
   }
-}
-
-/**
- * L'id qu'un `RETURNING` vient de rendre, ou un échec sec.
- *
- * `noUncheckedIndexedAccess` oblige à traiter le cas « aucune ligne », et le
- * traiter par un `0` écrirait une clé étrangère qui ne désigne personne — la
- * contrainte la rejetterait, mais après coup et avec un message qui ne dit rien.
- * Une insertion sans id rendu est une base cassée, pas une valeur par défaut.
- */
-function idRendu(lignes: readonly { id: number }[], quoi: string): number {
-  const id = lignes[0]?.id;
-
-  if (id === undefined) {
-    throw new Error(`Insertion de ${quoi} sans id rendu : la base n'a pas répondu.`);
-  }
-
-  return id;
 }
 
 /**
@@ -180,7 +127,7 @@ export async function creerPartie(base: Base, saisie: unknown): Promise<Resultat
   const entree = trouverEntree(donnees.jeuId);
 
   const regles = figerLesRegles(entree, donnees);
-  const createur = await resoudreCreateur(base, donnees.identite);
+  const createur = await resoudreIdentite(base, donnees.identite);
 
   if (createur.statut === "desambiguiser") {
     return createur;
@@ -190,16 +137,7 @@ export async function creerPartie(base: Base, saisie: unknown): Promise<Resultat
 
   return base.transaction(async (tx) => {
     const code = await reserverUnCode(tx);
-    const joueurId =
-      createur.statut === "connu"
-        ? createur.joueurId
-        : idRendu(
-            await tx
-              .insert(joueur)
-              .values({ nom: createur.nom, creeLe: maintenant })
-              .returning({ id: joueur.id }),
-            "joueur",
-          );
+    const joueurId = await assurerLeJoueur(tx, createur, maintenant);
 
     const partieId = idRendu(
       await tx
@@ -216,13 +154,7 @@ export async function creerPartie(base: Base, saisie: unknown): Promise<Resultat
 
     await tx.insert(participant).values({ partieId, joueurId });
 
-    await tx
-      .insert(appareil)
-      .values({ id: donnees.idAppareil, joueurId, vuLe: maintenant, creeLe: maintenant })
-      .onConflictDoUpdate({
-        target: appareil.id,
-        set: { joueurId, vuLe: maintenant },
-      });
+    await lierLAppareil(tx, donnees.idAppareil, joueurId, maintenant);
 
     return { statut: "creee", code, partieId, joueurId };
   });

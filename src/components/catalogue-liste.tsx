@@ -1,4 +1,5 @@
 import type { ReactElement } from "react";
+import { LISTE } from "@/components/champs";
 import type { EntreeCatalogue } from "@/lib/jeux/catalogue";
 import { libelleDeFin } from "@/lib/partie/tablee";
 
@@ -12,7 +13,7 @@ import { libelleDeFin } from "@/lib/partie/tablee";
  */
 export function CatalogueListe({ entrees }: { entrees: readonly EntreeCatalogue[] }): ReactElement {
   return (
-    <ul className="-mx-4 flex w-auto flex-col divide-y divide-border border-border border-y">
+    <ul className={LISTE}>
       {entrees.map((entree) => (
         <li key={entree.id}>
           <a

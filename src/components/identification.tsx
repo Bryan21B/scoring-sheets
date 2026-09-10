@@ -1,11 +1,8 @@
 import type { ReactElement } from "react";
+import { CHAMP_NOM, LISTE } from "@/components/champs";
 import { Button } from "@/components/ui/button";
 import type { JeuId } from "@/lib/jeux/catalogue";
 import type { JoueurConnu } from "@/lib/roster/noms";
-
-/** Classes du champ texte, partagées par les deux formulaires de l'écran. */
-const CHAMP_NOM =
-  "h-10 w-full rounded-lg border border-border bg-background px-3 text-base outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50";
 
 /**
  * « Qui es-tu ? » — le roster global, et le champ nouveau nom.
@@ -42,7 +39,7 @@ export function Identification({
 
       {roster.length > 0 && !aTrancher ? (
         <form action={destination} method="get" className="flex flex-col gap-3">
-          <ul className="-mx-4 flex w-auto flex-col divide-y divide-border border-border border-y">
+          <ul className={LISTE}>
             {roster.map((joueur) => (
               <li key={joueur.id}>
                 <label className="flex w-full cursor-pointer items-center gap-3 px-4 py-3 text-base">

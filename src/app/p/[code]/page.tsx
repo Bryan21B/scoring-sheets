@@ -1,10 +1,21 @@
 import { notFound } from "next/navigation";
-import type { ReactElement } from "react";
+import type { ReactElement, ReactNode } from "react";
 import { ouvrirLaMancheSuivanteAction } from "@/app/p/[code]/actions";
+import {
+  ajouterParticipantAction,
+  rejoindreAction,
+  retirerParticipantAction,
+} from "@/app/p/actions";
+import { TropDeTentatives } from "@/components/code-inconnu";
 import { PartieEntete } from "@/components/partie-entete";
+import { SalleDAttente } from "@/components/salle-attente";
 import { Button } from "@/components/ui/button";
 import { db } from "@/db";
-import { lirePartieParCode } from "@/lib/partie/lecture";
+import { cleDeLaRequete, lireLAppareil } from "@/lib/appareil/requete";
+import { messageDeRefusSchema, premierParametre } from "@/lib/partie/identite-url";
+import { chercherPartieParCode, limiteDeRecherche } from "@/lib/partie/recherche";
+import { lireSalleDAttente } from "@/lib/partie/salle-attente";
+import { listerLeRoster } from "@/lib/roster/lecture";
 
 /**
  * Jamais mise en cache : le code désigne une partie qui bouge, et une page
@@ -12,22 +23,71 @@ import { lirePartieParCode } from "@/lib/partie/lecture";
  */
 export const dynamic = "force-dynamic";
 
+/** La coquille commune, pour que les trois issues de la page se ressemblent. */
+function Ecran({ children }: { children: ReactNode }): ReactElement {
+  return (
+    <main className="mx-auto flex w-full max-w-2xl flex-1 flex-col gap-6 px-4 py-8">
+      {children}
+    </main>
+  );
+}
+
 /**
  * La page d'une partie, atteinte par son code.
  *
- * Le code **est** l'adresse, et il donne la lecture : la page ne demande à
+ * Le code **est** l'adresse, et il donne la **lecture** : la page ne demande à
  * personne qui il est, et montre donc son code à tous ceux qui l'ouvrent — le
- * créateur n'a aucun statut particulier ici.
+ * créateur n'a aucun statut particulier ici. L'écriture, elle, demande d'être
+ * participant, et c'est la salle d'attente qui en offre l'unique entrée.
+ *
+ * Les deux gestes de la page cohabitent parce que le domaine les enchaîne :
+ * tant qu'aucune manche n'existe la tablée bouge, et c'est **la première manche
+ * saisie** qui la gèle. Il n'y a donc pas de bouton « démarrer » — « saisir la
+ * manche suivante » en tient lieu, sans jamais l'annoncer.
+ *
+ * La recherche est **limitée en débit** : 2³⁰ combinaisons pour quelques
+ * centaines de parties font un enjeu nul, mais un script tire un million de
+ * codes sans transpirer. Voir `src/lib/partie/limite-de-debit.ts`.
+ *
+ * L'appareil se **lit** ici, il ne s'écrit pas : Next refuse qu'un composant
+ * serveur pose un cookie, et le proxy l'a déjà posé — en le réinjectant dans la
+ * requête transmise, si bien que le tout premier chargement d'un lien partagé
+ * voit déjà l'appareil.
  */
 export default async function PageDePartie(props: PageProps<"/p/[code]">): Promise<ReactElement> {
-  const partie = await lirePartieParCode(db, (await props.params).code);
+  const idAppareil = await lireLAppareil();
+  const trouvee = await chercherPartieParCode(db, limiteDeRecherche, {
+    code: (await props.params).code,
+    cle: await cleDeLaRequete(idAppareil),
+    maintenant: Date.now(),
+  });
 
-  if (partie === null) {
+  if (trouvee.statut === "tropDeTentatives") {
+    return (
+      <Ecran>
+        <TropDeTentatives />
+      </Ecran>
+    );
+  }
+
+  if (trouvee.statut === "inconnue") {
     notFound();
   }
 
+  const partie = trouvee.partie;
+  // Le message vient de l'adresse, donc de l'extérieur : il est rendu dans la
+  // page, et rien ne dit qu'il sort de notre propre redirection.
+  const erreur = messageDeRefusSchema.safeParse(
+    premierParametre((await props.searchParams).erreur),
+  );
+
   return (
-    <main className="mx-auto flex w-full max-w-2xl flex-1 flex-col gap-6 px-4 py-8">
+    <Ecran>
+      {erreur.success ? (
+        <p role="alert" className="rounded-lg bg-destructive/10 p-3 text-destructive text-sm">
+          {erreur.data}
+        </p>
+      ) : null}
       <PartieEntete partie={partie} />
 
       {/* Appuyer deux fois, ou à deux téléphones, ne crée pas deux manches :
@@ -37,6 +97,15 @@ export default async function PageDePartie(props: PageProps<"/p/[code]">): Promi
           Saisir la manche suivante
         </Button>
       </form>
-    </main>
+
+      <SalleDAttente
+        partie={partie}
+        salle={await lireSalleDAttente(db, partie.id, idAppareil)}
+        roster={await listerLeRoster(db)}
+        rejoindre={rejoindreAction}
+        ajouter={ajouterParticipantAction}
+        retirer={retirerParticipantAction}
+      />
+    </Ecran>
   );
 }

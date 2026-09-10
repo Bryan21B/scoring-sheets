@@ -15,7 +15,10 @@ import type { JoueurConnu } from "@/lib/roster/noms";
  * ne se rejoignent jamais : l'un se fige, l'autre se relit.
  */
 export type VueDePartie = {
-  /** L'identifiant de la partie : ce que les écritures d'une manche visent. */
+  /** L'identité interne : ce que visent les écritures de la page — mouvements
+   * de la tablée comme saisies d'une manche. Le code n'est pas la clé primaire
+   * — il doit pouvoir se régénérer sans casser les références — donc une page
+   * qui écrit a besoin des deux. */
   id: number;
   code: CodeDePartie;
   jeu: EntreeCatalogue;

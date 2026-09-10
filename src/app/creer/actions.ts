@@ -1,50 +1,13 @@
 "use server";
 
-import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { db } from "@/db";
-import {
-  assurerIdAppareil,
-  type IdAppareil,
-  NOM_COOKIE_APPAREIL,
-  OPTIONS_COOKIE_APPAREIL,
-} from "@/lib/appareil/cookie";
+import { assurerLAppareil } from "@/lib/appareil/requete";
 import { jeuIdSchema } from "@/lib/jeux/catalogue";
+import { adresseDePartie } from "@/lib/partie/adresse";
 import { creerPartie, RefusDeCreation } from "@/lib/partie/creation";
+import { lireIdentiteDuFormulaire } from "@/lib/partie/identite";
 import { ecrireIdentiteChoisie } from "@/lib/partie/identite-url";
-
-/**
- * L'identifiant d'appareil de la requête courante.
- *
- * Le proxy l'a normalement déjà posé ; le refaire ici couvre le cas où l'action
- * arrive sans être passée par lui — un `POST` direct, un cookie effacé entre
- * deux écrans. Sans ça la partie s'ouvrirait sans appareil, et personne ne
- * serait reconnu au retour.
- */
-async function assurerLAppareil(): Promise<IdAppareil> {
-  const bocal = await cookies();
-  const idAppareil = assurerIdAppareil(bocal.get(NOM_COOKIE_APPAREIL)?.value);
-
-  bocal.set(NOM_COOKIE_APPAREIL, idAppareil, OPTIONS_COOKIE_APPAREIL);
-
-  return idAppareil;
-}
-
-/**
- * Les champs plats d'identité du formulaire, tels quels.
- *
- * Rendus sans être validés : c'est `creationSchema` qui tranche, et une
- * deuxième validation ici en ferait deux à corriger le jour où la forme change.
- * Ils servent aussi à réécrire l'adresse en cas de refus — sans quoi le choix
- * de « qui es-tu ? » serait perdu à chaque erreur de tablée.
- */
-function lireIdentite(formulaire: FormData): Record<string, string> {
-  const mode = String(formulaire.get("mode") ?? "");
-
-  return mode === "roster"
-    ? { mode, joueurId: String(formulaire.get("joueurId") ?? "") }
-    : { mode, nom: String(formulaire.get("nom") ?? "") };
-}
 
 /**
  * Ce qui s'affiche quand la création est refusée.
@@ -100,7 +63,7 @@ export async function creerPartieAction(formulaire: FormData): Promise<void> {
     redirect("/");
   }
 
-  const identite = lireIdentite(formulaire);
+  const identite = lireIdentiteDuFormulaire(formulaire);
   let destination: string;
 
   try {
@@ -114,7 +77,7 @@ export async function creerPartieAction(formulaire: FormData): Promise<void> {
 
     destination =
       resultat.statut === "creee"
-        ? `/p/${resultat.code}`
+        ? adresseDePartie(resultat.code)
         : `/creer/${jeuId.data}?${ecrireIdentiteChoisie({ mode: "nouveau", nom: resultat.nom })}`;
   } catch (erreur) {
     destination = retourALaTablee(jeuId.data, formulaire, erreur);

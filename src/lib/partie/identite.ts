@@ -27,3 +27,19 @@ export const identiteSchema = z.discriminatedUnion("mode", [
  * à défaire.
  */
 export type IdentiteChoisie = z.infer<typeof identiteSchema>;
+
+/**
+ * Les champs plats d'identité d'un formulaire, tels quels.
+ *
+ * Rendus **sans être validés** : c'est {@link identiteSchema} qui tranche, à
+ * l'écriture, et une deuxième validation ici en ferait deux à corriger le jour
+ * où la forme change. Les deux formulaires qui la portent — la tablée à la
+ * création, l'arrivée en salle d'attente — envoient exactement la même chose.
+ */
+export function lireIdentiteDuFormulaire(formulaire: FormData): Record<string, string> {
+  const mode = String(formulaire.get("mode") ?? "");
+
+  return mode === "roster"
+    ? { mode, joueurId: String(formulaire.get("joueurId") ?? "") }
+    : { mode, nom: String(formulaire.get("nom") ?? "") };
+}

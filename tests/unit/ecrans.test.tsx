@@ -6,6 +6,7 @@ import { PartieEntete } from "@/components/partie-entete";
 import { TableeFormulaire } from "@/components/tablee-formulaire";
 import { CATALOGUE, trouverEntree } from "@/lib/jeux/catalogue";
 import { resoudreRegles } from "@/lib/jeux/resolution";
+import type { VueDePartie } from "@/lib/partie/lecture";
 import type { JoueurConnu } from "@/lib/roster/noms";
 
 const ENTREES = Object.values(CATALOGUE);
@@ -166,7 +167,7 @@ describe("la tablée", () => {
 
 describe("la page de partie", () => {
   const uno = trouverEntree("uno");
-  const vue = {
+  const vue: VueDePartie = {
     id: 1,
     code: "A1B2C3",
     jeu: uno,
@@ -193,10 +194,12 @@ describe("la page de partie", () => {
     expect(html).toContain("500 points");
   });
 
-  it("nomme les participants", () => {
+  it("laisse la tablée à la salle d'attente, qui la rend avec ses gestes", () => {
+    // Ajouter, retirer et se choisir ne se lisent pas sans la liste : elle est
+    // rendue une seule fois, là où on peut agir dessus.
     const html = renderToStaticMarkup(<PartieEntete partie={vue} />);
 
-    expect(html).toContain("Marie");
-    expect(html).toContain("Paul");
+    expect(html).not.toContain("Marie");
+    expect(html).not.toContain("Paul");
   });
 });

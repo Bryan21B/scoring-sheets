@@ -131,9 +131,11 @@ toutes les frontières qui valident.
 d'appareil dès le premier chargement et le réémet à chaque requête ; il n'écrit
 rien en base, le lien vers un joueur ne s'écrivant qu'au moment où on se choisit.
 - `src/lib/appareil/`, `src/lib/roster/`, `src/lib/partie/` — l'identité
-d'appareil (drapeaux et valeur opaque du cookie), le roster et la
-désambiguïsation des homonymes, et la partie : code Crockford, tablée, création
-et lecture. **Toute fonction qui touche la base prend `Base` en paramètre**
+d'appareil (drapeaux et valeur opaque du cookie, lien vers un joueur, lecture de
+la requête), le roster, la désambiguïsation des homonymes et la résolution d'une
+identité déclarée, et la partie : code Crockford, adresse, tablée, création,
+lecture, recherche limitée en débit et salle d'attente. **Toute fonction qui
+touche la base prend `Base` en paramètre**
 (`src/db/base.ts`), jamais le singleton de `@/db` : c'est ce qui la rend
 vérifiable contre une base jetable (`tests/unit/helpers/base-de-test.ts`).
 - `src/lib/manche/`, `src/lib/journal/` — la saisie d'une manche : l'ouverture
