@@ -61,3 +61,6 @@ next-env.d.ts
 # docs/regles/. Cette règle reste sans effet sur les deux PDF déjà suivis :
 # les retirer de l'index, et l'arbitrage de l'historique, relèvent de l'issue #19.
 /rules
+
+# worktrees de lanes — chaque lane a sa propre copie du dépôt, jamais versionnée.
+/.claude/worktrees/

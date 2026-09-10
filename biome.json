@@ -6,7 +6,7 @@
     "useIgnoreFile": true
   },
   "files": {
-    "includes": ["**", "!**/.next", "!**/node_modules", "!**/drizzle"]
+    "includes": ["**", "!**/.next", "!**/node_modules", "!**/drizzle", "!**/.claude"]
   },
   "formatter": {
     "enabled": true,
