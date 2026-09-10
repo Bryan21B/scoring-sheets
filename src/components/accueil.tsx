@@ -40,19 +40,19 @@ export type EnCours = {
  * rien à montrer qu'un tableau de tirets, et c'est la salle d'attente de la
  * page de partie qui a quelque chose à dire.
  *
- * Le poll est passé **par la page** et non construit ici : c'est un composant
- * client, et le rendre depuis ce composant-ci empêcherait de vérifier tout le
- * reste sur le balisage produit.
+ * Le sondage est passé **par la page** et non construit ici : c'est un
+ * composant client, et le rendre depuis ce composant-ci empêcherait de vérifier
+ * tout le reste sur le balisage produit.
  */
 export function Accueil({
   entrees,
   enCours,
-  poll,
+  sondage,
 }: {
   entrees: readonly EntreeCatalogue[];
   enCours: EnCours | null;
-  /** `<PollDePartie>` quand une partie tourne, rien sinon. Voir plus haut. */
-  poll?: ReactNode;
+  /** `<SondageDePartie>` quand une partie tourne, rien sinon. Voir plus haut. */
+  sondage?: ReactNode;
 }): ReactElement {
   if (enCours === null) {
     return (
@@ -93,7 +93,7 @@ export function Accueil({
         </div>
       </details>
 
-      {poll}
+      {sondage}
     </Ecran>
   );
 }

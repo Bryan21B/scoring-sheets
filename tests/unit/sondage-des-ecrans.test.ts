@@ -18,24 +18,24 @@ async function codeDe(chemin: string): Promise<string> {
 
 describe("le poll de la partie", () => {
   it("bat sur l'intervalle mesuré, et ne réécrit pas le nombre à côté", async () => {
-    const code = await codeDe("src/components/poll-de-partie.tsx");
+    const code = await codeDe("src/components/sondage-de-partie.tsx");
 
     expect(code).toContain("setInterval");
-    expect(code).toContain("INTERVALLE_DE_POLL_MS");
+    expect(code).toContain("INTERVALLE_DE_SONDAGE_MS");
     expect(code).not.toContain("3000");
   });
 
   it("délègue la décision à `doitRafraichir` plutôt que de la refaire en ligne", async () => {
     // C'est ce qui rend « inchangée, on ne fait rien ; changée, on rafraîchit »
     // vérifiable : un `!==` noyé dans le `useEffect` ne se teste pas.
-    const code = await codeDe("src/components/poll-de-partie.tsx");
+    const code = await codeDe("src/components/sondage-de-partie.tsx");
 
     expect(code).toContain("doitRafraichir");
     expect(code).toContain("refresh()");
   });
 
   it("range son battement : un intervalle non nettoyé s'empile à chaque rendu", async () => {
-    const code = await codeDe("src/components/poll-de-partie.tsx");
+    const code = await codeDe("src/components/sondage-de-partie.tsx");
 
     expect(code).toContain("clearInterval");
   });
@@ -43,7 +43,7 @@ describe("le poll de la partie", () => {
   it("n'emporte pas la base dans le navigateur", async () => {
     // Le composant est `use client` : importer le module qui lit la base
     // ferait partir Drizzle et le schéma dans le paquet servi au téléphone.
-    const code = await codeDe("src/components/poll-de-partie.tsx");
+    const code = await codeDe("src/components/sondage-de-partie.tsx");
 
     expect(code).toContain("@/lib/partie/sondage");
     expect(code).not.toContain("@/lib/partie/version");
@@ -67,7 +67,7 @@ describe("la passe avant reste sans poll", () => {
       expect(code).not.toContain("setInterval");
       expect(code).not.toContain("useEffect");
       expect(code).not.toContain("refresh");
-      expect(code).not.toContain("PollDePartie");
+      expect(code).not.toContain("SondageDePartie");
     });
   }
 });

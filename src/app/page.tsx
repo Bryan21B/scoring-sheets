@@ -1,7 +1,7 @@
 import type { ReactElement } from "react";
 import { ouvrirLaMancheSuivanteAction } from "@/app/p/[code]/actions";
 import { Accueil } from "@/components/accueil";
-import { PollDePartie } from "@/components/poll-de-partie";
+import { SondageDePartie } from "@/components/sondage-de-partie";
 import { db } from "@/db";
 import { CATALOGUE } from "@/lib/jeux/catalogue";
 import { lireLaGrille } from "@/lib/manche/lecture";
@@ -22,7 +22,7 @@ export const dynamic = "force-dynamic";
  * question « qu'est-ce qui tourne ? » dans `lirePartieEnCours`, et les totaux
  * dans le moteur. Rien ne se décide ici.
  *
- * La grille et l'estampille sortent de la **même passe de rendu** : le poll
+ * La grille et l'estampille sortent de la **même passe de rendu** : le sondage
  * compare à `partie.version` telle qu'elle était quand ces valeurs-ci ont été
  * lues, si bien qu'une écriture arrivée entre les deux se rattrape au battement
  * suivant plutôt que de passer inaperçue.
@@ -43,7 +43,7 @@ export default async function PageDAccueil(): Promise<ReactElement> {
         grille: await lireLaGrille(db, partie.id, partie.regles),
         ouvrirLaMancheSuivante: ouvrirLaMancheSuivanteAction.bind(null, partie.code),
       }}
-      poll={<PollDePartie code={partie.code} version={partie.version} />}
+      sondage={<SondageDePartie code={partie.code} version={partie.version} />}
     />
   );
 }

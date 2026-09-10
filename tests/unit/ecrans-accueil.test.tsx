@@ -149,7 +149,7 @@ describe("« saisir la manche suivante »", () => {
 /** L'accueil, avec ou sans partie qui tourne. */
 function accueil(enCours: EnCours | null): string {
   return renderToStaticMarkup(
-    <Accueil entrees={Object.values(CATALOGUE)} enCours={enCours} poll={null} />,
+    <Accueil entrees={Object.values(CATALOGUE)} enCours={enCours} sondage={null} />,
   );
 }
 

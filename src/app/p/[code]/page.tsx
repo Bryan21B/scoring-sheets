@@ -11,8 +11,8 @@ import { Ecran } from "@/components/ecran";
 import { GrilleDeScore } from "@/components/grille-score";
 import { MancheSuivante } from "@/components/manche-suivante";
 import { PartieEntete } from "@/components/partie-entete";
-import { PollDePartie } from "@/components/poll-de-partie";
 import { SalleDAttente } from "@/components/salle-attente";
+import { SondageDePartie } from "@/components/sondage-de-partie";
 import { TiroirDuJournal } from "@/components/tiroir-journal";
 import { db } from "@/db";
 import { cleDeLaRequete, lireLAppareil } from "@/lib/appareil/requete";
@@ -111,7 +111,7 @@ export default async function PageDePartie(props: PageProps<"/p/[code]">): Promi
         tiroir={await lireLeTiroir(db, partie.id, await props.searchParams)}
       />
 
-      <PollDePartie code={partie.code} version={partie.version} />
+      <SondageDePartie code={partie.code} version={partie.version} />
     </Ecran>
   );
 }

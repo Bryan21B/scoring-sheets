@@ -1,13 +1,13 @@
 import { describe, expect, it } from "bun:test";
 import {
   doitRafraichir,
-  INTERVALLE_DE_POLL_MS,
+  INTERVALLE_DE_SONDAGE_MS,
   reponseDeSondageSchema,
 } from "@/lib/partie/sondage";
 
 describe("l'intervalle du poll", () => {
   it("est de trois secondes, le chiffre que l'ADR 0003 a mesuré", () => {
-    expect(INTERVALLE_DE_POLL_MS).toBe(3000);
+    expect(INTERVALLE_DE_SONDAGE_MS).toBe(3000);
   });
 });
 

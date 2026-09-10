@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 import {
   doitRafraichir,
-  INTERVALLE_DE_POLL_MS,
+  INTERVALLE_DE_SONDAGE_MS,
   reponseDeSondageSchema,
 } from "@/lib/partie/sondage";
 
@@ -35,7 +35,7 @@ import {
  * suivant, et un écran d'erreur pour une lecture qu'on refait dans trois
  * secondes serait du bruit.
  */
-export function PollDePartie({ code, version }: { code: string; version: number }): null {
+export function SondageDePartie({ code, version }: { code: string; version: number }): null {
   const router = useRouter();
 
   useEffect(() => {
@@ -61,7 +61,7 @@ export function PollDePartie({ code, version }: { code: string; version: number 
 
     const battement = setInterval(() => {
       void sonder();
-    }, INTERVALLE_DE_POLL_MS);
+    }, INTERVALLE_DE_SONDAGE_MS);
 
     return () => {
       vivant = false;

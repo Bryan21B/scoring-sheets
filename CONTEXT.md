@@ -140,8 +140,10 @@ Tranché par [Écriture concurrente sur la même case : politique de conflit](ht
   n'est **jamais un jeton d'écriture** : le garde-fou du conflit porte sur la
   case, et une condition portée par la partie ferait échouer quatre joueurs sur
   cinq à 6 qui prend.
-- **Sondage** — la relecture de l'estampille par chaque téléphone, **toutes les
-  trois secondes**. Inchangée, on ne fait rien ; changée, on rafraîchit la page
+- **Sondage** — le *polling* de l'ADR 0003, sous son nom français : la relecture
+  de l'estampille par chaque téléphone, **toutes les trois secondes**. C'est
+  « sondage » que portent les identifiants ; « poll » reste dans la prose, où
+  l'ADR l'a posé. Inchangée, on ne fait rien ; changée, on rafraîchit la page
   sans recharger le document. C'est tout le transport : voir
   `docs/adr/0003-polling-plutot-que-push.md`, à refaire avant de le remplacer.
   La **passe avant ne sonde pas** — elle ne montre ni total ni alerte, donc elle

@@ -22,7 +22,7 @@ import { z } from "zod";
  * Il vit ici, et non dans le composant qui l'appelle, pour être relu par un
  * test : un nombre écrit dans un `useEffect` ne se vérifie pas.
  */
-export const INTERVALLE_DE_POLL_MS = 3000;
+export const INTERVALLE_DE_SONDAGE_MS = 3000;
 
 /**
  * Ce que la route du sondage renvoie. Validé à l'arrivée comme toute entrée
