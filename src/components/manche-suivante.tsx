@@ -1,8 +1,6 @@
-import type { ComponentProps, ReactElement } from "react";
+import type { ReactElement } from "react";
+import type { Action } from "@/components/champs";
 import { Button } from "@/components/ui/button";
-
-/** Une action de formulaire, telle qu'une page câble la sienne. */
-type Action = ComponentProps<"form">["action"];
 
 /**
  * Le geste principal de la soirée : **un appui, et on tape**.

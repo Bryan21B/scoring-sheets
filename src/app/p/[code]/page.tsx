@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation";
-import type { ReactElement, ReactNode } from "react";
+import type { ReactElement } from "react";
 import { ouvrirLaMancheSuivanteAction } from "@/app/p/[code]/actions";
 import {
   ajouterParticipantAction,
@@ -7,6 +7,7 @@ import {
   retirerParticipantAction,
 } from "@/app/p/actions";
 import { TropDeTentatives } from "@/components/code-inconnu";
+import { Ecran } from "@/components/ecran";
 import { GrilleDeScore } from "@/components/grille-score";
 import { MancheSuivante } from "@/components/manche-suivante";
 import { PartieEntete } from "@/components/partie-entete";
@@ -27,15 +28,6 @@ import { listerLeRoster } from "@/lib/roster/lecture";
  * gardée montrerait la tablée d'il y a dix minutes.
  */
 export const dynamic = "force-dynamic";
-
-/** La coquille commune, pour que les trois issues de la page se ressemblent. */
-function Ecran({ children }: { children: ReactNode }): ReactElement {
-  return (
-    <main className="mx-auto flex w-full max-w-2xl flex-1 flex-col gap-6 px-4 py-8">
-      {children}
-    </main>
-  );
-}
 
 /**
  * La page d'une partie, atteinte par son code.
@@ -101,14 +93,7 @@ export default async function PageDePartie(props: PageProps<"/p/[code]">): Promi
       ) : null}
       <PartieEntete partie={partie} />
 
-      {grille.manches.length > 0 ? (
-        <GrilleDeScore
-          joueurs={partie.participants}
-          manches={grille.manches}
-          totaux={grille.etat.totaux}
-          unite={partie.jeu.unite}
-        />
-      ) : null}
+      <GrilleDeScore partie={partie} grille={grille} />
 
       <MancheSuivante action={ouvrirLaMancheSuivanteAction.bind(null, partie.code)} />
 

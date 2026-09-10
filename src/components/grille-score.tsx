@@ -1,8 +1,7 @@
 import type { ReactElement } from "react";
-import type { EntreeCatalogue } from "@/lib/jeux/catalogue";
 import type { JoueurId } from "@/lib/jeux/moteur";
-import type { LigneDeGrille } from "@/lib/manche/lecture";
-import type { JoueurConnu } from "@/lib/roster/noms";
+import type { LigneDeGrille, VueDeGrille } from "@/lib/manche/lecture";
+import type { VueDePartie } from "@/lib/partie/lecture";
 
 /** Ce qu'une case vide montre : un trou, jamais un zéro — voir {@link GrilleDeScore}. */
 const TROU = "—";
@@ -30,20 +29,31 @@ const TROU = "—";
  * Les cases se retrouvent **par joueur**, jamais par position : le composant ne
  * suppose pas que sa lecture les lui donne dans l'ordre de ses colonnes, et un
  * décalage attribuerait le score de Paul à Léa en silence.
+ *
+ * **Une partie sans manche ne montre rien** — pas un tableau de tirets. La règle
+ * est ici plutôt qu'à chaque appel : elle vaut pour la grille elle-même, et deux
+ * écrans devant s'en souvenir sont un écran qui l'oubliera.
+ *
+ * Prend la partie et sa grille, et non les quatre listes qu'il en tire : elles
+ * voyagent toujours ensemble, et les séparer laisserait un appelant marier les
+ * joueurs d'une partie aux totaux d'une autre.
  */
 export function GrilleDeScore({
-  joueurs,
-  manches,
-  totaux,
-  unite,
+  partie,
+  grille,
 }: {
-  /** Les colonnes, dans l'ordre de la tablée. */
-  joueurs: readonly JoueurConnu[];
-  manches: readonly LigneDeGrille[];
-  /** Les totaux tels que `evaluer` les rend, la manche en cours comprise. */
-  totaux: ReadonlyMap<JoueurId, number>;
-  unite: EntreeCatalogue["unite"];
-}): ReactElement {
+  partie: VueDePartie;
+  grille: VueDeGrille;
+}): ReactElement | null {
+  if (grille.manches.length === 0) {
+    return null;
+  }
+
+  const joueurs = partie.participants;
+  const { manches } = grille;
+  const totaux = grille.etat.totaux;
+  const unite = partie.jeu.unite;
+
   return (
     <section className="flex flex-col gap-2">
       <div className="-mx-4 overflow-x-auto px-4">

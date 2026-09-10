@@ -1,5 +1,7 @@
-import type { ComponentProps, ReactElement, ReactNode } from "react";
+import type { ReactElement, ReactNode } from "react";
 import { CatalogueListe } from "@/components/catalogue-liste";
+import type { Action } from "@/components/champs";
+import { Ecran } from "@/components/ecran";
 import { GrilleDeScore } from "@/components/grille-score";
 import { MancheSuivante } from "@/components/manche-suivante";
 import { RejoindreParCode } from "@/components/rejoindre-par-code";
@@ -7,9 +9,6 @@ import type { EntreeCatalogue } from "@/lib/jeux/catalogue";
 import type { VueDeGrille } from "@/lib/manche/lecture";
 import type { VueDePartie } from "@/lib/partie/lecture";
 import { libelleDeFin } from "@/lib/partie/tablee";
-
-/** Une action de formulaire, telle qu'une page câble la sienne. */
-type Action = ComponentProps<"form">["action"];
 
 /** La soirée que l'accueil montre : la partie, sa feuille, et le geste suivant. */
 export type EnCours = {
@@ -76,14 +75,7 @@ export function Accueil({
         </p>
       </div>
 
-      {grille.manches.length > 0 ? (
-        <GrilleDeScore
-          joueurs={partie.participants}
-          manches={grille.manches}
-          totaux={grille.etat.totaux}
-          unite={partie.jeu.unite}
-        />
-      ) : null}
+      <GrilleDeScore partie={partie} grille={grille} />
 
       <MancheSuivante action={enCours.ouvrirLaMancheSuivante} />
 
@@ -103,14 +95,5 @@ export function Accueil({
 
       {poll}
     </Ecran>
-  );
-}
-
-/** La coquille commune, pour que les deux visages de l'accueil se ressemblent. */
-function Ecran({ children }: { children: ReactNode }): ReactElement {
-  return (
-    <main className="mx-auto flex w-full max-w-2xl flex-1 flex-col gap-6 px-4 py-8">
-      {children}
-    </main>
   );
 }

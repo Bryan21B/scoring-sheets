@@ -1,12 +1,23 @@
+import type { ComponentProps } from "react";
+
 /**
- * Les classes que plusieurs écrans partagent, écrites une seule fois.
+ * Ce que plusieurs écrans partagent, écrit une seule fois.
  *
- * Elles vivent ici parce qu'elles sont **la même chose**, pas parce qu'elles se
- * ressemblent : la liste pleine largeur est le motif de l'app — catalogue,
- * roster, tablée — et un champ de nom se saisit pareil qu'on ouvre une partie
- * ou qu'on la rejoigne. Trois copies divergent le jour où l'une est corrigée
- * seule, et l'écart ne se voit qu'à l'écran.
+ * Les classes vivent ici parce qu'elles sont **la même chose**, pas parce
+ * qu'elles se ressemblent : la liste pleine largeur est le motif de l'app —
+ * catalogue, roster, tablée — et un champ de nom se saisit pareil qu'on ouvre
+ * une partie ou qu'on la rejoigne. Trois copies divergent le jour où l'une est
+ * corrigée seule, et l'écart ne se voit qu'à l'écran.
  */
+
+/**
+ * Une action de formulaire, telle qu'une page câble la sienne.
+ *
+ * Le type est ici plutôt que recopié dans chaque composant qui écrit : tous les
+ * gestes de l'app passent par un `form`, et une action serveur liée ou une
+ * adresse en `GET` sont les deux seules formes qu'ils prennent.
+ */
+export type Action = ComponentProps<"form">["action"];
 
 /** Le champ texte d'un nom de joueur. */
 export const CHAMP_NOM =

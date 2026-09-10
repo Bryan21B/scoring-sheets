@@ -1,12 +1,9 @@
-import type { ComponentProps, ReactElement } from "react";
-import { CHAMP_NOM, LISTE } from "@/components/champs";
+import type { ReactElement } from "react";
+import { type Action, CHAMP_NOM, LISTE } from "@/components/champs";
 import { Button } from "@/components/ui/button";
 import type { VueDePartie } from "@/lib/partie/lecture";
 import { type Arrivee, type EtatDeSalle, PAS_DE_LA_PARTIE } from "@/lib/partie/salle-attente";
 import type { JoueurConnu } from "@/lib/roster/noms";
-
-/** Une action de formulaire, telle qu'une page câble la sienne. */
-type Action = ComponentProps<"form">["action"];
 
 /**
  * La tablée et ce qu'on peut encore en faire.

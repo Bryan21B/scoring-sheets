@@ -6,12 +6,21 @@ import { MancheSuivante } from "@/components/manche-suivante";
 import { CATALOGUE, trouverEntree } from "@/lib/jeux/catalogue";
 import { evaluer, type Manche } from "@/lib/jeux/moteur";
 import { resoudreRegles } from "@/lib/jeux/resolution";
-import type { LigneDeGrille } from "@/lib/manche/lecture";
+import type { LigneDeGrille, VueDeGrille } from "@/lib/manche/lecture";
 import type { VueDePartie } from "@/lib/partie/lecture";
 import { LEA, MARIE, PAUL, TABLEE } from "./helpers/tablee";
 
 const SIX_QUI_PREND = trouverEntree("6-qui-prend");
 const REGLES = resoudreRegles(SIX_QUI_PREND, { nombreDeJoueurs: 3 });
+
+const PARTIE: VueDePartie = {
+  id: 1,
+  code: "A1B2C3",
+  jeu: SIX_QUI_PREND,
+  regles: REGLES,
+  version: 4,
+  participants: [...TABLEE],
+};
 
 /** Une ligne de grille pour la tablée de trois, valeurs manquantes vides. */
 function ligne(numero: number, ...valeurs: readonly (number | null)[]): LigneDeGrille {
@@ -23,25 +32,23 @@ function ligne(numero: number, ...valeurs: readonly (number | null)[]): LigneDeG
 }
 
 /**
- * La grille rendue, **totaux calculés par le moteur** et non écrits à la main :
- * une carte fabriquée dans le test prouverait seulement que le composant sait
- * afficher une carte.
+ * La feuille de score telle que la page la lit, **totaux calculés par le
+ * moteur** et non écrits à la main : une carte fabriquée dans le test prouverait
+ * seulement que le composant sait afficher une carte.
  */
-function grille(...lignes: readonly LigneDeGrille[]): string {
+function feuille(...lignes: readonly LigneDeGrille[]): VueDeGrille {
   const manches: Manche[] = lignes.map((une) => ({
     close: une.close,
     participants: TABLEE.map((joueur) => joueur.id),
     cases: une.cases.map(({ joueur, valeur }) => ({ joueurId: joueur.id, valeur })),
   }));
 
-  return renderToStaticMarkup(
-    <GrilleDeScore
-      joueurs={TABLEE}
-      manches={lignes}
-      totaux={evaluer(REGLES, manches).totaux}
-      unite={SIX_QUI_PREND.unite}
-    />,
-  );
+  return { manches: lignes, etat: evaluer(REGLES, manches) };
+}
+
+/** La grille rendue pour la tablée de trois. */
+function grille(...lignes: readonly LigneDeGrille[]): string {
+  return renderToStaticMarkup(<GrilleDeScore partie={PARTIE} grille={feuille(...lignes)} />);
 }
 
 describe("la grille de score", () => {
@@ -92,6 +99,12 @@ describe("la grille de score", () => {
   it("nomme ce que ses nombres comptent", () => {
     expect(grille(ligne(1, 8, 15, 0))).toContain("têtes de bœuf");
   });
+
+  it("ne montre rien avant la première manche, plutôt qu'un tableau de tirets", () => {
+    // La règle vit dans la grille et non chez ses appelants : deux écrans
+    // devant s'en souvenir sont un écran qui l'oubliera.
+    expect(grille()).toBe("");
+  });
 });
 
 describe("la grille et les joueurs qu'elle range", () => {
@@ -133,15 +146,6 @@ describe("« saisir la manche suivante »", () => {
   });
 });
 
-const PARTIE: VueDePartie = {
-  id: 1,
-  code: "A1B2C3",
-  jeu: SIX_QUI_PREND,
-  regles: REGLES,
-  version: 4,
-  participants: [...TABLEE],
-};
-
 /** L'accueil, avec ou sans partie qui tourne. */
 function accueil(enCours: EnCours | null): string {
   return renderToStaticMarkup(
@@ -153,7 +157,7 @@ function accueil(enCours: EnCours | null): string {
 function enCours(...lignes: readonly LigneDeGrille[]): EnCours {
   return {
     partie: PARTIE,
-    grille: { manches: lignes, etat: evaluer(REGLES, []) },
+    grille: feuille(...lignes),
     ouvrirLaMancheSuivante: "/p/A1B2C3/manche",
   };
 }
