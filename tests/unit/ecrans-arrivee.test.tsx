@@ -19,6 +19,7 @@ const PARTIE: VueDePartie = {
   code: "A1B2C3",
   jeu: UNO,
   regles: resoudreRegles(UNO, { nombreDeJoueurs: 3 }),
+  version: 1,
   participants: [MARIE],
 };
 

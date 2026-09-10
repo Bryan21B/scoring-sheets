@@ -172,6 +172,7 @@ describe("la page de partie", () => {
     code: "A1B2C3",
     jeu: uno,
     regles: resoudreRegles(uno, { nombreDeJoueurs: 3 }),
+    version: 1,
     participants: [MARIE, PAUL],
   };
 

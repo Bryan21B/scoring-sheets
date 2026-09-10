@@ -23,6 +23,9 @@ export type VueDePartie = {
   code: CodeDePartie;
   jeu: EntreeCatalogue;
   regles: Regles;
+  /** L'estampille du poll, telle qu'elle était au rendu de la page. Voir
+   * `src/lib/partie/version.ts` : elle sert à comparer, **jamais** à écrire. */
+  version: number;
   participants: JoueurConnu[];
 };
 
@@ -46,7 +49,13 @@ export async function lirePartieParCode(base: Base, codeBrut: string): Promise<V
   }
 
   const [ligne] = await base
-    .select({ id: partie.id, code: partie.code, jeuId: partie.jeuId, regles: partie.regles })
+    .select({
+      id: partie.id,
+      code: partie.code,
+      jeuId: partie.jeuId,
+      regles: partie.regles,
+      version: partie.version,
+    })
     .from(partie)
     .where(eq(partie.code, code.data))
     .limit(1);
@@ -69,6 +78,7 @@ export async function lirePartieParCode(base: Base, codeBrut: string): Promise<V
     code: ligne.code,
     jeu: trouverEntree(jeuId.data),
     regles: parseRegles(ligne.regles),
+    version: ligne.version,
     participants: await lireLesParticipants(base, ligne.id),
   };
 }

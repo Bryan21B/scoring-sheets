@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it } from "bun:test";
 import type { Base } from "@/db/base";
 import { trouverEntree } from "@/lib/jeux/catalogue";
 import { resoudreRegles } from "@/lib/jeux/resolution";
-import { evaluerLaPartie, lireLaManche } from "@/lib/manche/lecture";
+import { evaluerLaPartie, lireLaGrille, lireLaManche } from "@/lib/manche/lecture";
 import { ouvrirLaMancheSuivante } from "@/lib/manche/ouverture";
 import { ecrireLaCase } from "@/lib/manche/saisie";
 import { type BaseDeTest, creerBaseDeTest } from "../helpers/base-de-test";
@@ -123,5 +123,48 @@ describe("evaluerLaPartie", () => {
     const etat = await evaluerLaPartie(base, partie.partieId, REGLES);
 
     expect([...etat.totaux.keys()]).toEqual([joueurA(0), joueurA(1), joueurA(2)]);
+  });
+});
+
+describe("lireLaGrille", () => {
+  it("rend une ligne par manche, dans l'ordre où elles ont été jouées", async () => {
+    await ouvrirLaMancheSuivante(base, partie.partieId);
+
+    const grille = await lireLaGrille(base, partie.partieId, REGLES);
+
+    expect(grille.manches.map((ligne) => ligne.numero)).toEqual([1, 2]);
+  });
+
+  it("porte sur chaque ligne une case par joueur, la vide comprise", async () => {
+    await poser(joueurA(1), 15);
+
+    const grille = await lireLaGrille(base, partie.partieId, REGLES);
+
+    expect(grille.manches[0]?.cases.map((une) => une.joueur.nom)).toEqual(["Marie", "Paul", "Léa"]);
+    expect(grille.manches[0]?.cases.map((une) => une.valeur)).toEqual([null, 15, null]);
+  });
+
+  it("dit d'une ligne si sa manche est close, ce que le pied de grille ne calcule pas", async () => {
+    const grille = await lireLaGrille(base, partie.partieId, REGLES);
+
+    expect(grille.manches[0]?.close).toBe(false);
+  });
+
+  it("porte les totaux du moteur, et non un décompte refait pour la grille", async () => {
+    const deuxieme = await ouvrirLaMancheSuivante(base, partie.partieId);
+    await poser(joueurA(0), 8);
+    await poser(joueurA(0), 5, deuxieme.id);
+
+    const grille = await lireLaGrille(base, partie.partieId, REGLES);
+
+    expect(grille.etat.totaux.get(joueurA(0))).toBe(13);
+  });
+
+  it("rend une grille sans ligne pour une partie qui n'a pas commencé", async () => {
+    const neuve = await ouvrirUnePartieDeTest(base, { noms: ["Zoé", "Tom"] });
+
+    const grille = await lireLaGrille(base, neuve.partieId, REGLES);
+
+    expect(grille.manches).toEqual([]);
   });
 });

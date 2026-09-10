@@ -111,39 +111,94 @@ export async function lireLaManche(
 }
 
 /**
- * L'état de la partie, **calculé par le moteur** et jamais ici.
+ * Une ligne de la grille : une manche, et ce que chaque joueur y a marqué.
+ *
+ * Elle porte **une case par participant**, la vide comprise, comme
+ * {@link VueDeManche} — c'est ce qui laisse la grille montrer un trou plutôt
+ * qu'un zéro, et un zéro est une manche réussie à 6 qui prend.
+ *
+ * `close` est la clôture **déclarée** relue de la base, jamais la complétude
+ * dérivée : la grille l'affiche, elle ne la calcule pas.
+ */
+export type LigneDeGrille = {
+  numero: number;
+  close: boolean;
+  cases: readonly CaseDeManche[];
+};
+
+/**
+ * La feuille de score entière : les manches en lignes, et l'état du moteur.
+ *
+ * Les deux voyagent ensemble parce qu'ils sortent de **la même lecture** : les
+ * séparer ferait relire les mêmes manches deux fois pour un écran qui montre
+ * les valeurs et les totaux côte à côte, avec le risque qu'une écriture se
+ * glisse entre les deux et qu'un total ne corresponde pas aux cases affichées.
+ *
+ * Les colonnes ne sont pas ici : les joueurs viennent de la {@link VueDePartie}
+ * que l'écran tient déjà, et les recopier ferait deux listes de participants à
+ * garder d'accord.
+ */
+export type VueDeGrille = {
+  manches: readonly LigneDeGrille[];
+  etat: Etat;
+};
+
+/**
+ * La feuille de score d'une partie : ses manches, et ce que le moteur en tire.
  *
  * Ce module traduit des lignes en manches et s'arrête là : rien de ce que le
  * moteur calcule n'est stocké, et un total additionné en SQL serait un second
  * décompte à garder d'accord avec le premier.
  *
- * L'effectif courant est recopié sur toutes les manches, ce que le moteur
- * autorise explicitement — il en lit l'**intersection**, si bien que l'effectif
- * historique et l'effectif courant recopié donnent le même résultat. Il sort des
- * cases elles-mêmes, par {@link mancheDuMoteur}, et non d'une seconde requête.
+ * Une **seule lecture** pour les valeurs et pour les totaux : les séparer
+ * relirait les mêmes manches deux fois pour un écran qui montre les deux côte à
+ * côte, avec le risque qu'une écriture se glisse entre et qu'un total ne
+ * corresponde pas aux cases affichées.
  *
- * Prend une {@link Lecture} : la clôture d'une manche l'appelle **dans sa propre
- * transaction**, pour calculer `fini` sur une manche qu'elle vient de fermer et
- * que personne d'autre ne voit encore.
+ * L'effectif sort des cases elles-mêmes, par {@link mancheDuMoteur}, et non
+ * d'une seconde requête.
+ *
+ * Prend une {@link Lecture} : la clôture d'une manche appelle l'évaluation
+ * **dans sa propre transaction**, pour calculer `fini` sur une manche qu'elle
+ * vient de fermer et que personne d'autre ne voit encore.
+ */
+export async function lireLaGrille(
+  base: Lecture,
+  partieId: number,
+  regles: Regles,
+): Promise<VueDeGrille> {
+  const lignes = await base
+    .select({ id: manche.id, numero: manche.numero, closeLe: manche.closeLe })
+    .from(manche)
+    .where(eq(manche.partieId, partieId))
+    .orderBy(asc(manche.numero));
+
+  const grille: LigneDeGrille[] = [];
+
+  for (const ligne of lignes) {
+    grille.push({
+      numero: ligne.numero,
+      close: ligne.closeLe !== null,
+      cases: await lireLesCases(base, partieId, ligne.id),
+    });
+  }
+
+  const manches: Manche[] = grille.map((ligne) => mancheDuMoteur(ligne.cases, ligne.close));
+
+  return { manches: grille, etat: evaluer(regles, manches) };
+}
+
+/**
+ * L'état de la partie seul, pour les écrans qui n'ont pas la grille à montrer.
+ *
+ * Passe par {@link lireLaGrille} plutôt que de relire les manches à sa façon :
+ * deux traductions des mêmes lignes vers le moteur divergeraient le jour où
+ * l'une est corrigée seule.
  */
 export async function evaluerLaPartie(
   base: Lecture,
   partieId: number,
   regles: Regles,
 ): Promise<Etat> {
-  const lignes = await base
-    .select({ id: manche.id, closeLe: manche.closeLe })
-    .from(manche)
-    .where(eq(manche.partieId, partieId))
-    .orderBy(asc(manche.numero));
-
-  const manches: Manche[] = [];
-
-  for (const ligne of lignes) {
-    manches.push(
-      mancheDuMoteur(await lireLesCases(base, partieId, ligne.id), ligne.closeLe !== null),
-    );
-  }
-
-  return evaluer(regles, manches);
+  return (await lireLaGrille(base, partieId, regles)).etat;
 }
