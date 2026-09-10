@@ -79,6 +79,10 @@ Tranché par [Qui pilote la passe avant, quand chacun compte pour soi](https://g
   soi** et s'arrête là : elle ne pousse jamais vers l'écran d'un autre joueur.
   Sans appareil rattaché à un participant de la partie, elle démarre sur la
   première case manquante.
+- **Pavé** — le clavier numérique **maison** de la passe avant : dix touches
+  toujours ouvertes, jamais le clavier système. Un chiffre qui ferait sortir des
+  bornes du mode ne prend **pas** — refus sec, sans boîte de dialogue, et sans
+  rien détruire de ce qui était tapé.
 - **Récapitulatif** — l'écran qui suit la passe avant. Il porte les totaux, les
   cases encore vides **nommées** par le joueur qu'elles concernent, et la
   correction. C'est de là qu'on saisit pour quelqu'un d'autre, y compris pour un

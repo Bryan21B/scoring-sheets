@@ -1,0 +1,88 @@
+import { z } from "zod";
+import type { Ecriture } from "@/db/base";
+import { journal } from "@/db/schema";
+import { idAppareilSchema } from "@/lib/appareil/cookie";
+
+/**
+ * Qui a fait le geste : le **joueur figé à l'écriture**, et l'appareil à côté.
+ *
+ * Le joueur est gravé et jamais résolu à la lecture — le lien appareil vers
+ * joueur se repointe vers l'avant, et le relire réécrirait tout l'historique
+ * des lignes de ce téléphone. L'appareil est gardé **en plus** parce que le
+ * joueur seul ne distingue pas deux téléphones qui se déclarent la même
+ * personne, et que c'est précisément l'anomalie pour laquelle le tiroir existe.
+ *
+ * Le schéma vit ici et non dans les modules qui écrivent : « qui agit » est une
+ * notion du journal, et l'y laisser garde une seule forme à corriger.
+ */
+export const agissantSchema = z.strictObject({
+  joueurId: z.coerce.number().int().positive(),
+  /** Nullable comme la colonne : un appareil peut avoir été effacé depuis. */
+  appareilId: idAppareilSchema.nullable(),
+});
+
+/** L'auteur d'une ligne de journal, validé. */
+export type Agissant = z.infer<typeof agissantSchema>;
+
+/**
+ * Ce qu'une ligne `saisie` garde en plus des colonnes : la valeur posée.
+ *
+ * Non exporté : rien ne le relit encore. Le schéma est ici la **source** du
+ * type — la charge utile ne s'écrit pas deux fois — et il deviendra une vraie
+ * frontière le jour où le tiroir relira ce JSON depuis la base.
+ */
+const detailDeSaisieSchema = z.strictObject({
+  valeur: z.number().int().nonnegative(),
+});
+
+/** Ce qu'une ligne `correction` garde : d'où l'on venait, et où l'on va. */
+const detailDeCorrectionSchema = z.strictObject({
+  ancienne: z.number().int().nonnegative(),
+  nouvelle: z.number().int().nonnegative(),
+});
+
+/**
+ * Un geste **sur une case**, et la charge utile que son discriminant impose.
+ *
+ * Union discriminée plutôt que deux champs optionnels : une correction sans
+ * ancienne valeur ne se représente pas, et c'est la seule chose qu'on serait
+ * venu lire dans le tiroir.
+ */
+export type GesteDeCase =
+  | { geste: "saisie"; detail: z.infer<typeof detailDeSaisieSchema> }
+  | { geste: "correction"; detail: z.infer<typeof detailDeCorrectionSchema> };
+
+/** Une ligne à consigner : la case que le geste touche, et son auteur. */
+export type LigneDeCase = GesteDeCase & {
+  partieId: number;
+  /** Un entier nu, sans clé étrangère : un numéro de manche ne se réutilise pas. */
+  mancheNumero: number;
+  joueurConcerneId: number;
+  agissant: Agissant;
+};
+
+/**
+ * Écrit une ligne, **dans la transaction de la mutation qu'elle enregistre**.
+ *
+ * Prend `Ecriture` et non `Base`, et ce n'est pas une commodité : c'est le type
+ * qui interdit d'appeler cette fonction hors d'une transaction. Un journal qui
+ * peut rater des lignes en silence est pire que pas de journal — on lui fait
+ * confiance sans qu'il l'ait mérité, et il ne sert que le jour où on le
+ * consulte pour trancher. Son échec doit donc faire échouer la mutation.
+ *
+ * L'horodatage est celui du **serveur** : l'horloge d'un téléphone à table se
+ * règle à la main, et deux lignes prises sur deux téléphones ne s'ordonneraient
+ * plus entre elles.
+ */
+export async function consignerUnGesteDeCase(tx: Ecriture, ligne: LigneDeCase): Promise<void> {
+  await tx.insert(journal).values({
+    partieId: ligne.partieId,
+    geste: ligne.geste,
+    joueurAgissantId: ligne.agissant.joueurId,
+    appareilId: ligne.agissant.appareilId,
+    mancheNumero: ligne.mancheNumero,
+    joueurConcerneId: ligne.joueurConcerneId,
+    detail: JSON.stringify(ligne.detail),
+    ecritLe: new Date(),
+  });
+}

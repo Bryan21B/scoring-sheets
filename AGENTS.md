@@ -135,6 +135,12 @@ désambiguïsation des homonymes, et la partie : code Crockford, tablée, créat
 et lecture. **Toute fonction qui touche la base prend `Base` en paramètre**
 (`src/db/base.ts`), jamais le singleton de `@/db` : c'est ce qui la rend
 vérifiable contre une base jetable (`tests/unit/helpers/base-de-test.ts`).
+- `src/lib/manche/`, `src/lib/journal/` — la saisie d'une manche : l'ouverture
+idempotente par l'unicité `(partie, numéro)` (`ouverture.ts`), l'écriture
+**conditionnée sur la valeur montrée** et sa ligne de journal dans la **même
+transaction** (`saisie.ts`, `journal/ligne.ts`), la lecture d'une manche et le
+passage au moteur (`lecture.ts`), et les deux fonctions pures des écrans — par
+où la passe avant démarre (`passe-avant.ts`), ce que le pavé accepte (`pave.ts`).
 
 ## Gotchas
 

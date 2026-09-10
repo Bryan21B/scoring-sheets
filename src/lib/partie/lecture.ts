@@ -15,6 +15,8 @@ import type { JoueurConnu } from "@/lib/roster/noms";
  * ne se rejoignent jamais : l'un se fige, l'autre se relit.
  */
 export type VueDePartie = {
+  /** L'identifiant de la partie : ce que les écritures d'une manche visent. */
+  id: number;
   code: CodeDePartie;
   jeu: EntreeCatalogue;
   regles: Regles;
@@ -60,6 +62,7 @@ export async function lirePartieParCode(base: Base, codeBrut: string): Promise<V
   }
 
   return {
+    id: ligne.id,
     code: ligne.code,
     jeu: trouverEntree(jeuId.data),
     regles: parseRegles(ligne.regles),

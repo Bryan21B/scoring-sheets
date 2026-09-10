@@ -1,6 +1,8 @@
 import { notFound } from "next/navigation";
 import type { ReactElement } from "react";
+import { ouvrirLaMancheSuivanteAction } from "@/app/p/[code]/actions";
 import { PartieEntete } from "@/components/partie-entete";
+import { Button } from "@/components/ui/button";
 import { db } from "@/db";
 import { lirePartieParCode } from "@/lib/partie/lecture";
 
@@ -27,6 +29,14 @@ export default async function PageDePartie(props: PageProps<"/p/[code]">): Promi
   return (
     <main className="mx-auto flex w-full max-w-2xl flex-1 flex-col gap-6 px-4 py-8">
       <PartieEntete partie={partie} />
+
+      {/* Appuyer deux fois, ou à deux téléphones, ne crée pas deux manches :
+          l'unicité (partie, numéro) fait rejoindre la même. */}
+      <form action={ouvrirLaMancheSuivanteAction.bind(null, partie.code)} method="post">
+        <Button type="submit" size="lg" className="w-full">
+          Saisir la manche suivante
+        </Button>
+      </form>
     </main>
   );
 }

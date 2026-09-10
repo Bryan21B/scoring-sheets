@@ -167,6 +167,7 @@ describe("la tablée", () => {
 describe("la page de partie", () => {
   const uno = trouverEntree("uno");
   const vue = {
+    id: 1,
     code: "A1B2C3",
     jeu: uno,
     regles: resoudreRegles(uno, { nombreDeJoueurs: 3 }),
