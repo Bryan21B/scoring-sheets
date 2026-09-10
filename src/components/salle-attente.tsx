@@ -2,7 +2,12 @@ import type { ReactElement } from "react";
 import { type Action, CHAMP_NOM, LISTE } from "@/components/champs";
 import { Button } from "@/components/ui/button";
 import type { VueDePartie } from "@/lib/partie/lecture";
-import { type Arrivee, type EtatDeSalle, PAS_DE_LA_PARTIE } from "@/lib/partie/salle-attente";
+import {
+  type Arrivee,
+  type EtatDeSalle,
+  estDeLaPartie,
+  PAS_DE_LA_PARTIE,
+} from "@/lib/partie/salle-attente";
 import type { JoueurConnu } from "@/lib/roster/noms";
 
 /**
@@ -33,7 +38,7 @@ export function SalleDAttente({
   ajouter: Action;
   retirer: Action;
 }): ReactElement {
-  const dedans = salle.arrivee.statut === "participant";
+  const dedans = estDeLaPartie(salle);
 
   return (
     <section className="flex flex-col gap-8">

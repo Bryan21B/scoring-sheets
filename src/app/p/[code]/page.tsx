@@ -8,12 +8,8 @@ import {
 } from "@/app/p/actions";
 import { TropDeTentatives } from "@/components/code-inconnu";
 import { Ecran } from "@/components/ecran";
-import { GrilleDeScore } from "@/components/grille-score";
-import { MancheSuivante } from "@/components/manche-suivante";
-import { PartieEntete } from "@/components/partie-entete";
-import { SalleDAttente } from "@/components/salle-attente";
+import { EcranDePartie } from "@/components/ecran-de-partie";
 import { SondageDePartie } from "@/components/sondage-de-partie";
-import { TiroirDuJournal } from "@/components/tiroir-journal";
 import { db } from "@/db";
 import { cleDeLaRequete, lireLAppareil } from "@/lib/appareil/requete";
 import { lireLeTiroir } from "@/lib/journal/lecture";
@@ -46,6 +42,10 @@ export const dynamic = "force-dynamic";
  * partie, et deux façons de la montrer divergeraient. La grille n'apparaît
  * qu'une fois une manche ouverte — avant, c'est la salle d'attente qui a
  * quelque chose à dire, pas un tableau de tirets.
+ *
+ * La forme de l'écran vit dans `EcranDePartie`, et **la règle « le code donne
+ * la lecture, l'écriture demande d'être participant » avec elle** : ici il n'y
+ * a que du câblage, comme sur l'accueil.
  *
  * La recherche est **limitée en débit** : 2³⁰ combinaisons pour quelques
  * centaines de parties font un enjeu nul, mais un script tire un million de
@@ -85,33 +85,20 @@ export default async function PageDePartie(props: PageProps<"/p/[code]">): Promi
   const grille = await lireLaGrille(db, partie.id, partie.regles);
 
   return (
-    <Ecran>
-      {erreur.success ? (
-        <p role="alert" className="rounded-lg bg-destructive/10 p-3 text-destructive text-sm">
-          {erreur.data}
-        </p>
-      ) : null}
-      <PartieEntete partie={partie} />
-
-      <GrilleDeScore partie={partie} grille={grille} />
-
-      <MancheSuivante action={ouvrirLaMancheSuivanteAction.bind(null, partie.code)} />
-
-      <SalleDAttente
-        partie={partie}
-        salle={await lireSalleDAttente(db, partie.id, idAppareil)}
-        roster={await listerLeRoster(db)}
-        rejoindre={rejoindreAction}
-        ajouter={ajouterParticipantAction}
-        retirer={retirerParticipantAction}
-      />
-
-      <TiroirDuJournal
-        code={partie.code}
-        tiroir={await lireLeTiroir(db, partie.id, await props.searchParams)}
-      />
-
-      <SondageDePartie code={partie.code} version={partie.version} />
-    </Ecran>
+    <EcranDePartie
+      partie={partie}
+      grille={grille}
+      salle={await lireSalleDAttente(db, partie.id, idAppareil)}
+      roster={await listerLeRoster(db)}
+      tiroir={await lireLeTiroir(db, partie.id, await props.searchParams)}
+      gestes={{
+        ouvrirLaMancheSuivante: ouvrirLaMancheSuivanteAction.bind(null, partie.code),
+        rejoindre: rejoindreAction,
+        ajouter: ajouterParticipantAction,
+        retirer: retirerParticipantAction,
+      }}
+      erreur={erreur.success ? erreur.data : undefined}
+      sondage={<SondageDePartie code={partie.code} version={partie.version} />}
+    />
   );
 }

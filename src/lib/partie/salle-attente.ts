@@ -39,6 +39,21 @@ export type EtatDeSalle = {
 };
 
 /**
+ * Celui qui arrive est-il **de la partie** ?
+ *
+ * La ligne que le code seul ne franchit pas : le code donne la lecture,
+ * l'écriture demande d'être participant. Nommée ici plutôt que recopiée dans
+ * chaque écran qui offre un geste — trois copies divergent le jour où l'une est
+ * corrigée seule, et l'écart ne se voit qu'à l'écran.
+ *
+ * `propose` n'en est pas : la proposition est **armée et non inscrite**, et
+ * c'est précisément ce qui rend le spectateur possible.
+ */
+export function estDeLaPartie(salle: EtatDeSalle): boolean {
+  return salle.arrivee.statut === "participant";
+}
+
+/**
  * La liste des participants est-elle fermée ?
  *
  * **Déduit de l'existence d'une manche**, jamais stocké : il n'y a pas de

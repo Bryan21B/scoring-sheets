@@ -102,6 +102,19 @@ describe("la salle d'attente, une fois la partie commencée", () => {
     expect(html).not.toContain("Rejoindre la partie");
   });
 
+  it("n'offre qu'eux à un appareil vierge : les participants, et rien d'autre", () => {
+    // Zoé est au roster sans être de la partie, et le champ « nouveau nom »
+    // ajouterait quelqu'un : les deux sont des façons de rejoindre, et
+    // rejoindre s'arrête au gel. Réclamer, non — il n'ajoute personne.
+    const html = rendre({ statut: "inconnu" }, true);
+
+    expect(html).toContain("Réclamer sa place");
+    expect(html).toContain("Marie");
+    expect(html).not.toContain("Zoé");
+    expect(html).not.toContain('name="nom"');
+    expect(html).not.toContain('action="/p/ajouter"');
+  });
+
   it("ne propose plus de retirer personne", () => {
     expect(rendre({ statut: "participant", joueur: MARIE }, true)).not.toContain(
       'action="/p/retirer"',
