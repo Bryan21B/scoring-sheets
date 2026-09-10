@@ -5,6 +5,8 @@ import { notFound, redirect } from "next/navigation";
 import { db } from "@/db";
 import { NOM_COOKIE_APPAREIL } from "@/lib/appareil/cookie";
 import { lireLeJoueurDeLAppareil } from "@/lib/appareil/lecture";
+import { type EtatDeCloture, etatDeCloture, refusAMontrer } from "@/lib/manche/annonce";
+import { CLOTURE_HORS_TABLEE, cloturerLaManche } from "@/lib/manche/cloture";
 import { ouvrirLaMancheSuivante } from "@/lib/manche/ouverture";
 import { type RefusDEcriture, refusDe } from "@/lib/manche/refus";
 import { ecrireLaCase } from "@/lib/manche/saisie";
@@ -92,4 +94,62 @@ export async function ecrireLaCaseAction(
   }
 
   redirect(`/p/${partie.code}/manche/${retour.numero}/recapitulatif`);
+}
+
+/**
+ * Clôt une manche : la **déclaration** qu'elle est finie, et la confirmation de
+ * fin de partie s'il y a une fin à confirmer.
+ *
+ * Le joueur qui clôt se résout **ici**, du cookie, et jamais du formulaire :
+ * `manche.close_par` et `partie.fin_par` se gravent, et laisser un envoi les
+ * désigner reviendrait à laisser signer la fin d'une soirée au nom d'un autre.
+ *
+ * Elle ne rend un état que lorsqu'il y a quelque chose à dire — la partie vient
+ * de finir, ou la clôture est refusée. Une clôture qui ne termine rien renvoie
+ * à la partie, d'où part la manche suivante : il n'y a pas de second écran
+ * « voulez-vous terminer », quelqu'un vient déjà d'agir.
+ *
+ * `redirect` fonctionne en levant : il est appelé hors de tout `try`.
+ *
+ * @throws ce que la clôture lève et qui n'est pas écrit pour être lu — une
+ * manche disparue, une contrainte : cela remonte à la frontière d'erreur au
+ * lieu d'être recopié à la table.
+ */
+export async function cloturerLaMancheAction(
+  code: string,
+  _precedent: EtatDeCloture,
+  formulaire: FormData,
+): Promise<EtatDeCloture> {
+  const partie = await exigerLaPartie(code);
+  const bocal = await cookies();
+  const joueurId = await lireLeJoueurDeLAppareil(db, bocal.get(NOM_COOKIE_APPAREIL)?.value);
+
+  // Ne s'être choisi personne et s'être choisi quelqu'un d'une autre soirée
+  // sont la même situation vue de la partie : on n'est pas de la tablée.
+  if (joueurId === null) {
+    return { statut: "refusee", message: CLOTURE_HORS_TABLEE };
+  }
+
+  let annonce: EtatDeCloture;
+
+  try {
+    annonce = etatDeCloture(
+      await cloturerLaManche(db, {
+        mancheId: formulaire.get("mancheId"),
+        parJoueurId: joueurId,
+      }),
+    );
+  } catch (erreur) {
+    annonce = refusAMontrer(erreur);
+
+    if (annonce === null) {
+      throw erreur;
+    }
+  }
+
+  if (annonce !== null) {
+    return annonce;
+  }
+
+  redirect(`/p/${partie.code}`);
 }

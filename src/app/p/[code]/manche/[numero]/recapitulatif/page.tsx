@@ -1,5 +1,8 @@
 import { notFound } from "next/navigation";
 import type { ReactElement } from "react";
+import { cloturerLaMancheAction } from "@/app/p/[code]/actions";
+import { ClotureDeManche } from "@/components/cloture-de-manche";
+import { Ecran } from "@/components/ecran";
 import { Recapitulatif } from "@/components/recapitulatif";
 import { db } from "@/db";
 import { evaluerLaPartie, lireLaManche } from "@/lib/manche/lecture";
@@ -15,6 +18,11 @@ export const dynamic = "force-dynamic";
  * Les totaux viennent du **moteur** et d'aucun calcul local, la manche en cours
  * comprise : on voit le seuil arriver avant que la manche ne soit close, ce qui
  * est exactement ce qui rend la correction possible tant qu'elle vaut encore.
+ *
+ * Elle ne calcule **jamais** `fini` et n'annonce donc aucune fin : l'alerte sort
+ * de la clôture et de nulle part ailleurs, sans quoi elle s'allumerait puis
+ * s'éteindrait au gré des corrections. C'est aussi d'ici que part la clôture,
+ * parce que c'est ici qu'on vient vérifier la manche avant de la déclarer finie.
  */
 export default async function PageDeRecapitulatif(
   props: PageProps<"/p/[code]/manche/[numero]/recapitulatif">,
@@ -35,17 +43,26 @@ export default async function PageDeRecapitulatif(
 
   const etat = await evaluerLaPartie(db, partie.id, partie.regles);
 
+  const adresseDeLaPartie = `/p/${partie.code}`;
+
   return (
-    <main className="mx-auto flex w-full max-w-2xl flex-1 flex-col gap-6 px-4 py-8">
+    <Ecran>
       <Recapitulatif
         manche={manche}
         totaux={etat.totaux}
         unite={partie.jeu.unite}
-        adresseDeLaManche={`/p/${partie.code}/manche/${manche.numero}`}
+        adresseDeLaManche={`${adresseDeLaPartie}/manche/${manche.numero}`}
       />
-      <a href={`/p/${partie.code}`} className="text-muted-foreground text-sm underline">
+
+      <ClotureDeManche
+        action={cloturerLaMancheAction.bind(null, partie.code)}
+        mancheId={manche.id}
+        partie={adresseDeLaPartie}
+      />
+
+      <a href={adresseDeLaPartie} className="text-muted-foreground text-sm underline">
         Retour à la partie
       </a>
-    </main>
+    </Ecran>
   );
 }

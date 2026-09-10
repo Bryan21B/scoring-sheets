@@ -1,10 +1,12 @@
 import { describe, expect, it } from "bun:test";
 import { renderToStaticMarkup } from "react-dom/server";
+import { VueDeCloture } from "@/components/cloture-de-manche";
 import { EcranDeRefus } from "@/components/ecran-de-refus";
 import { PasseAvant } from "@/components/passe-avant";
 import { Recapitulatif } from "@/components/recapitulatif";
 import { type CadreDeSaisie, VueDeSaisie } from "@/components/saisie-de-case";
 import { trouverEntree } from "@/lib/jeux/catalogue";
+import type { EtatDeCloture } from "@/lib/manche/annonce";
 import type { CaseDeManche, VueDeManche } from "@/lib/manche/lecture";
 import type { RefusDEcriture } from "@/lib/manche/refus";
 import { casesDeLaTablee, LEA, MARIE, PAUL, TABLEE } from "./helpers/tablee";
@@ -13,6 +15,7 @@ const SIX_QUI_PREND = trouverEntree("6-qui-prend");
 const ADRESSE = "/p/ABC123/manche/1";
 const RECAPITULATIF = `${ADRESSE}/recapitulatif`;
 const JOURNAL = "/p/ABC123?journal=corrections";
+const PARTIE = "/p/ABC123";
 
 /** Une borne quelconque : le pavé la reçoit en prop, sa valeur n'apprend rien ici. */
 const BORNE = 200;
@@ -209,6 +212,21 @@ describe("le récapitulatif", () => {
   it("dit de quelle manche il récapitule", () => {
     expect(recapitulatif(manche(8, 15, null), totaux)).toContain("Manche 1");
   });
+
+  // Les totaux vivants montrent le seuil arriver, et c'est ce qui rend la
+  // correction possible tant qu'elle vaut encore. L'alerte, elle, ne sort que
+  // de la clôture : ici elle s'allumerait puis s'éteindrait à chaque correction.
+  it("n'annonce aucune fin de partie, seuil franchi ou non", () => {
+    const franchi = new Map([
+      [MARIE.id, 70],
+      [PAUL.id, 23],
+      [LEA.id, 0],
+    ]);
+    const html = recapitulatif(manche(8, 15, 3), franchi).toLowerCase();
+
+    expect(html).not.toContain("terminée");
+    expect(html).not.toContain("seuil");
+  });
 });
 
 describe("l'affichage optimiste de la saisie", () => {
@@ -298,5 +316,53 @@ describe("un refus arrête le geste", () => {
 
     expect(html).toContain("8");
     expect(html).not.toContain("Enregistré");
+  });
+});
+
+function cloture(etat: EtatDeCloture): string {
+  return renderToStaticMarkup(
+    <VueDeCloture action={RECAPITULATIF} mancheId={7} etat={etat} partie={PARTIE} />,
+  );
+}
+
+describe("clore la manche", () => {
+  // N'importe quel participant clôt : le composant ne reçoit aucune identité de
+  // lecteur, il n'a donc rien à conditionner et rien qui puisse l'être un jour
+  // par erreur. C'est le serveur qui vérifie qu'on est bien de la tablée.
+  it("offre le geste à qui regarde le récapitulatif", () => {
+    const html = cloture(null);
+
+    expect(html).toContain("Clore la manche");
+    expect(html).toContain('name="mancheId" value="7"');
+  });
+
+  it("montre un refus de clôture, et laisse réessayer une fois la manche réparée", () => {
+    const html = cloture({ statut: "refusee", message: "Il manque des valeurs à cette manche." });
+
+    expect(html).toContain("Il manque des valeurs à cette manche.");
+    expect(html).toContain("Clore la manche");
+  });
+});
+
+describe("l'alerte de fin de partie", () => {
+  // Clore la manche **est** la confirmation de fin de partie : il n'y a pas de
+  // second écran « voulez-vous terminer ».
+  it("ne dit rien tant qu'aucune clôture n'a rien terminé", () => {
+    expect(cloture(null)).not.toContain("terminée");
+  });
+
+  it("annonce la fin que la clôture a estampillée", () => {
+    const html = cloture({ statut: "finie", cause: "terminee" });
+
+    expect(html).toContain("terminée");
+    expect(html).toContain(`href="${PARTIE}"`);
+  });
+
+  it("ne repropose pas de clore une partie qui est finie", () => {
+    expect(cloture({ statut: "finie", cause: "terminee" })).not.toContain("Clore la manche");
+  });
+
+  it("dit l'abandon comme un abandon, sans le confondre avec une fin régulière", () => {
+    expect(cloture({ statut: "finie", cause: "abandonnee" })).toContain("abandonnée");
   });
 });
