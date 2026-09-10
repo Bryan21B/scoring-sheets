@@ -1,5 +1,15 @@
 # Changelog
 
+## [0.8.0](https://github.com/Bryan21B/scoring-sheets/compare/v0.7.0...v0.8.0) (2026-09-10)
+
+### Fonctionnalités
+
+* **spectateur:** Mettre en lecture seule qui a le code sans jouer ([cc944dc](https://github.com/Bryan21B/scoring-sheets/commit/cc944dc118d9fe460b5e7b21230e0faf3d267f7d)), closes [#34](https://github.com/Bryan21B/scoring-sheets/issues/34)
+
+### Refactoring
+
+* **tests:** Donner une seule Zoé aux écrans, et exiger le sondage ([944250b](https://github.com/Bryan21B/scoring-sheets/commit/944250beb5c78f50ea49edd6addb1a486492904c)), closes [#34](https://github.com/Bryan21B/scoring-sheets/issues/34)
+
 ## [0.7.0](https://github.com/Bryan21B/scoring-sheets/compare/v0.6.0...v0.7.0) (2026-09-10)
 
 ### Fonctionnalités
