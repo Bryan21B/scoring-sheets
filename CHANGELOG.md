@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.6.0](https://github.com/Bryan21B/scoring-sheets/compare/v0.5.0...v0.6.0) (2026-09-10)
+
+### Fonctionnalités
+
+* Ouvrir le journal d'une partie dans un tiroir discret ([ccf969f](https://github.com/Bryan21B/scoring-sheets/commit/ccf969f460863043e62d54639a566eb39480a236)), closes [#35](https://github.com/Bryan21B/scoring-sheets/issues/35)
+
 ## [0.5.0](https://github.com/Bryan21B/scoring-sheets/compare/v0.4.0...v0.5.0) (2026-09-10)
 
 ### Fonctionnalités
