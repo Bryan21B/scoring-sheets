@@ -3,10 +3,11 @@ import { notFound, redirect } from "next/navigation";
 import type { ReactElement } from "react";
 import { z } from "zod";
 import { ecrireLaCaseAction } from "@/app/p/[code]/actions";
-import { PasseAvant } from "@/components/passe-avant";
+import { SaisieDeCase } from "@/components/saisie-de-case";
 import { db } from "@/db";
 import { NOM_COOKIE_APPAREIL } from "@/lib/appareil/cookie";
 import { lireLeJoueurDeLAppareil } from "@/lib/appareil/lecture";
+import { adresseDuTiroir } from "@/lib/journal/tiroir";
 import { lireLaManche } from "@/lib/manche/lecture";
 import { numeroDeMancheSchema } from "@/lib/manche/ouverture";
 import { caseDeDepart } from "@/lib/manche/passe-avant";
@@ -39,7 +40,12 @@ export const dynamic = "force-dynamic";
  * précise, et que l'on saisit pour un participant sans appareil.
  *
  * Ce n'est que du câblage : la décision du démarrage vit dans `caseDeDepart`,
- * pure et vérifiée à part.
+ * pure et vérifiée à part, et le choix entre le pavé et l'écran de refus dans
+ * `VueDeSaisie`.
+ *
+ * L'adresse du tiroir part d'ici plutôt que d'être fabriquée par l'écran de
+ * refus : c'est la page qui connaît le code de la partie, et le refus n'a
+ * besoin que d'un endroit où envoyer qui veut savoir qui a écrit.
  */
 export default async function PageDeSaisie(
   props: PageProps<"/p/[code]/manche/[numero]">,
@@ -85,14 +91,17 @@ export default async function PageDeSaisie(
 
   return (
     <main className="mx-auto flex w-full max-w-2xl flex-1 flex-col px-4 py-8">
-      <PasseAvant
+      <SaisieDeCase
         action={ecrireLaCaseAction.bind(null, { code: partie.code, numero: manche.numero })}
-        mancheId={manche.id}
-        mancheNumero={manche.numero}
-        caseASaisir={caseASaisir}
-        max={bornes.max}
-        unite={partie.jeu.unite}
-        recapitulatif={recapitulatif}
+        cadre={{
+          mancheId: manche.id,
+          mancheNumero: manche.numero,
+          caseASaisir,
+          max: bornes.max,
+          unite: partie.jeu.unite,
+          recapitulatif,
+          journal: adresseDuTiroir(partie.code, "corrections"),
+        }}
       />
     </main>
   );

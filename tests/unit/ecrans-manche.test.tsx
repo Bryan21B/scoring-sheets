@@ -1,18 +1,23 @@
 import { describe, expect, it } from "bun:test";
 import { renderToStaticMarkup } from "react-dom/server";
+import { EcranDeRefus } from "@/components/ecran-de-refus";
 import { PasseAvant } from "@/components/passe-avant";
 import { Recapitulatif } from "@/components/recapitulatif";
+import { type CadreDeSaisie, VueDeSaisie } from "@/components/saisie-de-case";
 import { trouverEntree } from "@/lib/jeux/catalogue";
 import type { CaseDeManche, VueDeManche } from "@/lib/manche/lecture";
+import type { RefusDEcriture } from "@/lib/manche/refus";
 import { casesDeLaTablee, LEA, MARIE, PAUL, TABLEE } from "./helpers/tablee";
 
 const SIX_QUI_PREND = trouverEntree("6-qui-prend");
 const ADRESSE = "/p/ABC123/manche/1";
+const RECAPITULATIF = `${ADRESSE}/recapitulatif`;
+const JOURNAL = "/p/ABC123?journal=corrections";
 
 /** Une borne quelconque : le pavé la reçoit en prop, sa valeur n'apprend rien ici. */
 const BORNE = 200;
 
-function passeAvant(caseASaisir: CaseDeManche): string {
+function passeAvant(caseASaisir: CaseDeManche, enCours = false): string {
   return renderToStaticMarkup(
     <PasseAvant
       action="/p/ABC123/manche/1"
@@ -21,7 +26,46 @@ function passeAvant(caseASaisir: CaseDeManche): string {
       caseASaisir={caseASaisir}
       max={BORNE}
       unite={SIX_QUI_PREND.unite}
-      recapitulatif={`${ADRESSE}/recapitulatif`}
+      recapitulatif={RECAPITULATIF}
+      enCours={enCours}
+    />,
+  );
+}
+
+/** Le cadre d'une saisie : la case de Paul, dans la manche 1. */
+function cadre(caseASaisir: CaseDeManche): CadreDeSaisie {
+  return {
+    mancheId: 7,
+    mancheNumero: 1,
+    caseASaisir,
+    max: BORNE,
+    unite: SIX_QUI_PREND.unite,
+    recapitulatif: RECAPITULATIF,
+    journal: JOURNAL,
+  };
+}
+
+function ecranDeRefus(refus: RefusDEcriture): string {
+  return renderToStaticMarkup(
+    <EcranDeRefus
+      action={ADRESSE}
+      mancheId={7}
+      joueur={PAUL}
+      refus={refus}
+      unite={SIX_QUI_PREND.unite}
+      journal={JOURNAL}
+      recapitulatif={RECAPITULATIF}
+    />,
+  );
+}
+
+function vueDeSaisie(refus: RefusDEcriture | null): string {
+  return renderToStaticMarkup(
+    <VueDeSaisie
+      action={ADRESSE}
+      cadre={cadre({ joueur: PAUL, valeur: 8 })}
+      refus={refus}
+      enCours={false}
     />,
   );
 }
@@ -72,7 +116,7 @@ describe("la passe avant", () => {
   });
 
   it("mène au récapitulatif : un écran, pas cinq", () => {
-    expect(passeAvant({ joueur: PAUL, valeur: null })).toContain(`href="${ADRESSE}/recapitulatif"`);
+    expect(passeAvant({ joueur: PAUL, valeur: null })).toContain(`href="${RECAPITULATIF}"`);
   });
 });
 
@@ -164,5 +208,95 @@ describe("le récapitulatif", () => {
 
   it("dit de quelle manche il récapitule", () => {
     expect(recapitulatif(manche(8, 15, null), totaux)).toContain("Manche 1");
+  });
+});
+
+describe("l'affichage optimiste de la saisie", () => {
+  // « L'affichage optimiste lui a déjà montré son 12 » : l'écran affirme la
+  // valeur pendant que l'écriture est en vol, il n'attend pas le serveur pour
+  // la porter. Ce test épingle la règle de rendu, pas le temps du navigateur.
+  it("donne la valeur pour enregistrée pendant que l'écriture est en vol", () => {
+    const html = passeAvant({ joueur: PAUL, valeur: 12 }, true);
+
+    expect(html).toContain("12");
+    expect(html).toContain("Enregistré");
+  });
+
+  it("n'affirme rien tant que rien n'est parti", () => {
+    expect(passeAvant({ joueur: PAUL, valeur: 12 })).not.toContain("Enregistré");
+  });
+
+  it("ne laisse pas retaper par dessus une écriture en vol", () => {
+    expect(passeAvant({ joueur: PAUL, valeur: 12 }, true)).toContain("disabled");
+  });
+});
+
+describe("l'écran de refus", () => {
+  const Refus: RefusDEcriture = { valeurArrivee: 8, valeurTapee: 12 };
+
+  it("montre la valeur qui est arrivée : c'est elle qui rend le recul lisible", () => {
+    expect(ecranDeRefus(Refus)).toContain("8");
+  });
+
+  // Nommer Léa demanderait au chemin d'écriture d'aller lire le journal pour
+  // composer sa phrase. Le journal est une trace qu'on consulte, jamais une
+  // pièce du flux — il est à un appui de là pour qui veut savoir qui.
+  it("ne nomme pas l'auteur, et dit où le trouver", () => {
+    const html = ecranDeRefus(Refus);
+
+    expect(html).not.toContain("Marie");
+    expect(html).not.toContain("Léa");
+    expect(html).toContain(`href="${JOURNAL}"`);
+  });
+
+  it("nomme la case dont il parle, qui est celle qu'on saisissait", () => {
+    expect(ecranDeRefus(Refus)).toContain("Paul");
+  });
+
+  it("garde la valeur tapée sous la main", () => {
+    expect(ecranDeRefus(Refus)).toContain("12");
+  });
+
+  it("repose la valeur tapée par dessus la valeur arrivée, en un seul appui", () => {
+    const html = ecranDeRefus(Refus);
+
+    expect(html).toContain('name="valeurMontree" value="8"');
+    expect(html).toContain('name="valeur" value="12"');
+    expect(html.match(/type="submit"/g)).toHaveLength(1);
+  });
+
+  it("dit qu'une case est redevenue vide plutôt que de montrer un blanc", () => {
+    const html = ecranDeRefus({ valeurArrivee: null, valeurTapee: 12 });
+
+    expect(html).toContain("vide");
+    expect(html).toContain('name="valeurMontree" value=""');
+  });
+
+  it("laisse en rester là sans réappliquer", () => {
+    expect(ecranDeRefus(Refus)).toContain(`href="${RECAPITULATIF}"`);
+  });
+});
+
+describe("un refus arrête le geste", () => {
+  it("montre le pavé tant que rien n'est refusé", () => {
+    expect(vueDeSaisie(null)).toContain(">7</button>");
+  });
+
+  // Un écran, jamais un bandeau : à la trentième manche d'une soirée, un
+  // bandeau se rate. Le pavé disparaît, il n'est pas repoussé plus bas.
+  it("remplace la saisie par l'écran de refus au lieu de le poser au-dessus", () => {
+    const html = vueDeSaisie({ valeurArrivee: 8, valeurTapee: 12 });
+
+    expect(html).not.toContain(">7</button>");
+    expect(html).not.toContain("Effacer un chiffre");
+    expect(html).toContain("Réappliquer");
+  });
+
+  // Le recul de l'affichage optimiste : le 12 laisse la place au 8 arrivé.
+  it("fait reculer l'affichage sur la valeur arrivée", () => {
+    const html = vueDeSaisie({ valeurArrivee: 8, valeurTapee: 12 });
+
+    expect(html).toContain("8");
+    expect(html).not.toContain("Enregistré");
   });
 });

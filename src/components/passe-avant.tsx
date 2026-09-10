@@ -33,6 +33,12 @@ const TOUCHE =
  *
  * `valeurMontree` part avec l'écriture, et c'est le cœur du contrat : c'est
  * elle, et non la valeur tapée, qui conditionne l'écriture côté serveur.
+ *
+ * **L'affichage est optimiste** : pendant que l'écriture est en vol, l'écran
+ * donne la valeur pour enregistrée au lieu d'attendre le serveur. C'est ce que
+ * la politique d'écriture concurrente suppose — « l'affichage optimiste lui a
+ * déjà montré son 12 » — et ce que l'écran de refus fait reculer si quelqu'un
+ * est passé avant.
  */
 export function PasseAvant({
   action,
@@ -42,6 +48,7 @@ export function PasseAvant({
   max,
   unite,
   recapitulatif,
+  enCours = false,
 }: {
   action: ComponentProps<"form">["action"];
   mancheId: number;
@@ -52,6 +59,13 @@ export function PasseAvant({
   unite: EntreeCatalogue["unite"];
   /** L'adresse où la passe avant se termine — un écran, pas cinq. */
   recapitulatif: string;
+  /**
+   * Vrai pendant qu'une écriture est en vol.
+   *
+   * Le pavé se ferme alors : retaper par dessus une valeur partie poserait la
+   * suivante sur une condition qui n'est déjà plus celle qu'on avait vue.
+   */
+  enCours?: boolean;
 }): ReactElement {
   // Amorcée sur la valeur montrée : on arrive ici pour corriger aussi souvent
   // que pour saisir, et repartir d'un champ vide ferait retaper un 15 juste.
@@ -72,7 +86,7 @@ export function PasseAvant({
 
       <div className="flex flex-col items-center gap-1">
         <p className="font-mono text-6xl tabular-nums">{tapee === "" ? "—" : tapee}</p>
-        <p className="text-muted-foreground text-sm">{unite.plusieurs}</p>
+        <p className="text-muted-foreground text-sm">{enCours ? "Enregistré" : unite.plusieurs}</p>
       </div>
 
       <div className="grid grid-cols-3 gap-2">
@@ -81,6 +95,7 @@ export function PasseAvant({
             key={chiffre}
             type="button"
             className={TOUCHE}
+            disabled={enCours}
             onClick={() => setTapee((avant) => appuyerUnChiffre(avant, chiffre, max))}
           >
             {chiffre}
@@ -90,6 +105,7 @@ export function PasseAvant({
           type="button"
           className={TOUCHE}
           aria-label="Effacer un chiffre"
+          disabled={enCours}
           onClick={() => setTapee(effacerUnChiffre)}
         >
           ←
@@ -97,7 +113,7 @@ export function PasseAvant({
       </div>
 
       <div className="mt-auto flex flex-col gap-3">
-        <Button type="submit" size="lg" disabled={valeur === null}>
+        <Button type="submit" size="lg" disabled={valeur === null || enCours}>
           Valider
         </Button>
         <a href={recapitulatif} className="text-center text-muted-foreground text-sm underline">
