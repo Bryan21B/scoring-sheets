@@ -67,11 +67,16 @@ export type DemandeDEcriture = z.infer<typeof demandeDEcritureSchema>;
  * annoncer. `refusee` rend **la valeur arrivée**, parce que l'écran qui montre
  * le refus n'a rien d'autre pour se rendre lisible — et qu'aller la relire
  * après coup rouvrirait la course qu'on vient de fermer.
+ *
+ * Elle rend aussi **la valeur qui vient d'être refusée**, coercée comme elle est
+ * entrée : l'écran de refus la garde sous la main pour la réappliquer d'un
+ * appui, et la lui faire revenir du serveur est ce qui lui évite d'avoir à
+ * survivre au remplacement de la saisie par lui.
  */
 export type ResultatDEcriture =
   | { statut: "ecrite"; valeur: number }
   | { statut: "sansEffet"; valeur: number }
-  | { statut: "refusee"; valeurArrivee: ValeurDeCase };
+  | { statut: "refusee"; valeurArrivee: ValeurDeCase; valeurRefusee: number };
 
 /** La partie à laquelle une manche appartient, et sous quelles règles. */
 type ContexteDeManche = {
@@ -298,13 +303,14 @@ export async function ecrireLaCase(base: Base, brut: unknown): Promise<ResultatD
     }
 
     if (avant !== demande.valeurMontree) {
-      return { statut: "refusee", valeurArrivee: avant };
+      return { statut: "refusee", valeurArrivee: avant, valeurRefusee: demande.valeur };
     }
 
     if (!(await ecrireSousCondition(tx, demande))) {
       return {
         statut: "refusee",
         valeurArrivee: await lireLaCase(tx, demande.mancheId, demande.joueurConcerneId),
+        valeurRefusee: demande.valeur,
       };
     }
 

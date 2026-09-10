@@ -88,7 +88,7 @@ describe("l'écriture conditionnelle", () => {
 
     const enRetard = await ecrireLaCase(base, demandeDeMarie({ valeurMontree: null, valeur: 12 }));
 
-    expect(enRetard).toEqual({ statut: "refusee", valeurArrivee: 8 });
+    expect(enRetard).toEqual({ statut: "refusee", valeurArrivee: 8, valeurRefusee: 12 });
     expect(await valeurEnBase(marie())).toBe(8);
   });
 
@@ -98,7 +98,17 @@ describe("l'écriture conditionnelle", () => {
 
     const enRetard = await ecrireLaCase(base, demandeDeMarie({ valeurMontree: 8, valeur: 12 }));
 
-    expect(enRetard).toEqual({ statut: "refusee", valeurArrivee: 20 });
+    expect(enRetard).toEqual({ statut: "refusee", valeurArrivee: 20, valeurRefusee: 12 });
+  });
+
+  // L'écran de refus garde la valeur tapée sous la main pour la réappliquer
+  // d'un appui : elle lui revient du serveur, et n'a donc rien à survivre.
+  it("rend la valeur refusée avec le refus, coercée comme elle est arrivée", async () => {
+    await ecrireLaCase(base, demandeDeMarie({ valeur: 8 }));
+
+    const enRetard = await ecrireLaCase(base, demandeDeMarie({ valeurMontree: "", valeur: "12" }));
+
+    expect(enRetard).toEqual({ statut: "refusee", valeurArrivee: 8, valeurRefusee: 12 });
   });
 
   it("laisse passer l'écrasement informé : on voit la valeur, on écrit par dessus", async () => {
