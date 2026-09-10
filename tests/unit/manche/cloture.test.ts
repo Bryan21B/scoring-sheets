@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it } from "bun:test";
 import { eq } from "drizzle-orm";
 import type { Base } from "@/db/base";
-import { journal, manche, partie as partieTable, saisie } from "@/db/schema";
+import { joueur, journal, manche, participant, partie as partieTable, saisie } from "@/db/schema";
 import { cloturerLaManche, RefusDeCloture } from "@/lib/manche/cloture";
 import { ouvrirLaMancheSuivante } from "@/lib/manche/ouverture";
 import { ecrireLaCase } from "@/lib/manche/saisie";
@@ -93,6 +93,47 @@ describe("clore une manche", () => {
 
     expect(cloture).rejects.toBeInstanceOf(RefusDeCloture);
     expect((await ligneDeManche())?.closeLe).toBeNull();
+  });
+});
+
+describe("clore demande d'être de la partie", () => {
+  /** Quelqu'un du roster, mais pas de cette tablée : le voisin qui a le lien. */
+  async function unEtranger(): Promise<number> {
+    const [ligne] = await base
+      .insert(joueur)
+      .values({ nom: "Sacha", creeLe: new Date() })
+      .returning({ id: joueur.id });
+
+    if (ligne === undefined) {
+      throw new Error("Insertion du joueur étranger sans id rendu.");
+    }
+
+    return ligne.id;
+  }
+
+  // Le code donne la lecture à qui l'a : un appareil rattaché à un joueur d'une
+  // autre soirée arrive donc sur le récapitulatif avec le bouton sous les yeux.
+  it("refuse à qui n'est pas de la tablée, et ne date pas la manche au passage", async () => {
+    await remplirLaManche([8, 3, 0]);
+
+    const cloture = cloturerLaManche(base, { mancheId, parJoueurId: await unEtranger() });
+
+    expect(cloture).rejects.toBeInstanceOf(RefusDeCloture);
+    expect((await ligneDeManche())?.closeLe).toBeNull();
+  });
+
+  // Il est parti après la manche 3 mais il l'a jouée : la clore est légitime.
+  it("laisse clore un participant retiré : il était bien de la partie", async () => {
+    await remplirLaManche([8, 3, 0]);
+    await base
+      .update(participant)
+      .set({ retireLe: new Date() })
+      .where(eq(participant.joueurId, paul()));
+
+    const resultat = await cloturerLaManche(base, { mancheId, parJoueurId: paul() });
+
+    expect(resultat.statut).toBe("close");
+    expect((await ligneDeManche())?.closePar).toBe(paul());
   });
 });
 

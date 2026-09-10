@@ -1,7 +1,7 @@
 import { and, eq, isNull } from "drizzle-orm";
 import { z } from "zod";
 import type { Base, Ecriture } from "@/db/base";
-import { manche, partie } from "@/db/schema";
+import { manche, participant, partie } from "@/db/schema";
 import { estComplete } from "@/lib/jeux/moteur";
 import { parseRegles, type Regles } from "@/lib/jeux/regles";
 import { evaluerLaPartie, lireLaManche, mancheDuMoteur } from "@/lib/manche/lecture";
@@ -60,6 +60,17 @@ export class RefusDeCloture extends Error {
 const MANCHE_INCOMPLETE =
   "Il manque des valeurs à cette manche : une manche incomplète se répare, elle ne se clôt pas.";
 
+/**
+ * La phrase de qui n'est pas de la tablée, et où se trouve l'entrée.
+ *
+ * Exportée parce que l'action serveur la redit à l'appareil qui ne se déclare
+ * **aucun** joueur : ne s'être choisi personne et s'être choisi quelqu'un
+ * d'ailleurs sont la même situation vue de la partie, et deux phrases feraient
+ * croire à deux problèmes.
+ */
+export const CLOTURE_HORS_TABLEE =
+  "Il faut être de la partie pour clore une manche : prends ta place depuis la page de la partie.";
+
 /** Ce que la clôture doit relire avant de décider quoi que ce soit. */
 type ContexteDeCloture = {
   partieId: number;
@@ -102,6 +113,50 @@ async function lireLeContexte(tx: Ecriture, mancheId: number): Promise<ContexteD
     closeLe: ligne.closeLe,
     regles: parseRegles(ligne.regles),
   };
+}
+
+/**
+ * Vérifie que celui qui clôt est **de cette partie**.
+ *
+ * C'est la seule garde de ce module qui regarde **qui agit**, et elle diverge
+ * volontairement de `ecrireLaCase`, qui ne regarde jamais le joueur agissant.
+ * La différence n'est pas la confiance, c'est **où la valeur atterrit** : là,
+ * l'agissant ne va qu'au **journal**, une trace, et le conditionner
+ * inventerait une autorisation que ce design n'a pas — l'identité est une
+ * déclaration, jamais une preuve, voir
+ * `docs/adr/0004-identite-declarative-sans-authentification.md`. Ici,
+ * `parJoueurId` se grave dans `manche.close_par` **et** dans `partie.fin_par`,
+ * l'estampille que l'historique et le palmarès liront pour toujours — la même
+ * nature de donnée que `saisie.joueur_id`, que `verifierLeParticipant` garde
+ * déjà pour la même raison.
+ *
+ * C'est donc de l'**intégrité et non de l'autorisation** : rien n'empêche
+ * quiconque de se déclarer Marie, mais un joueur qui n'est d'aucune façon de
+ * cette table ne peut pas y être gravé comme celui qui l'a terminée.
+ *
+ * Le cas est ordinaire, pas forgé : le code donne la **lecture** à qui l'a, si
+ * bien qu'un téléphone rattaché à un joueur d'une autre soirée arrive sur le
+ * récapitulatif avec le bouton sous les yeux. D'où un {@link RefusDeCloture},
+ * écrit pour être lu, et non une `Error` nue.
+ *
+ * Un participant **retiré** passe, comme à la saisie : il a joué la manche
+ * avant de partir, et la déclarer finie reste légitime. Ce qu'on refuse ici,
+ * c'est l'étranger.
+ */
+async function verifierLeCloturant(
+  tx: Ecriture,
+  partieId: number,
+  parJoueurId: number,
+): Promise<void> {
+  const [inscrit] = await tx
+    .select({ id: participant.id })
+    .from(participant)
+    .where(and(eq(participant.partieId, partieId), eq(participant.joueurId, parJoueurId)))
+    .limit(1);
+
+  if (inscrit === undefined) {
+    throw new RefusDeCloture(CLOTURE_HORS_TABLEE);
+  }
 }
 
 /**
@@ -179,13 +234,16 @@ async function estampillerSiFinie(
  *
  * **Idempotente** : clore une manche déjà close ne fait rien et n'annonce rien.
  *
- * @throws {@link RefusDeCloture} sur une manche incomplète.
+ * @throws {@link RefusDeCloture} sur une manche incomplète, ou si celui qui
+ * clôt n'est pas de la partie.
  */
 export async function cloturerLaManche(base: Base, brut: unknown): Promise<ResultatDeCloture> {
   const demande = demandeDeClotureSchema.parse(brut);
 
   return base.transaction(async (tx) => {
     const contexte = await lireLeContexte(tx, demande.mancheId);
+
+    await verifierLeCloturant(tx, contexte.partieId, demande.parJoueurId);
 
     if (contexte.closeLe !== null) {
       return { statut: "dejaClose", fin: await lireLaFin(tx, contexte.partieId) };
