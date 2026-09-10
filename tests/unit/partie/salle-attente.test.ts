@@ -236,18 +236,61 @@ describe("se choisir dans la salle d'attente", () => {
     ).toBe("participant");
   });
 
-  it("laisse réclamer sa place même une fois la partie gelée", async () => {
+  it("laisse réclamer sa place même une fois la partie gelée, et lie l'appareil", async () => {
     // Paul, ajouté par Marie à la création, ouvre le lien après la manche 1 :
-    // sans ça, il serait spectateur de sa propre partie.
+    // sans ça, il serait spectateur de sa propre partie. Réclamer n'ajoute
+    // personne — c'est ce qui le rend permis ici — mais lie bien l'appareil,
+    // sans quoi il faudrait le refaire à chaque écran.
     const chezMarie = await ouvrirUnePartie("Marie", creerIdAppareil());
+    const telephoneDePaul = creerIdAppareil();
 
     await saisirUneManche(chezMarie.partieId);
     const resultat = await rejoindrePartie(base, chezMarie.partieId, {
-      idAppareil: creerIdAppareil(),
+      idAppareil: telephoneDePaul,
       identite: { mode: "roster", joueurId: String(chezMarie.joueurId) },
     });
 
+    const [lien] = await base.select().from(appareil).where(eq(appareil.id, telephoneDePaul));
+
     expect(resultat.statut).toBe("reclame");
+    expect(lien?.joueurId).toBe(chezMarie.joueurId);
+    expect(await nomsDesParticipants(chezMarie.code)).toEqual(["Marie"]);
+    expect(
+      (await lireSalleDAttente(base, chezMarie.partieId, telephoneDePaul)).arrivee.statut,
+    ).toBe("participant");
+  });
+
+  it("laisse deux appareils réclamer le même participant, le lien étant multiple", async () => {
+    // Le téléphone de Marie et la tablette posée au milieu de la table
+    // désignent la même personne : le second ne chasse pas le premier, et la
+    // tablée ne gagne pas un doublon au passage.
+    const telephoneDeMarie = creerIdAppareil();
+    const chezMarie = await ouvrirUnePartie("Marie", telephoneDeMarie);
+    const tablette = creerIdAppareil();
+    const portable = creerIdAppareil();
+
+    await saisirUneManche(chezMarie.partieId);
+    const identite = { mode: "roster", joueurId: String(chezMarie.joueurId) } as const;
+    const surLaTablette = await rejoindrePartie(base, chezMarie.partieId, {
+      idAppareil: tablette,
+      identite,
+    });
+    const surLePortable = await rejoindrePartie(base, chezMarie.partieId, {
+      idAppareil: portable,
+      identite,
+    });
+
+    const liens = await base
+      .select({ id: appareil.id })
+      .from(appareil)
+      .where(eq(appareil.joueurId, chezMarie.joueurId));
+
+    expect(surLaTablette).toEqual({ statut: "reclame", joueurId: chezMarie.joueurId });
+    expect(surLePortable).toEqual({ statut: "reclame", joueurId: chezMarie.joueurId });
+    expect(liens.map((lien) => lien.id).sort()).toEqual(
+      [telephoneDeMarie, tablette, portable].sort(),
+    );
+    expect(await nomsDesParticipants(chezMarie.code)).toEqual(["Marie"]);
   });
 
   it("refuse de rejoindre dès qu'une manche existe", async () => {
