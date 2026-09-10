@@ -3,9 +3,11 @@ import type { InValue } from "@libsql/client";
 import type { Base } from "@/db/base";
 import { trouverEntree } from "@/lib/jeux/catalogue";
 import { resoudreRegles } from "@/lib/jeux/resolution";
+import { cloturerLaManche } from "@/lib/manche/cloture";
 import { lireLaGrille } from "@/lib/manche/lecture";
 import { ouvrirLaMancheSuivante } from "@/lib/manche/ouverture";
 import { ecrireLaCase } from "@/lib/manche/saisie";
+import { lirePartieEnCours } from "@/lib/partie/en-cours";
 import { retirerParticipant } from "@/lib/partie/salle-attente";
 import { doitRafraichir } from "@/lib/partie/sondage";
 import { chercherLaVersion, lireLaVersion, selectionDeVersion } from "@/lib/partie/version";
@@ -163,3 +165,45 @@ function limiteOuverte() {
 function limiteFermee() {
   return { estOuvert: () => false, noterUnEchec: () => undefined };
 }
+
+describe("la fin d'une partie, vue du poll", () => {
+  /** Remplit et clôt une manche pour toute la tablée, à la valeur donnée. */
+  async function jouerUneManche(valeur: number): Promise<void> {
+    const mancheId = (await ouvrirLaMancheSuivante(base, partie.partieId)).id;
+
+    for (const rang of [0, 1, 2]) {
+      await ecrireLaCase(base, {
+        mancheId,
+        joueurConcerneId: joueurDeLaPartie(partie, rang),
+        valeurMontree: null,
+        valeur,
+        agissant: { joueurId: joueurDeLaPartie(partie, 0), appareilId: partie.idAppareil },
+      });
+    }
+
+    await cloturerLaManche(base, { mancheId, parJoueurId: joueurDeLaPartie(partie, 0) });
+  }
+
+  it("fait bouger l'estampille quand la partie se scelle, alors que la fin n'écrit que `partie`", async () => {
+    // `src/db/triggers.sql` le dit noir sur blanc : aucun déclencheur ne
+    // surveille `partie`, et la fin n'écrit que ses trois colonnes. Ce qui
+    // sauve le poll est la ligne de journal posée dans la même transaction.
+    // Sans elle, les autres téléphones verraient une partie close sans jamais
+    // l'apprendre — c'est exactement ce que ce test empêche de régresser.
+    await jouerUneManche(30);
+    const avantLaDerniere = await lireLaVersion(base, partie.code);
+
+    await jouerUneManche(40);
+
+    expect(
+      doitRafraichir(avantLaDerniere ?? 0, (await lireLaVersion(base, partie.code)) ?? 0),
+    ).toBe(true);
+  });
+
+  it("sort de l'accueil une partie que la clôture vient de sceller", async () => {
+    await jouerUneManche(30);
+    await jouerUneManche(40);
+
+    expect(await lirePartieEnCours(base)).toBeNull();
+  });
+});
