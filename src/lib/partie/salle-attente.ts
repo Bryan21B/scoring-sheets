@@ -4,6 +4,7 @@ import type { Base, Ecriture } from "@/db/base";
 import { appareil, joueur, manche, participant } from "@/db/schema";
 import { idAppareilSchema } from "@/lib/appareil/cookie";
 import { lierLAppareil } from "@/lib/appareil/lien";
+import { exigerUnePartieOuverte } from "@/lib/partie/fin";
 import { identiteSchema } from "@/lib/partie/identite";
 import { assurerLeJoueur, resoudreIdentite } from "@/lib/roster/choix";
 import type { Homonymie, JoueurConnu } from "@/lib/roster/noms";
@@ -220,6 +221,9 @@ async function inscrire(tx: Ecriture, partieId: number, joueurId: number): Promi
  * qu'aucune manche n'existe. Le cas qui reste — bouger la liste après avoir
  * supprimé la manche 1 — appartient au dégel, pas ici.
  *
+ * @throws {@link PartieScellee} si la partie porte une fin — scellée, elle ne
+ * bouge plus, et le dire vaut mieux que de parler d'une manche 1 à supprimer qui
+ * ne se supprimera jamais.
  * @throws {@link RefusDArrivee} si la partie est gelée et que le joueur n'y a
  * pas déjà de place. Une `ZodError` ou une `Error` nue pour tout le reste :
  * cookie malformé, joueur inexistant, base qui ne répond pas.
@@ -239,6 +243,8 @@ export async function rejoindrePartie(
   const maintenant = new Date();
 
   return base.transaction(async (tx) => {
+    await exigerUnePartieOuverte(tx, partieId);
+
     const reclame =
       choix.statut === "connu" && (await estParticipant(tx, partieId, choix.joueurId));
 
@@ -321,6 +327,7 @@ async function exigerUneMainDeLaPartie(
  * comme n'importe lequel saisit n'importe quelle case. Inventer un rôle ici en
  * créerait un pour une seule fonctionnalité.
  *
+ * @throws {@link PartieScellee} si la partie porte une fin.
  * @throws {@link RefusDArrivee} si la partie est gelée, ou si l'appareil n'est
  * pas celui d'un participant.
  */
@@ -340,6 +347,7 @@ export async function ajouterParticipant(
 
   return base.transaction(async (tx) => {
     await exigerUneMainDeLaPartie(tx, partieId, donnees.idAppareil);
+    await exigerUnePartieOuverte(tx, partieId);
 
     if (choix.statut === "connu" && (await estParticipant(tx, partieId, choix.joueurId))) {
       return { statut: "dejaLa", joueurId: choix.joueurId };
@@ -387,6 +395,7 @@ export const retraitSchema = z.strictObject({
  * Retirer quelqu'un qui n'est déjà plus là ne fait rien : la liste est celle
  * qu'on voulait, il n'y a rien à annoncer.
  *
+ * @throws {@link PartieScellee} si la partie porte une fin.
  * @throws {@link RefusDArrivee} si la partie est gelée, ou si l'appareil n'est
  * pas celui d'un participant.
  */
@@ -400,6 +409,7 @@ export async function retirerParticipant(
 
   await base.transaction(async (tx) => {
     await exigerUneMainDeLaPartie(tx, partieId, donnees.idAppareil);
+    await exigerUnePartieOuverte(tx, partieId);
 
     if (await estGelee(tx, partieId)) {
       throw new RefusDArrivee(PARTIE_COMMENCEE);

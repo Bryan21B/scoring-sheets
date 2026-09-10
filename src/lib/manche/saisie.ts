@@ -4,6 +4,7 @@ import type { Base, Ecriture } from "@/db/base";
 import { manche, participant, partie, saisie } from "@/db/schema";
 import { parseRegles, type Regles } from "@/lib/jeux/regles";
 import { agissantSchema, consignerUnGesteDeCase, type GesteDeCase } from "@/lib/journal/ligne";
+import { exigerUnePartieOuverte } from "@/lib/partie/fin";
 
 /**
  * Ce que porte une case : un entier, ou **le vide, qui est une valeur**.
@@ -268,9 +269,14 @@ function gesteDe(avant: ValeurDeCase, nouvelle: number): GesteDeCase {
  * mais ne la garantit pas : c'est la clause SQL qui tranche, et un zéro ligne
  * touchée l'emporte sur ce que la relecture croyait savoir.
  *
- * @throws si la manche n'existe pas, si le mode n'est pas `entierParJoueur`, si
- * la valeur sort des bornes, ou si la case concerne quelqu'un qui n'est pas de
- * la partie : autant d'envois qu'aucun écran ne produit.
+ * Une partie **scellée** refuse tout, saisie comme correction : c'est le prix
+ * assumé de l'estampille de fin, et le seul recours est de corriger *avant* de
+ * clore la manche qui termine la partie.
+ *
+ * @throws {@link PartieScellee} si la partie porte une fin. Une `Error` nue si
+ * la manche n'existe pas, si le mode n'est pas `entierParJoueur`, si la valeur
+ * sort des bornes, ou si la case concerne quelqu'un qui n'est pas de la partie :
+ * autant d'envois qu'aucun écran ne produit.
  */
 export async function ecrireLaCase(base: Base, brut: unknown): Promise<ResultatDEcriture> {
   const demande = demandeDEcritureSchema.parse(brut);
@@ -278,6 +284,7 @@ export async function ecrireLaCase(base: Base, brut: unknown): Promise<ResultatD
   return base.transaction(async (tx) => {
     const contexte = await lireLeContexte(tx, demande.mancheId);
 
+    await exigerUnePartieOuverte(tx, contexte.partieId);
     verifierLesBornes(contexte.regles, demande.valeur);
     await verifierLeParticipant(tx, contexte.partieId, demande.joueurConcerneId);
 

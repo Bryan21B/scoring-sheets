@@ -43,6 +43,53 @@ export async function lireLaFin(base: Lecture, partieId: number): Promise<FinDeP
 }
 
 /**
+ * Un refus **écrit pour être lu**, au-dessus de l'écran d'où partait l'écriture.
+ *
+ * Une classe et non une `Error` nue : c'est le seul refus de ce module qu'un
+ * écran a de bonnes raisons de montrer plutôt que de laisser remonter. Le
+ * téléphone de Marie peut très bien être resté sur la passe avant pendant que
+ * Paul closait la manche qui a terminé la partie.
+ */
+export class PartieScellee extends Error {
+  override readonly name = "PartieScellee";
+}
+
+/** Ce qu'on dit d'une partie régulièrement terminée : il n'y a plus de recours. */
+const PARTIE_TERMINEE = "Cette partie est terminée : elle ne bouge plus.";
+
+/** Ce qu'on dit d'une partie abandonnée : il y en a un, et c'est la reprise. */
+const PARTIE_ABANDONNEE = "Cette partie est abandonnée : il faut la reprendre avant d'y écrire.";
+
+/**
+ * Exige que la partie n'ait **pas de fin** : le **scellement**, tenu au seul
+ * endroit où il se lit.
+ *
+ * Un garde-fou que les chemins d'écriture appellent, plutôt qu'une condition
+ * recopiée dans chacun : trois copies divergeraient le jour où la reprise arrive
+ * et n'en corrigerait que deux.
+ *
+ * Il porte sur la **présence d'une fin**, pas sur sa cause, parce que les deux
+ * causes ferment de la même façon — c'est ce qui en sort qui diffère, et rien
+ * n'en sort encore. La phrase, elle, dépend de la cause : dire « supprime la
+ * manche 1 » sur une partie terminée serait un mensonge, et ne rien dire du
+ * recours sur une partie abandonnée en cacherait un.
+ *
+ * À ne pas confondre avec le **gel**, qui ne ferme que la liste des
+ * participants : deux mots, deux portées.
+ *
+ * @throws {@link PartieScellee} si la partie porte une fin.
+ */
+export async function exigerUnePartieOuverte(base: Lecture, partieId: number): Promise<void> {
+  const fin = await lireLaFin(base, partieId);
+
+  if (fin === null) {
+    return;
+  }
+
+  throw new PartieScellee(fin.cause === "terminee" ? PARTIE_TERMINEE : PARTIE_ABANDONNEE);
+}
+
+/**
  * Estampille la fin, **ou rend celle qui y est déjà**.
  *
  * La condition `fin_le IS NULL` est dans le SQL et non dans une relecture
