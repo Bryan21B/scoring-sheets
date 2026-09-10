@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.5.0](https://github.com/Bryan21B/scoring-sheets/compare/v0.4.0...v0.5.0) (2026-09-10)
+
+### Fonctionnalités
+
+* **manche:** Clore une manche complète et estampiller la fin de partie ([901c7e1](https://github.com/Bryan21B/scoring-sheets/commit/901c7e1b9b5d15d670d8f9799b2fbafba5923ce2)), closes [#31](https://github.com/Bryan21B/scoring-sheets/issues/31)
+* **partie:** Sceller une partie terminée contre toute écriture ([1204b3e](https://github.com/Bryan21B/scoring-sheets/commit/1204b3e8d93bd35a8fb49f5c10b854e715433170)), closes [#31](https://github.com/Bryan21B/scoring-sheets/issues/31)
+
 ## [0.4.0](https://github.com/Bryan21B/scoring-sheets/compare/v0.3.0...v0.4.0) (2026-09-10)
 
 ### Fonctionnalités
