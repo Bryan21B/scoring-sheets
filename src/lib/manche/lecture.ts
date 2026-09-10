@@ -144,6 +144,24 @@ export type VueDeGrille = {
 };
 
 /**
+ * Ce que le moteur tire d'une feuille **déjà lue**.
+ *
+ * La traduction des lignes de grille vers les manches du moteur vit ici et
+ * nulle part ailleurs. {@link lireLaGrille} lit une partie à la fois ; l'historique
+ * en lit vingt d'un coup, en quelques requêtes groupées, et ne peut donc pas
+ * passer par elle — mais il finit au même endroit, sur cette fonction-ci. Deux
+ * traductions des mêmes lignes divergeraient le jour où l'une est corrigée
+ * seule, et un vainqueur d'historique ne correspondrait plus aux totaux de la
+ * fiche qu'on ouvre en tapant dessus.
+ */
+export function etatDesLignes(regles: Regles, lignes: readonly LigneDeGrille[]): Etat {
+  return evaluer(
+    regles,
+    lignes.map((ligne) => mancheDuMoteur(ligne.cases, ligne.close)),
+  );
+}
+
+/**
  * La feuille de score d'une partie : ses manches, et ce que le moteur en tire.
  *
  * Ce module traduit des lignes en manches et s'arrête là : rien de ce que le
@@ -183,9 +201,7 @@ export async function lireLaGrille(
     });
   }
 
-  const manches: Manche[] = grille.map((ligne) => mancheDuMoteur(ligne.cases, ligne.close));
-
-  return { manches: grille, etat: evaluer(regles, manches) };
+  return { manches: grille, etat: etatDesLignes(regles, grille) };
 }
 
 /**
