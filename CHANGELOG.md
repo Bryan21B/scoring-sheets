@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.7.0](https://github.com/Bryan21B/scoring-sheets/compare/v0.6.0...v0.7.0) (2026-09-10)
+
+### Fonctionnalités
+
+* **accueil:** Faire de l'accueil la partie en cours, grille et poll compris ([4cc6f88](https://github.com/Bryan21B/scoring-sheets/commit/4cc6f88f9e3c1e9a110196c3620f5e5d9772c663)), closes [#32](https://github.com/Bryan21B/scoring-sheets/issues/32)
+* **accueil:** Lire la partie en cours, sa grille et son estampille ([d81b5be](https://github.com/Bryan21B/scoring-sheets/commit/d81b5bee2665b03528722d068a442c6e53c1d766)), closes [#32](https://github.com/Bryan21B/scoring-sheets/issues/32)
+
+### Refactoring
+
+* **accueil:** Sortir la coquille, l'action et la règle du tableau vide ([ae614cd](https://github.com/Bryan21B/scoring-sheets/commit/ae614cd6de21f8ca498df71a4bf70ca7ac9c98c2)), closes [#32](https://github.com/Bryan21B/scoring-sheets/issues/32)
+* **sondage:** Donner un seul nom au sondage dans les identifiants ([29c468c](https://github.com/Bryan21B/scoring-sheets/commit/29c468cf95cfe4f1dfbb05ab4797a1d42aec2342)), closes [#32](https://github.com/Bryan21B/scoring-sheets/issues/32)
+
 ## [0.6.0](https://github.com/Bryan21B/scoring-sheets/compare/v0.5.0...v0.6.0) (2026-09-10)
 
 ### Fonctionnalités
