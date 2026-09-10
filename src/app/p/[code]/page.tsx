@@ -9,11 +9,13 @@ import {
 import { TropDeTentatives } from "@/components/code-inconnu";
 import { Ecran } from "@/components/ecran";
 import { EcranDePartie } from "@/components/ecran-de-partie";
+import { FicheDePartie } from "@/components/fiche-partie";
 import { SondageDePartie } from "@/components/sondage-de-partie";
 import { db } from "@/db";
 import { cleDeLaRequete, lireLAppareil } from "@/lib/appareil/requete";
 import { lireLeTiroir } from "@/lib/journal/lecture";
 import { lireLaGrille } from "@/lib/manche/lecture";
+import { lireLaFin } from "@/lib/partie/fin";
 import { messageDeRefusSchema, premierParametre } from "@/lib/partie/identite-url";
 import { chercherPartieParCode, limiteDeRecherche } from "@/lib/partie/recherche";
 import { lireSalleDAttente } from "@/lib/partie/salle-attente";
@@ -46,6 +48,12 @@ export const dynamic = "force-dynamic";
  * La forme de l'écran vit dans `EcranDePartie`, et **la règle « le code donne
  * la lecture, l'écriture demande d'être participant » avec elle** : ici il n'y
  * a que du câblage, comme sur l'accueil.
+ * **Deux écrans à une seule adresse.** Tant que la partie est ouverte, celui de
+ * la soirée ; une fois **scellée**, sa fiche — la grille complète et le journal,
+ * sans les gestes qui ne mènent plus nulle part. Le code est l'adresse d'une
+ * partie et les liens du tiroir visent `/p/<code>` : une fiche logée ailleurs
+ * ferait quitter la page au moment même où l'on ouvre le journal pour comprendre
+ * ce qui s'est passé.
  *
  * La recherche est **limitée en débit** : 2³⁰ combinaisons pour quelques
  * centaines de parties font un enjeu nul, mais un script tire un million de
@@ -83,6 +91,25 @@ export default async function PageDePartie(props: PageProps<"/p/[code]">): Promi
     premierParametre((await props.searchParams).erreur),
   );
   const grille = await lireLaGrille(db, partie.id, partie.regles);
+  const fin = await lireLaFin(db, partie.id);
+
+  // Une partie **scellée** montre sa fiche, pas l'écran d'une soirée qui bouge :
+  // ni « saisir la manche suivante », ni salle d'attente, ni sondage — le
+  // scellement refuse toute écriture, et rien ne changera plus sous un autre
+  // téléphone. À la **même adresse**, parce que le code est l'adresse d'une
+  // partie et que les liens du tiroir du journal visent `/p/<code>` : une fiche
+  // ailleurs ferait quitter la page en ouvrant le journal.
+  if (fin !== null) {
+    return (
+      <FicheDePartie
+        partie={partie}
+        grille={grille}
+        fin={fin}
+        tiroir={await lireLeTiroir(db, partie.id, await props.searchParams)}
+        erreur={erreur.success ? erreur.data : undefined}
+      />
+    );
+  }
 
   return (
     <EcranDePartie
