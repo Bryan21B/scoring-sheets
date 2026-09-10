@@ -1,7 +1,7 @@
 import { and, asc, eq, isNull } from "drizzle-orm";
-import type { Base } from "@/db/base";
+import type { Lecture } from "@/db/base";
 import { joueur, manche, participant, saisie } from "@/db/schema";
-import type { Etat, JoueurId, Manche } from "@/lib/jeux/moteur";
+import type { Etat, Manche } from "@/lib/jeux/moteur";
 import { evaluer } from "@/lib/jeux/moteur";
 import type { Regles } from "@/lib/jeux/regles";
 import type { ValeurDeCase } from "@/lib/manche/saisie";
@@ -44,14 +44,40 @@ export type VueDeManche = {
  * qu'on vient chercher. Un participant retiré sort de la liste, ses valeurs
  * déjà saisies restant en base intactes.
  */
-async function lireLesCases(base: Base, partieId: number, mancheId: number) {
-  return base
+async function lireLesCases(
+  base: Lecture,
+  partieId: number,
+  mancheId: number,
+): Promise<CaseDeManche[]> {
+  const lignes = await base
     .select({ id: joueur.id, nom: joueur.nom, valeur: saisie.valeur })
     .from(participant)
     .innerJoin(joueur, eq(joueur.id, participant.joueurId))
     .leftJoin(saisie, and(eq(saisie.mancheId, mancheId), eq(saisie.joueurId, participant.joueurId)))
     .where(and(eq(participant.partieId, partieId), isNull(participant.retireLe)))
     .orderBy(asc(participant.id));
+
+  return lignes.map(({ id, nom, valeur }) => ({ joueur: { id, nom }, valeur }));
+}
+
+/**
+ * Les mêmes cases, relues comme **le moteur** les lit.
+ *
+ * `participants` sort des cases elles-mêmes, et ce n'est pas un raccourci :
+ * {@link lireLesCases} en produit exactement une par participant encore de la
+ * partie, la vide comprise, si bien que les deux listes sont la même. La
+ * recopier depuis une seconde requête laisserait deux lectures de l'effectif
+ * diverger, ce que le moteur ne pourrait pas rattraper.
+ *
+ * `close` reste un paramètre : la clôture est **déclarée** et ne se lit pas dans
+ * les cases, ce que confondre les deux effacerait.
+ */
+export function mancheDuMoteur(cases: readonly CaseDeManche[], close: boolean): Manche {
+  return {
+    close,
+    participants: cases.map(({ joueur }) => joueur.id),
+    cases: cases.map(({ joueur, valeur }) => ({ joueurId: joueur.id, valeur })),
+  };
 }
 
 /**
@@ -67,7 +93,7 @@ async function lireLesCases(base: Base, partieId: number, mancheId: number) {
  * n'a rien de mieux à faire qu'un 404.
  */
 export async function lireLaManche(
-  base: Base,
+  base: Lecture,
   partieId: number,
   numero: number,
 ): Promise<VueDeManche | null> {
@@ -81,13 +107,7 @@ export async function lireLaManche(
     return null;
   }
 
-  const cases = await lireLesCases(base, partieId, ligne.id);
-
-  return {
-    id: ligne.id,
-    numero,
-    cases: cases.map(({ id, nom, valeur }) => ({ joueur: { id, nom }, valeur })),
-  };
+  return { id: ligne.id, numero, cases: await lireLesCases(base, partieId, ligne.id) };
 }
 
 /**
@@ -99,17 +119,18 @@ export async function lireLaManche(
  *
  * L'effectif courant est recopié sur toutes les manches, ce que le moteur
  * autorise explicitement — il en lit l'**intersection**, si bien que l'effectif
- * historique et l'effectif courant recopié donnent le même résultat.
+ * historique et l'effectif courant recopié donnent le même résultat. Il sort des
+ * cases elles-mêmes, par {@link mancheDuMoteur}, et non d'une seconde requête.
+ *
+ * Prend une {@link Lecture} : la clôture d'une manche l'appelle **dans sa propre
+ * transaction**, pour calculer `fini` sur une manche qu'elle vient de fermer et
+ * que personne d'autre ne voit encore.
  */
-export async function evaluerLaPartie(base: Base, partieId: number, regles: Regles): Promise<Etat> {
-  const participants: JoueurId[] = (
-    await base
-      .select({ joueurId: participant.joueurId })
-      .from(participant)
-      .where(and(eq(participant.partieId, partieId), isNull(participant.retireLe)))
-      .orderBy(asc(participant.id))
-  ).map((ligne) => ligne.joueurId);
-
+export async function evaluerLaPartie(
+  base: Lecture,
+  partieId: number,
+  regles: Regles,
+): Promise<Etat> {
   const lignes = await base
     .select({ id: manche.id, closeLe: manche.closeLe })
     .from(manche)
@@ -119,13 +140,9 @@ export async function evaluerLaPartie(base: Base, partieId: number, regles: Regl
   const manches: Manche[] = [];
 
   for (const ligne of lignes) {
-    const cases = await lireLesCases(base, partieId, ligne.id);
-
-    manches.push({
-      close: ligne.closeLe !== null,
-      participants,
-      cases: cases.map(({ id, valeur }) => ({ joueurId: id, valeur })),
-    });
+    manches.push(
+      mancheDuMoteur(await lireLesCases(base, partieId, ligne.id), ligne.closeLe !== null),
+    );
   }
 
   return evaluer(regles, manches);

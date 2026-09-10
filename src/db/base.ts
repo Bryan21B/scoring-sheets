@@ -22,3 +22,12 @@ export type Base = LibSQLDatabase<typeof schema>;
  * écriture concurrente peut séparer.
  */
 export type Ecriture = Parameters<Parameters<Base["transaction"]>[0]>[0];
+
+/**
+ * Une base qu'on **lit**, qu'on soit ou non déjà dans une transaction.
+ *
+ * Une même lecture sert souvent deux fois — l'écran qui décide quoi montrer, et
+ * l'écriture qui décide si elle a le droit — et une deuxième version écrite pour
+ * la transaction divergerait de la première le jour où l'une est corrigée.
+ */
+export type Lecture = Base | Ecriture;
