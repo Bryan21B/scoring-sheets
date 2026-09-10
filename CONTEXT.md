@@ -55,6 +55,17 @@ dans `docs/specs/2026-08-31-configuration-de-jeu.md`.
   décompte. C'est l'unité qu'on ouvre, qu'on remplit, puis qu'on clôt.
 - **Feuille de score** — la représentation d'une partie : qui joue, ce qui a été
   marqué, où en sont les totaux. Le nom du produit vient de là.
+- **Grille** — la forme que prend la feuille de score : les **manches en lignes,
+  les joueurs en colonnes, les totaux au pied**. Elle défile latéralement à cinq
+  joueurs, prix connu de cette forme, et c'est pour ça qu'elle a été écartée
+  pour *saisir* — la passe avant montre un joueur à la fois — et retenue pour
+  *lire*. L'accueil, la page d'une partie et la future fiche de partie montrent
+  la même.
+- **Accueil** — l'écran d'ouverture, qui **est la partie en cours** dès qu'il y
+  en a une : le catalogue ne reprend tout l'écran que quand rien ne tourne. Une
+  partie en cours est une partie **sans fin** — ni terminée ni abandonnée. Deux
+  coûts assumés : le catalogue disparaît de la vue tant qu'une partie tourne, et
+  une deuxième partie en cours se retrouve par son code plutôt que sur cet écran.
 - **Joueur** — une personne du roster, persistante entre parties. Le nom est
   son seul identifiant humain, et il est modifiable.
 - **Manche** — un tour de jeu à l'issue duquel des points sont attribués. Elle
@@ -122,6 +133,20 @@ Tranché par [Écriture concurrente sur la même case : politique de conflit](ht
   garde ce qui repose sur une information vraie.
 - **Écriture sans effet** — poser sur une case la valeur qu'elle porte déjà.
   Réussit en silence : rien n'a bougé, rien ne bouge, aucun conflit à annoncer.
+
+- **Estampille de version** — un compteur par partie, que des déclencheurs font
+  avancer à chaque écriture sur une manche, une saisie, un participant ou le
+  journal. Elle rend le sondage bon marché — une ligne indexée à relire — et
+  n'est **jamais un jeton d'écriture** : le garde-fou du conflit porte sur la
+  case, et une condition portée par la partie ferait échouer quatre joueurs sur
+  cinq à 6 qui prend.
+- **Sondage** — la relecture de l'estampille par chaque téléphone, **toutes les
+  trois secondes**. Inchangée, on ne fait rien ; changée, on rafraîchit la page
+  sans recharger le document. C'est tout le transport : voir
+  `docs/adr/0003-polling-plutot-que-push.md`, à refaire avant de le remplacer.
+  La **passe avant ne sonde pas** — elle ne montre ni total ni alerte, donc elle
+  n'a rien à rafraîchir, ce qui dissout la question « ma valeur est-elle
+  remplacée pendant que je tape ».
 
 Aucune **présence** n'existe : le transport ne pousse rien, donc personne ne sait
 qui est connecté ni qui saisit. Un verrou d'édition est irréalisable, pas écarté,
