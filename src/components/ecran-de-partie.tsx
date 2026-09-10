@@ -36,11 +36,17 @@ export type GestesDePartie = {
  * `SalleDAttente` dit pourquoi ; sans lui il resterait des gens convaincus que
  * l'app est cassée.
  *
- * Ce que ça arrête concrètement : « Saisir la manche suivante » sous le doigt
- * d'un spectateur ouvrirait une manche dans une partie où il n'a pas de
- * colonne, et **gèlerait la liste**, s'enfermant lui-même dehors. Ce n'est pas
- * une fraude qu'on borne ici — le lien appareil → joueur reste une déclaration
- * — c'est un geste offert à qui n'avait rien à en faire.
+ * Ce qu'on retire du doigt du spectateur : « Saisir la manche suivante », qui
+ * ouvrirait une manche dans une partie où il n'a pas de colonne, et
+ * **gèlerait la liste** — s'enfermant lui-même dehors.
+ *
+ * **La portée est celle d'un écran, pas d'une garde.** Ce composant ne rend pas
+ * le formulaire ; `ouvrirLaMancheSuivanteAction` reste ouverte à qui la poste
+ * quand même, et l'accueil l'offre encore à tout appareil. Ce n'est pas une
+ * fraude qu'on borne ici — le lien appareil → joueur est une déclaration, pas
+ * une preuve — c'est un geste offert à qui n'avait rien à en faire. Les
+ * écritures qui touchent **la liste**, elles, sont gardées côté serveur par
+ * `exigerUneMainDeLaPartie`, parce que c'est là que l'invariant vit.
  *
  * La salle d'attente reste montrée à tout le monde : c'est elle qui porte la
  * seule écriture que le code seul autorise — **réclamer sa place**, permis
