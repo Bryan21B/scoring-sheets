@@ -229,6 +229,43 @@ export function lignesDuRecapitulatif(
 }
 
 /**
+ * Où un geste qu'on vient de poser renvoie.
+ *
+ * Les **désignations d'abord, puis les valeurs** : c'est la forme de la passe
+ * avant, et elle ne tient que si une désignation enchaîne sur la suivante. À
+ * Uno, nommer le sorti appelle son total — repasser par le récapitulatif entre
+ * les deux ferait quatre gestes d'une manche qui en demande deux ; à Dnup, le
+ * deuxième sorti suit le premier.
+ *
+ * Une **valeur**, elle, arrête la passe avant. À 6 qui prend, renvoyer à la
+ * passe avant rouvrirait indéfiniment sa propre case, puisque c'est sur elle
+ * qu'on démarre, remplie comprise — et « un écran, pas cinq » veut dire qu'on
+ * ne pousse personne vers un deuxième.
+ *
+ * Rendre la **suite** et non une adresse : les adresses se fabriquent dans les
+ * pages, qui seules connaissent le code de la partie.
+ */
+export function suiteDuGeste(regles: Regles, valeurPosee: ValeurDeCase): SuiteDuGeste {
+  return estUneDesignation(regles, valeurPosee) ? "passeAvant" : "recapitulatif";
+}
+
+/** L'écran vers lequel un geste posé renvoie. */
+export type SuiteDuGeste = "passeAvant" | "recapitulatif";
+
+/**
+ * Ce geste-là **nomme-t-il quelqu'un**, plutôt que de poser un nombre compté
+ * devant soi ?
+ *
+ * Deux modes, deux écritures de la même désignation : au podium **toute**
+ * écriture en est une, puisque la colonne n'y porte qu'un rang ; à Uno, c'est
+ * le vide qui désigne, le total qui suit étant une valeur. À 6 qui prend, le
+ * vide ne s'écrit pas — la frontière d'écriture le refuse — donc jamais.
+ */
+function estUneDesignation(regles: Regles, valeurPosee: ValeurDeCase): boolean {
+  return regles.saisie.mode === "podium" || valeurPosee === null;
+}
+
+/**
  * Ce qu'une valeur de case **veut dire**, mise en mots selon le mode.
  *
  * La colonne `valeur` ne porte pas la même chose partout : des points à 6 qui

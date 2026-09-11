@@ -5,6 +5,7 @@ import {
   designationsManquantes,
   gestesAttendus,
   lignesDuRecapitulatif,
+  suiteDuGeste,
   valeurEnMots,
 } from "@/lib/manche/gestes";
 import {
@@ -149,5 +150,29 @@ describe("ce qu'une valeur veut dire, selon le mode", () => {
 
   it("nomme le vide plutôt que de rendre un blanc", () => {
     expect(valeurEnMots(uno, null)).toBe("vide");
+  });
+});
+
+describe("où un geste posé renvoie", () => {
+  // « Les désignations d'abord, puis les valeurs » : une manche d'Uno se saisit
+  // en **deux gestes**, et repasser par le récapitulatif entre les deux en
+  // ferait quatre.
+  it("enchaîne après une désignation : le sorti nommé, son total est la suite", () => {
+    expect(suiteDuGeste(uno, null)).toBe("passeAvant");
+  });
+
+  it("enchaîne les deux désignations de Dnup sans détour", () => {
+    expect(suiteDuGeste(dnup, 1)).toBe("passeAvant");
+  });
+
+  it("s'arrête après une valeur : le total tapé, la passe avant est finie", () => {
+    expect(suiteDuGeste(uno, 24)).toBe("recapitulatif");
+  });
+
+  it("s'arrête après chaque valeur à 6 qui prend : un écran, pas cinq", () => {
+    // Renvoyer à la passe avant rouvrirait sa propre case indéfiniment, puisque
+    // c'est sur elle qu'on démarre, remplie comprise.
+    expect(suiteDuGeste(sixQuiPrend, 12)).toBe("recapitulatif");
+    expect(suiteDuGeste(sixQuiPrend, 0)).toBe("recapitulatif");
   });
 });

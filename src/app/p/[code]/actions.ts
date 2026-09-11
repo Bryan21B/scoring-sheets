@@ -8,6 +8,7 @@ import { lireLeJoueurDeLAppareil } from "@/lib/appareil/lecture";
 import type { Agissant } from "@/lib/journal/ligne";
 import { type EtatDeCloture, finAAnnoncer, refusAMontrer } from "@/lib/manche/annonce";
 import { CLOTURE_HORS_TABLEE, cloturerLaManche } from "@/lib/manche/cloture";
+import { suiteDuGeste } from "@/lib/manche/gestes";
 import { ouvrirLaMancheSuivante } from "@/lib/manche/ouverture";
 import { type RefusDEcriture, refusDe } from "@/lib/manche/refus";
 import { ecrireLaCase } from "@/lib/manche/saisie";
@@ -65,6 +66,12 @@ export async function ouvrirLaMancheSuivanteAction(code: string): Promise<void> 
  * être compris. La valeur arrivée revient donc là où l'on tapait, sans
  * navigation, avec la valeur tapée pour la reposer d'un appui.
  *
+ * Une **désignation** renvoie à la passe avant plutôt qu'au récapitulatif :
+ * « les désignations d'abord, puis les valeurs » ne tient que si le sorti nommé
+ * appelle son total, et une manche d'Uno se saisit en deux gestes. La décision
+ * est dans `suiteDuGeste`, pure et vérifiée à part ; la page qui ne trouve plus
+ * rien à demander renvoie d'elle-même au récapitulatif.
+ *
  * La forme est celle que `useActionState` attend, l'état précédent en premier
  * paramètre après ce que la page a lié. Il n'est pas lu : chaque envoi porte sa
  * propre condition dans ses champs cachés, et l'état d'avant ne rejuge rien.
@@ -96,22 +103,25 @@ export async function ecrireLaCaseAction(
   }
 
   const joueurConcerneId = formulaire.get("joueurConcerneId");
-  const refus = refusDe(
-    await ecrireLaCase(db, {
-      mancheId: formulaire.get("mancheId"),
-      joueurConcerneId,
-      valeurMontree: formulaire.get("valeurMontree"),
-      valeur: formulaire.get("valeur"),
-      agissant: { joueurId: joueurAgissantId, appareilId: idAppareil ?? null },
-    }),
-    concerne(partie, joueurConcerneId),
-  );
+  const resultat = await ecrireLaCase(db, {
+    mancheId: formulaire.get("mancheId"),
+    joueurConcerneId,
+    valeurMontree: formulaire.get("valeurMontree"),
+    valeur: formulaire.get("valeur"),
+    agissant: { joueurId: joueurAgissantId, appareilId: idAppareil ?? null },
+  });
 
-  if (refus !== null) {
-    return refus;
+  if (resultat.statut === "refusee") {
+    return refusDe(resultat, concerne(partie, joueurConcerneId));
   }
 
-  redirect(`/p/${partie.code}/manche/${retour.numero}/recapitulatif`);
+  const manche = `/p/${partie.code}/manche/${retour.numero}`;
+
+  redirect(
+    suiteDuGeste(partie.regles, resultat.valeur) === "passeAvant"
+      ? manche
+      : `${manche}/recapitulatif`,
+  );
 }
 
 /**
