@@ -1,11 +1,18 @@
-import { and, asc, desc, eq, inArray, isNotNull, isNull } from "drizzle-orm";
+import { and, desc, eq, isNotNull } from "drizzle-orm";
 import type { Lecture } from "@/db/base";
-import { joueur, manche, participant, partie, saisie } from "@/db/schema";
+import { partie } from "@/db/schema";
 import { type EntreeCatalogue, type JeuId, jeuIdSchema, trouverEntree } from "@/lib/jeux/catalogue";
 import { parseRegles } from "@/lib/jeux/regles";
-import { etatDesLignes, type LigneDeGrille } from "@/lib/manche/lecture";
+import { etatDesLignes } from "@/lib/manche/lecture";
 import type { CodeDePartie } from "@/lib/partie/code";
 import type { FinDePartie } from "@/lib/partie/fin";
+import {
+  grouper,
+  lignesDeGrille,
+  lireLesManches,
+  lireLesTablees,
+  lireLesValeurs,
+} from "@/lib/partie/lecture-groupee";
 import type { JoueurConnu } from "@/lib/roster/noms";
 
 /**
@@ -145,145 +152,6 @@ async function lireLaPage(base: Lecture, filtre: FiltreDHistorique): Promise<Par
 }
 
 /**
- * Les participants encore de chaque partie de la page, en **une** requête.
- *
- * Groupés dans l'ordre de la tablée, comme `lirePartieParCode` les rend, parce
- * que c'est cet ordre-là que les colonnes d'une grille suivent. Un participant
- * retiré n'y est pas : il ne compte ni dans l'effectif affiché, ni au
- * classement, et ses valeurs déjà saisies restent en base intactes.
- */
-async function lireLesTablees(
-  base: Lecture,
-  partieIds: readonly number[],
-): Promise<Map<number, JoueurConnu[]>> {
-  const lignes = await base
-    .select({ partieId: participant.partieId, id: joueur.id, nom: joueur.nom })
-    .from(participant)
-    .innerJoin(joueur, eq(joueur.id, participant.joueurId))
-    .where(and(inArray(participant.partieId, partieIds), isNull(participant.retireLe)))
-    .orderBy(asc(participant.id));
-
-  return grouper(
-    lignes,
-    (ligne) => ligne.partieId,
-    ({ id, nom }) => ({ id, nom }),
-  );
-}
-
-/** Une manche de la page, avec la partie dont elle relève. */
-type MancheDeLaPage = { id: number; partieId: number; numero: number; close: boolean };
-
-/**
- * Toutes les manches des parties **à totaliser**, en une requête.
- *
- * Le tri est global et non par partie : `numero` croissant à l'intérieur d'un
- * même `partie_id` est tout ce dont le regroupement a besoin, et un `ORDER BY`
- * par partie n'existe pas en SQL.
- */
-async function lireLesManches(
-  base: Lecture,
-  partieIds: readonly number[],
-): Promise<MancheDeLaPage[]> {
-  if (partieIds.length === 0) {
-    return [];
-  }
-
-  const lignes = await base
-    .select({
-      id: manche.id,
-      partieId: manche.partieId,
-      numero: manche.numero,
-      closeLe: manche.closeLe,
-    })
-    .from(manche)
-    .where(inArray(manche.partieId, partieIds))
-    .orderBy(asc(manche.partieId), asc(manche.numero));
-
-  return lignes.map((ligne) => ({
-    id: ligne.id,
-    partieId: ligne.partieId,
-    numero: ligne.numero,
-    close: ligne.closeLe !== null,
-  }));
-}
-
-/**
- * Les valeurs saisies de toutes ces manches, indexées par manche puis par joueur.
- *
- * Une seule requête pour la page entière : c'est le contraire d'une lecture par
- * partie, et c'est ce qui empêche l'historique de coûter en requêtes ce que la
- * liste coûte en lignes.
- */
-async function lireLesValeurs(
-  base: Lecture,
-  mancheIds: readonly number[],
-): Promise<Map<number, Map<number, number | null>>> {
-  const valeurs = new Map<number, Map<number, number | null>>();
-
-  if (mancheIds.length === 0) {
-    return valeurs;
-  }
-
-  const lignes = await base
-    .select({ mancheId: saisie.mancheId, joueurId: saisie.joueurId, valeur: saisie.valeur })
-    .from(saisie)
-    .where(inArray(saisie.mancheId, mancheIds));
-
-  for (const ligne of lignes) {
-    const parJoueur = valeurs.get(ligne.mancheId) ?? new Map<number, number | null>();
-
-    parJoueur.set(ligne.joueurId, ligne.valeur);
-    valeurs.set(ligne.mancheId, parJoueur);
-  }
-
-  return valeurs;
-}
-
-/** Range des lignes plates sous la clé qui les groupe, dans l'ordre reçu. */
-function grouper<Ligne, Valeur>(
-  lignes: readonly Ligne[],
-  cle: (ligne: Ligne) => number,
-  valeur: (ligne: Ligne) => Valeur,
-): Map<number, Valeur[]> {
-  const groupes = new Map<number, Valeur[]>();
-
-  for (const ligne of lignes) {
-    const groupe = groupes.get(cle(ligne)) ?? [];
-
-    groupe.push(valeur(ligne));
-    groupes.set(cle(ligne), groupe);
-  }
-
-  return groupes;
-}
-
-/**
- * Les lignes de grille d'une partie, reconstruites depuis la lecture groupée.
- *
- * Une case par participant, la vide comprise, exactement comme la jointure
- * gauche de `lireLesCases` les rend une partie à la fois — et, comme elle,
- * chacune dit si elle a été **touchée**. Ce n'est pas un détail de forme : à
- * Uno, une case absente et une case touchée mais vide portent toutes deux
- * `null`, et les confondre rendrait toute manche d'Uno incomplète, donc tout
- * historique d'Uno sans vainqueur.
- */
-function lignesDeGrille(
-  manches: readonly MancheDeLaPage[],
-  tablee: readonly JoueurConnu[],
-  valeurs: ReadonlyMap<number, ReadonlyMap<number, number | null>>,
-): LigneDeGrille[] {
-  return manches.map((une) => ({
-    numero: une.numero,
-    close: une.close,
-    cases: tablee.map((joueur) => ({
-      joueur,
-      valeur: valeurs.get(une.id)?.get(joueur.id) ?? null,
-      touchee: valeurs.get(une.id)?.has(joueur.id) ?? false,
-    })),
-  }));
-}
-
-/**
  * Le vainqueur d'une partie terminée, ou personne.
  *
  * Le premier groupe du classement, **à condition qu'il n'y ait qu'un joueur
@@ -308,10 +176,11 @@ function vainqueurDuClassement(
  *
  * **Quatre requêtes, quelle que soit la taille de la page.** Une pour désigner
  * les parties — sur l'index partiel de date de fin, jamais sur toute la table —
- * puis trois lectures groupées qui rapportent d'un coup les tablées, les manches
- * et les valeurs de ces parties-là. Le moteur ne voit donc jamais que les
- * quelques parties affichées, et une base qui grossit n'ajoute ni requête ni
- * manche à relire.
+ * puis les trois lectures groupées de `partie/lecture-groupee.ts`, qui
+ * rapportent d'un coup les tablées, les manches et les valeurs de ces
+ * parties-là. Le moteur ne voit donc jamais que les quelques parties affichées,
+ * et une base qui grossit n'ajoute ni requête ni manche à relire. Le palmarès
+ * passe par les mêmes trois lectures, sur toutes les parties terminées.
  *
  * Le vainqueur vient du **moteur** et d'aucune addition faite en SQL. Rien du
  * décompte n'est stocké — un total agrégé par la base serait un second décompte,
