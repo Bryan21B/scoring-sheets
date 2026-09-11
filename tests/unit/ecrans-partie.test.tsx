@@ -1,6 +1,7 @@
 import { describe, expect, it } from "bun:test";
 import { renderToStaticMarkup } from "react-dom/server";
 import { EcranDePartie, type GestesDePartie } from "@/components/ecran-de-partie";
+import type { GestesDuTiroir } from "@/components/tiroir-journal";
 import { trouverEntree } from "@/lib/jeux/catalogue";
 import { evaluer, type Manche } from "@/lib/jeux/moteur";
 import { resoudreRegles } from "@/lib/jeux/resolution";
@@ -30,6 +31,16 @@ const GESTES: GestesDePartie = {
   rejoindre: "/p/rejoindre",
   ajouter: "/p/ajouter",
   retirer: "/p/retirer",
+};
+
+/**
+ * Le tiroir ne range rien dans ces tests : cet écran-ci ne le montre que fermé,
+ * et ce que le tiroir offre se vérifie sur le tiroir.
+ */
+const AUCUNE_SORTIE: GestesDuTiroir = {
+  abandonner: undefined,
+  reprendre: undefined,
+  supprimer: undefined,
 };
 
 /** Une ligne de grille pour la tablée de trois, valeurs manquantes vides. */
@@ -73,6 +84,7 @@ function rendre(salle: EtatDeSalle, erreur?: string): string {
       salle={salle}
       roster={[...TABLEE, ZOE]}
       tiroir={{ etat: "ferme" }}
+      gestesDuTiroir={AUCUNE_SORTIE}
       gestes={GESTES}
       erreur={erreur}
       sondage={<p>estampille</p>}

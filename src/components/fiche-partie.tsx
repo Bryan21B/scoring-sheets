@@ -2,7 +2,7 @@ import type { ReactElement } from "react";
 import { BandeauDeRefus } from "@/components/bandeau-de-refus";
 import { Ecran } from "@/components/ecran";
 import { GrilleDeScore } from "@/components/grille-score";
-import { TiroirDuJournal } from "@/components/tiroir-journal";
+import { type GestesDuTiroir, TiroirDuJournal } from "@/components/tiroir-journal";
 import { horodatage, type VueDuTiroir } from "@/lib/journal/tiroir";
 import type { VueDeGrille } from "@/lib/manche/lecture";
 import type { FinDePartie } from "@/lib/partie/fin";
@@ -57,12 +57,23 @@ export function FicheDePartie({
   grille,
   fin,
   tiroir,
+  gestesDuTiroir,
   erreur,
 }: {
   partie: VueDePartie;
   grille: VueDeGrille;
   fin: FinDePartie;
   tiroir: VueDuTiroir;
+  /**
+   * Ce que le tiroir offre de ranger — ici, **la reprise et rien d'autre**.
+   *
+   * C'est la seule écriture qu'une partie scellée peut porter, et elle n'existe
+   * que si la cause est un abandon : une partie régulièrement terminée ne se
+   * rouvre pas. La fiche ne le décide pas elle-même, `sortiesDePartie` l'a fait
+   * — sans quoi la condition qui distingue les deux causes vivrait dans un
+   * écran, où elle ne se vérifie qu'à l'œil.
+   */
+  gestesDuTiroir: GestesDuTiroir;
   /**
    * Le refus rapporté par l'adresse, s'il y en a un.
    *
@@ -91,7 +102,7 @@ export function FicheDePartie({
 
       <GrilleDeScore partie={partie} grille={grille} />
 
-      <TiroirDuJournal code={partie.code} tiroir={tiroir} />
+      <TiroirDuJournal code={partie.code} tiroir={tiroir} gestes={gestesDuTiroir} />
 
       <a href={ADRESSE_HISTORIQUE} className="text-muted-foreground text-sm underline">
         Revenir à l’historique

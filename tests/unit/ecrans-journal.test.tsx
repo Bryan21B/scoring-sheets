@@ -1,6 +1,6 @@
 import { describe, expect, it } from "bun:test";
 import { renderToStaticMarkup } from "react-dom/server";
-import { TiroirDuJournal } from "@/components/tiroir-journal";
+import { type GestesDuTiroir, TiroirDuJournal } from "@/components/tiroir-journal";
 import type { LigneDuTiroir, VueDuTiroir } from "@/lib/journal/tiroir";
 import { LEA, MARIE, PAUL } from "./helpers/tablee";
 
@@ -23,8 +23,25 @@ function ligne(surcharges: Partial<LigneDuTiroir> = {}): LigneDuTiroir {
   };
 }
 
-function rendre(tiroir: VueDuTiroir): string {
-  return renderToStaticMarkup(<TiroirDuJournal code={CODE} tiroir={tiroir} />);
+/** Aucun geste offert : l'état du spectateur, et le défaut de ces tests. */
+const AUCUN_GESTE: GestesDuTiroir = {
+  abandonner: undefined,
+  reprendre: undefined,
+  supprimer: undefined,
+};
+
+/** Les adresses des trois gestes, en clair : c'est ce que le test cherche. */
+const ABANDONNER = "/p/abandonner";
+const REPRENDRE = "/p/reprendre";
+const SUPPRIMER = "/p/supprimer";
+
+function rendre(tiroir: VueDuTiroir, gestes: GestesDuTiroir = AUCUN_GESTE): string {
+  return renderToStaticMarkup(<TiroirDuJournal code={CODE} tiroir={tiroir} gestes={gestes} />);
+}
+
+/** Le tiroir ouvert sur la vue par défaut, avec les gestes qu'on lui donne. */
+function ouvert(gestes: GestesDuTiroir): string {
+  return rendre({ etat: "ouvert", portee: "corrections", lignes: [ligne()] }, gestes);
 }
 
 describe("l'entrée de menu du journal", () => {
@@ -208,5 +225,63 @@ describe("ce que le tiroir affirme, et ce qu'il n'affirme pas", () => {
     expect(html).toContain("Joueur retiré");
     expect(html).not.toContain("a supprimé");
     expect(html).not.toContain("a retiré");
+  });
+});
+
+describe("les gestes du cycle de vie, offerts depuis le tiroir", () => {
+  it("offre l'abandon derrière une confirmation, jamais d'un seul appui", () => {
+    // Le seul geste de la partie qui agit sur ce que les quatre autres voient
+    // sans qu'ils l'aient demandé. Le `details` est la confirmation : l'appel
+    // ouvre, le bouton engage, et il n'y en a qu'un.
+    const html = ouvert({ ...AUCUN_GESTE, abandonner: ABANDONNER });
+
+    expect(html).toContain("<details");
+    expect(html).toContain("Abandonner la partie");
+    expect(html).toContain(`action="${ABANDONNER}"`);
+    expect(html).toContain("Oui, abandonner");
+  });
+
+  it("ne montre rien de l'abandon quand il n'est pas offert", () => {
+    const html = ouvert(AUCUN_GESTE);
+
+    expect(html).not.toContain("Abandonner la partie");
+    expect(html).not.toContain("Oui, abandonner");
+  });
+
+  it("offre la reprise d'un seul appui : c'est le recours, pas le couperet", () => {
+    const html = ouvert({ ...AUCUN_GESTE, reprendre: REPRENDRE });
+
+    expect(html).toContain(`action="${REPRENDRE}"`);
+    expect(html).toContain("Reprendre la partie");
+  });
+
+  it("n'offre jamais l'abandon et la reprise ensemble : la page tranche avant", () => {
+    const abandonnable = ouvert({ ...AUCUN_GESTE, abandonner: ABANDONNER });
+    const reprenable = ouvert({ ...AUCUN_GESTE, reprendre: REPRENDRE });
+
+    expect(abandonnable).not.toContain("Reprendre la partie");
+    expect(reprenable).not.toContain("Abandonner la partie");
+  });
+
+  it("offre la suppression derrière une confirmation, elle aussi", () => {
+    const html = ouvert({ ...AUCUN_GESTE, supprimer: SUPPRIMER });
+
+    expect(html).toContain(`action="${SUPPRIMER}"`);
+    expect(html).toContain("Supprimer la partie");
+    expect(html).toContain("Oui, supprimer");
+  });
+
+  it("ne montre aucun geste tant que le tiroir est fermé : ils vivent dedans", () => {
+    const html = rendre(
+      { etat: "ferme" },
+      {
+        abandonner: ABANDONNER,
+        reprendre: undefined,
+        supprimer: SUPPRIMER,
+      },
+    );
+
+    expect(html).not.toContain("Abandonner la partie");
+    expect(html).not.toContain("Supprimer la partie");
   });
 });

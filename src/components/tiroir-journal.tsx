@@ -1,4 +1,6 @@
 import type { ReactElement } from "react";
+import type { Action } from "@/components/champs";
+import { Button } from "@/components/ui/button";
 import {
   adresseDuTiroir,
   type DetailDuTiroir,
@@ -49,6 +51,33 @@ const RIEN_A_MONTRER: Record<Portee, string> = {
 };
 
 /**
+ * Les trois gestes du cycle de vie, **déjà décidés** par la page.
+ *
+ * `undefined` veut dire « pas offert », et le composant n'a donc aucune
+ * condition à évaluer : c'est `sortiesDePartie` qui tranche, une seule fois et
+ * à un endroit vérifiable. Lui passer un état de partie et une identité de
+ * lecteur aurait remis dans l'écran trois conditions dont l'une — « abandonnée,
+ * jamais terminée » — est précisément celle qu'on se trompe à relire vite.
+ *
+ * Ensemble et non un par un : les trois visent la même partie, et les séparer
+ * laisserait un appelant marier l'abandon d'une partie à la suppression d'une
+ * autre.
+ */
+export type GestesDuTiroir = {
+  abandonner: Action | undefined;
+  reprendre: Action | undefined;
+  supprimer: Action | undefined;
+};
+
+/** Ce que l'abandon fait, dit avant qu'on le confirme. */
+const ABANDON_EXPLIQUE =
+  "La partie quitte l’accueil et n’accepte plus rien. Son journal reste, et n’importe qui autour de la table peut la reprendre.";
+
+/** Ce que la suppression fait, dit avant qu'on la confirme. */
+const SUPPRESSION_EXPLIQUEE =
+  "Rien n’a encore été consigné : la partie disparaît pour de bon, avec sa tablée. Passé la première manche, c’est l’abandon qui la range.";
+
+/**
  * Le journal d'une partie, derrière une entrée de menu discrète.
  *
  * **Discret est une exigence, pas un goût.** Le tiroir existe pour le jour où
@@ -66,13 +95,27 @@ const RIEN_A_MONTRER: Record<Portee, string> = {
  * Il n'a pas non plus d'état local : ouvert, fermé et portée vivent dans
  * l'adresse. La page de partie se rafraîchit toute seule, et un `useState` se
  * viderait à chaque tour de poll — pendant la lecture, précisément.
+ *
+ * **C'est aussi d'ici qu'on range la partie.** L'abandon, la reprise et la
+ * suppression sont logés sous le même `⋯`, et pour la même raison que le
+ * journal : ce ne sont pas des gestes de tous les soirs, et les mettre sur
+ * l'écran principal ferait de la fin de soirée un bouton qu'on frôle. Le
+ * composant ne décide pourtant toujours rien — il reçoit des actions déjà
+ * filtrées, voir {@link GestesDuTiroir}.
  */
 export function TiroirDuJournal({
   code,
   tiroir,
+  gestes,
 }: {
   code: string;
   tiroir: VueDuTiroir;
+  /**
+   * Exigé et non optionnel, comme le refus de l'écran de partie : chaque page
+   * qui montre un tiroir doit avoir décidé ce qu'elle y offre, et l'omettre
+   * ferait disparaître la reprise de la seule fiche qui en a besoin.
+   */
+  gestes: GestesDuTiroir;
 }): ReactElement {
   if (tiroir.etat === "ferme") {
     return <EntreeDeMenu code={code} />;
@@ -81,7 +124,7 @@ export function TiroirDuJournal({
   return (
     <>
       <EntreeDeMenu code={code} />
-      <Panneau code={code} portee={tiroir.portee} lignes={tiroir.lignes} />
+      <Panneau code={code} portee={tiroir.portee} lignes={tiroir.lignes} gestes={gestes} />
     </>
   );
 }
@@ -119,10 +162,12 @@ function Panneau({
   code,
   portee,
   lignes,
+  gestes,
 }: {
   code: string;
   portee: Portee;
   lignes: readonly LigneDuTiroir[];
+  gestes: GestesDuTiroir;
 }): ReactElement {
   return (
     <>
@@ -153,6 +198,8 @@ function Panneau({
           </ul>
         )}
 
+        <Sorties gestes={gestes} />
+
         <a
           href={adresseDuTiroir(code, null)}
           className="text-center text-muted-foreground text-sm underline"
@@ -161,6 +208,93 @@ function Panneau({
         </a>
       </section>
     </>
+  );
+}
+
+/**
+ * Ranger la partie : la reprendre, l'abandonner, la supprimer.
+ *
+ * L'ordre n'est pas cosmétique. **La reprise vient en tête** parce que sur une
+ * partie abandonnée elle est le seul geste qui reste, et qu'elle est le recours
+ * — la chercher sous deux confirmations serait la cacher. Les deux gestes qui
+ * ferment viennent ensuite, et chacun derrière la sienne.
+ *
+ * Rien du tout quand rien n'est offert : un spectateur, ou une partie terminée,
+ * n'ont pas à voir un bloc vide s'annoncer sous le journal.
+ */
+function Sorties({ gestes }: { gestes: GestesDuTiroir }): ReactElement | null {
+  if (
+    gestes.reprendre === undefined &&
+    gestes.abandonner === undefined &&
+    gestes.supprimer === undefined
+  ) {
+    return null;
+  }
+
+  return (
+    <div className="flex flex-col gap-3 border-border border-t pt-4">
+      {gestes.reprendre === undefined ? null : (
+        <form action={gestes.reprendre} method="post">
+          <Button type="submit" size="lg" className="w-full">
+            Reprendre la partie
+          </Button>
+        </form>
+      )}
+
+      {gestes.abandonner === undefined ? null : (
+        <Confirmation
+          action={gestes.abandonner}
+          appel="Abandonner la partie"
+          explication={ABANDON_EXPLIQUE}
+          engagement="Oui, abandonner"
+        />
+      )}
+
+      {gestes.supprimer === undefined ? null : (
+        <Confirmation
+          action={gestes.supprimer}
+          appel="Supprimer la partie"
+          explication={SUPPRESSION_EXPLIQUEE}
+          engagement="Oui, supprimer"
+        />
+      )}
+    </div>
+  );
+}
+
+/**
+ * **Une confirmation, une seule** : l'appel ouvre, le bouton engage.
+ *
+ * Un `details` et non un `confirm()` ni un second écran. Le premier imposerait
+ * un composant client à un tiroir dont tout l'état vit dans l'adresse ; le
+ * second ferait quitter le journal qu'on venait peut-être de lire pour décider.
+ * Ce qu'on cherche est qu'aucun appui unique ne ferme la soirée des autres, et
+ * un repli suffit à l'obtenir.
+ *
+ * L'explication est **dans** le repli, à côté du bouton : elle est ce qui rend
+ * la confirmation informée plutôt que cérémonielle.
+ */
+function Confirmation({
+  action,
+  appel,
+  explication,
+  engagement,
+}: {
+  action: Action;
+  appel: string;
+  explication: string;
+  engagement: string;
+}): ReactElement {
+  return (
+    <details>
+      <summary className="cursor-pointer text-muted-foreground text-sm">{appel}</summary>
+      <form action={action} method="post" className="flex flex-col gap-3 pt-3">
+        <p className="text-muted-foreground text-sm">{explication}</p>
+        <Button type="submit" size="lg" variant="destructive">
+          {engagement}
+        </Button>
+      </form>
+    </details>
   );
 }
 

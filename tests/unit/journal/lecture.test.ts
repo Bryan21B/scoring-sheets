@@ -6,6 +6,7 @@ import { lireLeTiroir } from "@/lib/journal/lecture";
 import { cloturerLaManche } from "@/lib/manche/cloture";
 import { ouvrirLaMancheSuivante } from "@/lib/manche/ouverture";
 import { ecrireLaCase } from "@/lib/manche/saisie";
+import { abandonnerLaPartie, reprendreLaPartie } from "@/lib/partie/cycle";
 import { PartieScellee } from "@/lib/partie/fin";
 import { type BaseDeTest, creerBaseDeTest } from "../helpers/base-de-test";
 import {
@@ -207,6 +208,21 @@ describe("le tiroir du journal", () => {
       "suppressionDeManche",
       "correction",
     ]);
+  });
+
+  it("montre l'abandon et la reprise par défaut : ils disent pourquoi elle s'était arrêtée", async () => {
+    // Les deux seuls gestes qui changent ce que les autres ont le **droit** de
+    // faire, et c'est exactement ce qu'on vient lire dans un journal. Les
+    // enterrer sous la bascule montrerait une partie qui recommence à bouger
+    // sans dire pourquoi elle avait cessé, ni qui l'a rouverte.
+    const agissant = { joueurId: marie(), appareilId: partie.idAppareil };
+    await ecrire(paul(), null, 12);
+    await abandonnerLaPartie(base, partie.partieId, agissant);
+    await reprendreLaPartie(base, partie.partieId, agissant);
+
+    const tiroir = await ouvrir();
+
+    expect(tiroir.lignes.map((ligne) => ligne.geste)).toEqual(["reprise", "abandon"]);
   });
 
   it("montre tout, saisies de routine comprises, quand on le demande", async () => {

@@ -5,14 +5,23 @@ import { notFound, redirect } from "next/navigation";
 import { db } from "@/db";
 import { NOM_COOKIE_APPAREIL } from "@/lib/appareil/cookie";
 import { lireLeJoueurDeLAppareil } from "@/lib/appareil/lecture";
+import type { Agissant } from "@/lib/journal/ligne";
 import { type EtatDeCloture, finAAnnoncer, refusAMontrer } from "@/lib/manche/annonce";
 import { CLOTURE_HORS_TABLEE, cloturerLaManche } from "@/lib/manche/cloture";
 import { ouvrirLaMancheSuivante } from "@/lib/manche/ouverture";
 import { type RefusDEcriture, refusDe } from "@/lib/manche/refus";
 import { ecrireLaCase } from "@/lib/manche/saisie";
 import { adresseDePartie } from "@/lib/partie/adresse";
+import {
+  abandonnerLaPartie,
+  RefusDeCycle,
+  reprendreLaPartie,
+  supprimerLaPartie,
+} from "@/lib/partie/cycle";
+import { PartieScellee, RepriseImpossible } from "@/lib/partie/fin";
 import type { VueDePartie } from "@/lib/partie/lecture";
 import { lirePartieParCode } from "@/lib/partie/lecture";
+import { PAS_DE_LA_PARTIE } from "@/lib/partie/salle-attente";
 
 /** La partie que ce code désigne, ou un 404 : le code **est** l'adresse. */
 async function exigerLaPartie(code: string): Promise<VueDePartie> {
@@ -153,4 +162,116 @@ export async function cloturerLaMancheAction(
   }
 
   redirect(adresseDePartie(partie.code));
+}
+
+/**
+ * Le cadre commun aux trois gestes du cycle de vie : qui agit, et où l'on va.
+ *
+ * Le joueur agissant se résout **ici**, du cookie, et jamais du formulaire :
+ * `partie.fin_par` se grave et la ligne de journal fige son auteur — laisser un
+ * envoi les désigner reviendrait à signer l'arrêt d'une soirée au nom d'un
+ * autre. L'appareil part à côté, parce que le joueur seul ne distingue pas deux
+ * téléphones qui se déclarent la même personne.
+ *
+ * Un appareil qui ne se déclare **aucun** joueur reçoit la phrase du
+ * spectateur : ne s'être choisi personne et s'être choisi quelqu'un d'une autre
+ * soirée sont la même situation vue de la partie.
+ *
+ * `redirect` est appelé **hors** du `try` : il fonctionne en levant, et
+ * l'attraper transformerait chaque navigation réussie en erreur.
+ */
+async function rangerLaPartie(
+  code: string,
+  geste: (partieId: number, agissant: Agissant) => Promise<void>,
+  apres: (partie: VueDePartie) => string,
+): Promise<void> {
+  const partie = await exigerLaPartie(code);
+  const bocal = await cookies();
+  const idAppareil = bocal.get(NOM_COOKIE_APPAREIL)?.value;
+  const joueurId = await lireLeJoueurDeLAppareil(db, idAppareil);
+  let destination: string;
+
+  if (joueurId === null) {
+    return redirect(avecRefus(partie.code, PAS_DE_LA_PARTIE));
+  }
+
+  try {
+    await geste(partie.id, { joueurId, appareilId: idAppareil ?? null });
+    destination = apres(partie);
+  } catch (erreur) {
+    destination = avecRefus(partie.code, refusDuCycle(erreur));
+  }
+
+  redirect(destination);
+}
+
+/**
+ * L'adresse de la partie, avec la phrase à afficher au-dessus.
+ *
+ * Le refus **revient sur la partie** plutôt que de disparaître : les deux
+ * écrans de `/p/<code>` savent le montrer, et c'est précisément quand la partie
+ * vient de changer d'état sous un autre téléphone qu'il explique quelque chose.
+ */
+function avecRefus(code: string, message: string): string {
+  return `${adresseDePartie(code)}?${new URLSearchParams({ erreur: message }).toString()}`;
+}
+
+/**
+ * Ce qui s'affiche quand un geste du cycle de vie est refusé.
+ *
+ * Les trois classes qui se montrent, et rien d'autre : `RefusDeCycle` pour le
+ * spectateur et le journal non vide, `PartieScellee` et `RepriseImpossible`
+ * pour les deux sens de la fin. Tout le reste est interne — un rapport de champs
+ * Zod, une contrainte SQLite — et l'afficher n'aiderait personne tout en
+ * racontant la base.
+ */
+function refusDuCycle(erreur: unknown): string {
+  return erreur instanceof RefusDeCycle ||
+    erreur instanceof PartieScellee ||
+    erreur instanceof RepriseImpossible
+    ? erreur.message
+    : "Le geste n’a pas abouti. Recharge la partie et recommence.";
+}
+
+/**
+ * Abandonne la partie : elle quitte l'accueil, et son journal reste.
+ *
+ * Le retour se fait sur `/p/<code>`, qui montre désormais la fiche de la partie
+ * scellée — d'où part la reprise, si quelqu'un s'est trompé de bouton.
+ */
+export async function abandonnerLaPartieAction(code: string): Promise<void> {
+  await rangerLaPartie(
+    code,
+    async (partieId, agissant) => {
+      await abandonnerLaPartie(db, partieId, agissant);
+    },
+    (partie) => adresseDePartie(partie.code),
+  );
+}
+
+/** Reprend une partie abandonnée : elle redevient la soirée en cours. */
+export async function reprendreLaPartieAction(code: string): Promise<void> {
+  await rangerLaPartie(
+    code,
+    async (partieId, agissant) => {
+      await reprendreLaPartie(db, partieId, agissant);
+    },
+    (partie) => adresseDePartie(partie.code),
+  );
+}
+
+/**
+ * Supprime une partie dont le journal est vide, et rentre à l'accueil.
+ *
+ * L'accueil et non la partie : il n'y a plus de partie à cette adresse, et y
+ * revenir donnerait un 404 pour toute confirmation.
+ */
+export async function supprimerLaPartieAction(code: string): Promise<void> {
+  await rangerLaPartie(
+    code,
+    async (partieId, agissant) => {
+      await supprimerLaPartie(db, partieId, agissant);
+    },
+    () => "/",
+  );
 }

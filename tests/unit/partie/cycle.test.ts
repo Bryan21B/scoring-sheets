@@ -12,6 +12,7 @@ import {
   journalEstVide,
   RefusDeCycle,
   reprendreLaPartie,
+  sortiesDePartie,
   supprimerLaPartie,
 } from "@/lib/partie/cycle";
 import { lirePartieEnCours } from "@/lib/partie/en-cours";
@@ -415,5 +416,49 @@ describe("journalEstVide", () => {
     await reprendreLaPartie(base, partie.partieId, agissantDeMarie());
 
     expect(await journalEstVide(base, partie.partieId)).toBe(false);
+  });
+});
+
+// Pure, et c'est ce qui la rend vérifiable : l'écran n'a plus qu'à câbler ce
+// qu'elle décide, et aucun de ces cas n'a besoin d'une base.
+describe("sortiesDePartie", () => {
+  const EnCours = { fin: null, deLaPartie: true, journalVide: false };
+  const Abandon: FinDePartie = { le: new Date(), cause: "abandonnee", par: 1 };
+  const Terminee: FinDePartie = { le: new Date(), cause: "terminee", par: 1 };
+
+  it("offre l'abandon sur une partie en cours, et pas la reprise", () => {
+    expect(sortiesDePartie(EnCours)).toEqual({
+      abandon: true,
+      reprise: false,
+      suppression: false,
+    });
+  });
+
+  it("offre la reprise sur une partie abandonnée, et plus l'abandon", () => {
+    expect(sortiesDePartie({ ...EnCours, fin: Abandon })).toEqual({
+      abandon: false,
+      reprise: true,
+      suppression: false,
+    });
+  });
+
+  it("n'offre rien sur une partie terminée : elle ne se rouvre pas", () => {
+    expect(sortiesDePartie({ ...EnCours, fin: Terminee })).toEqual({
+      abandon: false,
+      reprise: false,
+      suppression: false,
+    });
+  });
+
+  it("offre la suppression tant que le journal est vide", () => {
+    expect(sortiesDePartie({ ...EnCours, journalVide: true }).suppression).toBe(true);
+  });
+
+  it("n'offre rien au spectateur, pas même la suppression d'une partie vierge", () => {
+    expect(sortiesDePartie({ fin: null, deLaPartie: false, journalVide: true })).toEqual({
+      abandon: false,
+      reprise: false,
+      suppression: false,
+    });
   });
 });

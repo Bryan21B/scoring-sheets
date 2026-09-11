@@ -1,6 +1,7 @@
 import { describe, expect, it } from "bun:test";
 import { renderToStaticMarkup } from "react-dom/server";
 import { FicheDePartie } from "@/components/fiche-partie";
+import type { GestesDuTiroir } from "@/components/tiroir-journal";
 import { trouverEntree } from "@/lib/jeux/catalogue";
 import { evaluer, type Manche } from "@/lib/jeux/moteur";
 import { resoudreRegles } from "@/lib/jeux/resolution";
@@ -29,6 +30,23 @@ const TERMINEE: FinDePartie = {
   par: MARIE.id,
 };
 
+/** La fin d'une partie qu'on a rangée sans la finir. */
+const ABANDONNEE: FinDePartie = {
+  le: new Date("2026-09-08T19:45:00.000Z"),
+  cause: "abandonnee",
+  par: MARIE.id,
+};
+
+/** Rien à ranger : ce que `sortiesDePartie` rend sur une partie terminée. */
+const AUCUNE_SORTIE: GestesDuTiroir = {
+  abandonner: undefined,
+  reprendre: undefined,
+  supprimer: undefined,
+};
+
+/** Ce qu'elle rend sur une partie abandonnée, pour qui est de la tablée. */
+const REPRISE_OFFERTE: GestesDuTiroir = { ...AUCUNE_SORTIE, reprendre: "/p/reprendre" };
+
 /** Une ligne de grille pour la tablée de trois, valeurs manquantes vides. */
 function ligne(numero: number, ...valeurs: readonly (number | null)[]): LigneDeGrille {
   return {
@@ -55,7 +73,13 @@ function feuille(...lignes: readonly LigneDeGrille[]): VueDeGrille {
 }
 
 function rendre(
-  options: { grille?: VueDeGrille; fin?: FinDePartie; tiroir?: VueDuTiroir; erreur?: string } = {},
+  options: {
+    grille?: VueDeGrille;
+    fin?: FinDePartie;
+    tiroir?: VueDuTiroir;
+    gestesDuTiroir?: GestesDuTiroir;
+    erreur?: string;
+  } = {},
 ): string {
   return renderToStaticMarkup(
     <FicheDePartie
@@ -63,6 +87,7 @@ function rendre(
       grille={options.grille ?? feuille(ligne(1, 8, 3, 0), ligne(2, 12, 5, 60))}
       fin={options.fin ?? TERMINEE}
       tiroir={options.tiroir ?? { etat: "ferme" }}
+      gestesDuTiroir={options.gestesDuTiroir ?? AUCUNE_SORTIE}
       erreur={options.erreur}
     />,
   );
@@ -151,5 +176,35 @@ describe("la fiche de partie", () => {
 
   it("ne montre pas de courbe : la grille montre déjà la progression, en chiffres", () => {
     expect(rendre()).not.toContain("<svg");
+  });
+});
+
+describe("la fiche d'une partie abandonnée", () => {
+  it("dit qu'elle est abandonnée, et non terminée", () => {
+    const html = rendre({ fin: ABANDONNEE });
+
+    expect(html).toContain("Partie abandonnée");
+    expect(html).not.toContain("Partie terminée");
+  });
+
+  it("offre la reprise depuis le tiroir, la seule écriture qu'elle accepte", () => {
+    const html = rendre({
+      fin: ABANDONNEE,
+      tiroir: { etat: "ouvert", portee: "corrections", lignes: [] },
+      gestesDuTiroir: REPRISE_OFFERTE,
+    });
+
+    expect(html).toContain('action="/p/reprendre"');
+    expect(html).toContain("Reprendre la partie");
+  });
+
+  it("ne la propose pas sur une partie terminée : celle-là ne se rouvre pas", () => {
+    const html = rendre({
+      fin: TERMINEE,
+      tiroir: { etat: "ouvert", portee: "corrections", lignes: [] },
+    });
+
+    expect(html).not.toContain("Reprendre la partie");
+    expect(html).not.toContain("Abandonner la partie");
   });
 });

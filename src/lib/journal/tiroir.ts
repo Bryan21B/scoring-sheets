@@ -123,8 +123,25 @@ export function etiquetteDAppareil(rang: number): string {
  * routine ; elles enterreraient la ligne qu'on est venu chercher. **Tout reste
  * écrit, c'est la lecture qui filtre, jamais l'écriture** — la bascule « tout
  * afficher » rend les autres sans qu'aucune n'ait jamais été perdue.
+ *
+ * `abandon` et `reprise` y sont, et c'est le critère qui les y met plutôt qu'une
+ * exception : la vue par défaut montre **ce qui sort de la routine**, et ces
+ * deux-là sont les seuls gestes qui changent ce que les autres ont le **droit**
+ * de faire. Les enterrer sous la bascule montrerait une partie qui recommence à
+ * bouger sans dire pourquoi elle avait cessé, ni qui l'a rouverte — ce qui est
+ * exactement la question qu'on vient poser au journal. Ils sont d'ailleurs rares
+ * là où les saisies sont nombreuses : ils n'enterrent rien.
+ *
+ * `participantAjoute` et `participantRetire` n'y sont pas : ils ne se consignent
+ * que sur un journal déjà non vide — après un dégel — et ils ne retirent de
+ * droit à personne.
  */
-const GESTES_MONTRES_PAR_DEFAUT: readonly Geste[] = ["correction", "suppressionDeManche"];
+const GESTES_MONTRES_PAR_DEFAUT: readonly Geste[] = [
+  "correction",
+  "suppressionDeManche",
+  "abandon",
+  "reprise",
+];
 
 /** Ce geste sort-il de la routine, et mérite-t-il donc la vue par défaut ? */
 export function sortDeLaRoutine(geste: Geste): boolean {

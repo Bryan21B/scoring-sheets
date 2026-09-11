@@ -5,7 +5,7 @@ import { GrilleDeScore } from "@/components/grille-score";
 import { MancheSuivante } from "@/components/manche-suivante";
 import { PartieEntete } from "@/components/partie-entete";
 import { SalleDAttente } from "@/components/salle-attente";
-import { TiroirDuJournal } from "@/components/tiroir-journal";
+import { type GestesDuTiroir, TiroirDuJournal } from "@/components/tiroir-journal";
 import type { VueDuTiroir } from "@/lib/journal/tiroir";
 import type { VueDeGrille } from "@/lib/manche/lecture";
 import type { VueDePartie } from "@/lib/partie/lecture";
@@ -63,6 +63,7 @@ export function EcranDePartie({
   roster,
   tiroir,
   gestes,
+  gestesDuTiroir,
   erreur,
   sondage,
 }: {
@@ -72,6 +73,13 @@ export function EcranDePartie({
   roster: readonly JoueurConnu[];
   tiroir: VueDuTiroir;
   gestes: GestesDePartie;
+  /**
+   * Ce que le tiroir offre de ranger. Séparé de {@link GestesDePartie} parce
+   * que la fiche d'une partie scellée en a besoin sans avoir les quatre autres :
+   * les gestes de la soirée et ceux du cycle de vie ne vivent pas au même
+   * rythme, et les réunir obligerait la fiche à passer quatre actions mortes.
+   */
+  gestesDuTiroir: GestesDuTiroir;
   /**
    * Le refus rapporté par l'adresse, montré au-dessus du reste.
    *
@@ -111,7 +119,7 @@ export function EcranDePartie({
         retirer={gestes.retirer}
       />
 
-      <TiroirDuJournal code={partie.code} tiroir={tiroir} />
+      <TiroirDuJournal code={partie.code} tiroir={tiroir} gestes={gestesDuTiroir} />
 
       {sondage}
     </Ecran>

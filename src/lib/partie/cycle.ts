@@ -212,3 +212,47 @@ export async function supprimerLaPartie(
     await tx.delete(partie).where(eq(partie.id, partieId));
   });
 }
+
+/**
+ * Les trois gestes du cycle de vie, et lesquels l'écran a le droit d'offrir.
+ *
+ * Trois booléens plutôt qu'un état à quatre valeurs : ils ne s'excluent pas
+ * tous. Une partie en cours au journal vide offre l'abandon **et** la
+ * suppression, et c'est exactement la partie ouverte par erreur.
+ */
+export type SortiesDePartie = {
+  abandon: boolean;
+  reprise: boolean;
+  suppression: boolean;
+};
+
+/**
+ * Ce que le tiroir propose, décidé **une fois** et sans toucher à la base.
+ *
+ * Pure, et séparée des écritures qu'elle annonce, parce que c'est *la* décision
+ * de l'écran : trois conditions recopiées dans un composant ne se vérifient
+ * qu'à l'œil, et celle de la reprise — « abandonnée, jamais terminée » — est
+ * précisément celle qu'on se tromperait à relire vite.
+ *
+ * Elle ne remplace aucun garde-fou : le serveur revérifie les trois, parce que
+ * ce qu'un écran n'offre pas reste postable. Ce qu'elle évite est le bouton
+ * mort, qui fait douter de l'application plutôt que du geste.
+ *
+ * `deLaPartie` et non une identité : le spectateur n'arrête pas la soirée des
+ * autres, et savoir qui il est ne regarde pas ce module.
+ */
+export function sortiesDePartie(entree: {
+  fin: FinDePartie | null;
+  deLaPartie: boolean;
+  journalVide: boolean;
+}): SortiesDePartie {
+  if (!entree.deLaPartie) {
+    return { abandon: false, reprise: false, suppression: false };
+  }
+
+  return {
+    abandon: entree.fin === null,
+    reprise: entree.fin?.cause === "abandonnee",
+    suppression: entree.journalVide,
+  };
+}

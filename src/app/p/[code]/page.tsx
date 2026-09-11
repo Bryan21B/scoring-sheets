@@ -1,6 +1,11 @@
 import { notFound } from "next/navigation";
 import type { ReactElement } from "react";
-import { ouvrirLaMancheSuivanteAction } from "@/app/p/[code]/actions";
+import {
+  abandonnerLaPartieAction,
+  ouvrirLaMancheSuivanteAction,
+  reprendreLaPartieAction,
+  supprimerLaPartieAction,
+} from "@/app/p/[code]/actions";
 import {
   ajouterParticipantAction,
   rejoindreAction,
@@ -15,10 +20,11 @@ import { db } from "@/db";
 import { cleDeLaRequete, lireLAppareil } from "@/lib/appareil/requete";
 import { lireLeTiroir } from "@/lib/journal/lecture";
 import { lireLaGrille } from "@/lib/manche/lecture";
+import { journalEstVide, sortiesDePartie } from "@/lib/partie/cycle";
 import { lireLaFin } from "@/lib/partie/fin";
 import { messageDeRefusSchema, premierParametre } from "@/lib/partie/identite-url";
 import { chercherPartieParCode, limiteDeRecherche } from "@/lib/partie/recherche";
-import { lireSalleDAttente } from "@/lib/partie/salle-attente";
+import { estDeLaPartie, lireSalleDAttente } from "@/lib/partie/salle-attente";
 import { listerLeRoster } from "@/lib/roster/lecture";
 
 /**
@@ -92,6 +98,20 @@ export default async function PageDePartie(props: PageProps<"/p/[code]">): Promi
   );
   const grille = await lireLaGrille(db, partie.id, partie.regles);
   const fin = await lireLaFin(db, partie.id);
+  // Lue **avant** la bifurcation, et pour les deux écrans : la fiche d'une
+  // partie abandonnée doit savoir si celui qui regarde est de la tablée, sans
+  // quoi elle offrirait la reprise au premier passant.
+  const salle = await lireSalleDAttente(db, partie.id, idAppareil);
+  const sorties = sortiesDePartie({
+    fin,
+    deLaPartie: estDeLaPartie(salle),
+    journalVide: await journalEstVide(db, partie.id),
+  });
+  const gestesDuTiroir = {
+    abandonner: sorties.abandon ? abandonnerLaPartieAction.bind(null, partie.code) : undefined,
+    reprendre: sorties.reprise ? reprendreLaPartieAction.bind(null, partie.code) : undefined,
+    supprimer: sorties.suppression ? supprimerLaPartieAction.bind(null, partie.code) : undefined,
+  };
 
   // Une partie **scellée** montre sa fiche, pas l'écran d'une soirée qui bouge :
   // ni « saisir la manche suivante », ni salle d'attente, ni sondage — le
@@ -106,6 +126,7 @@ export default async function PageDePartie(props: PageProps<"/p/[code]">): Promi
         grille={grille}
         fin={fin}
         tiroir={await lireLeTiroir(db, partie.id, await props.searchParams)}
+        gestesDuTiroir={gestesDuTiroir}
         erreur={erreur.success ? erreur.data : undefined}
       />
     );
@@ -115,9 +136,10 @@ export default async function PageDePartie(props: PageProps<"/p/[code]">): Promi
     <EcranDePartie
       partie={partie}
       grille={grille}
-      salle={await lireSalleDAttente(db, partie.id, idAppareil)}
+      salle={salle}
       roster={await listerLeRoster(db)}
       tiroir={await lireLeTiroir(db, partie.id, await props.searchParams)}
+      gestesDuTiroir={gestesDuTiroir}
       gestes={{
         ouvrirLaMancheSuivante: ouvrirLaMancheSuivanteAction.bind(null, partie.code),
         rejoindre: rejoindreAction,
