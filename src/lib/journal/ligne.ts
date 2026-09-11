@@ -87,3 +87,48 @@ export async function consignerUnGesteDeCase(tx: Ecriture, ligne: LigneDeCase): 
     ecritLe: new Date(),
   });
 }
+
+/**
+ * Un geste qui porte sur **la partie entière**, et sur aucune case.
+ *
+ * Les deux seuls qui changent ce que les autres ont le **droit** de faire, et
+ * c'est exactement ce qu'on vient lire dans un journal : sans eux, il montrerait
+ * une partie qui recommence à bouger sans dire pourquoi elle avait cessé, ni qui
+ * l'a rouverte. Ils entrent donc en paire, ou pas du tout.
+ */
+export type GesteDePartie = "abandon" | "reprise";
+
+/** Une ligne qui n'a ni manche, ni joueur concerné, ni charge utile. */
+export type LigneDePartie = {
+  partieId: number;
+  geste: GesteDePartie;
+  agissant: Agissant;
+};
+
+/**
+ * Écrit une ligne sans case, **dans la transaction du geste qu'elle enregistre**.
+ *
+ * Séparée de {@link consignerUnGesteDeCase} plutôt que pliée dedans avec trois
+ * champs optionnels : la case est ce qui définit l'autre — sa manche, son joueur
+ * concerné, sa valeur — et une ligne d'abandon n'en a aucun. Les réunir
+ * obligerait chaque appelant à passer trois `null` dont le type ne dirait plus
+ * qu'ils sont obligatoires ici et interdits là.
+ *
+ * `Ecriture` et non `Base`, pour la même raison que sa jumelle, et pour une de
+ * plus : **aucun déclencheur ne porte sur `partie`**, si bien que c'est cette
+ * insertion-là qui fait bouger l'estampille de version. Écrite hors de la
+ * transaction de l'abandon, elle laisserait les autres téléphones devant une
+ * partie close sans l'avoir appris. Voir `src/db/triggers.sql`.
+ */
+export async function consignerUnGesteDePartie(tx: Ecriture, ligne: LigneDePartie): Promise<void> {
+  await tx.insert(journal).values({
+    partieId: ligne.partieId,
+    geste: ligne.geste,
+    joueurAgissantId: ligne.agissant.joueurId,
+    appareilId: ligne.agissant.appareilId,
+    mancheNumero: null,
+    joueurConcerneId: null,
+    detail: null,
+    ecritLe: new Date(),
+  });
+}

@@ -1,6 +1,6 @@
 import { and, eq, isNull } from "drizzle-orm";
 import { z } from "zod";
-import type { Base, Ecriture } from "@/db/base";
+import type { Base, Ecriture, Lecture } from "@/db/base";
 import { appareil, joueur, manche, participant } from "@/db/schema";
 import { idAppareilSchema } from "@/lib/appareil/cookie";
 import { lierLAppareil } from "@/lib/appareil/lien";
@@ -8,15 +8,6 @@ import { exigerUnePartieOuverte } from "@/lib/partie/fin";
 import { identiteSchema } from "@/lib/partie/identite";
 import { assurerLeJoueur, resoudreIdentite } from "@/lib/roster/choix";
 import type { Homonymie, JoueurConnu } from "@/lib/roster/noms";
-
-/**
- * Une base qu'on lit, qu'on soit ou non déjà dans une transaction.
- *
- * Le gel se relit aux deux endroits — l'écran qui décide quoi montrer, et
- * l'écriture qui décide si elle a le droit — et une deuxième lecture écrite
- * pour la transaction divergerait de la première.
- */
-type Lecture = Base | Ecriture;
 
 /**
  * Ce que la salle d'attente sait de celui qui vient d'ouvrir le lien.
@@ -184,8 +175,17 @@ const PARTIE_COMMENCEE =
  * « Vivante » exclut le participant retiré : sa ligne reste — c'est ce qui
  * garde ses valeurs et lui permet de revenir sans se dédoubler — mais il n'est
  * plus de la partie, et son appareil revient donc à l'état « peut rejoindre ».
+ *
+ * Exportée parce que **les gestes du cycle de vie posent la même question** :
+ * abandonner, reprendre et supprimer demandent d'être de la tablée, exactement
+ * comme la salle d'attente. Une seconde lecture écrite là-bas divergerait de
+ * celle-ci le jour où « vivante » gagne une nuance.
  */
-async function estParticipant(base: Lecture, partieId: number, joueurId: number): Promise<boolean> {
+export async function estParticipant(
+  base: Lecture,
+  partieId: number,
+  joueurId: number,
+): Promise<boolean> {
   const [place] = await base
     .select({ id: participant.id })
     .from(participant)
