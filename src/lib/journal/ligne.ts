@@ -151,6 +151,27 @@ export type LigneDeSuppression = {
 };
 
 /**
+ * Un mouvement de la **tablée** : quelqu'un entre, quelqu'un s'en va.
+ *
+ * Il ne porte ni manche ni valeur — il n'y a pas de case — mais il porte un
+ * **joueur concerné**, et c'est ce qui le sépare de {@link GesteDePartie} : ce
+ * qu'on vient lire au journal après un mouvement de liste, c'est *qui* a bougé.
+ *
+ * Les deux entrent en paire pour la même raison que l'abandon et la reprise :
+ * l'un sans l'autre montrerait une tablée qui rétrécit sans jamais grandir.
+ */
+export type GesteDeParticipant = "participantAjoute" | "participantRetire";
+
+/** Une ligne de mouvement : qui a bougé, et qui l'a fait bouger. */
+export type LigneDeParticipant = {
+  partieId: number;
+  geste: GesteDeParticipant;
+  /** Celui qui entre ou qui s'en va — jamais celui qui tient le téléphone. */
+  joueurConcerneId: number;
+  agissant: Agissant;
+};
+
+/**
  * Écrit la ligne d'une suppression, **dans la transaction qui efface la manche**.
  *
  * Séparée de ses deux jumelles pour la même raison qu'elles le sont entre
@@ -175,6 +196,38 @@ export async function consignerUneSuppressionDeManche(
     mancheNumero: ligne.mancheNumero,
     joueurConcerneId: null,
     detail: JSON.stringify({ valeurs: ligne.valeurs }),
+    ecritLe: new Date(),
+  });
+}
+
+/**
+ * Écrit un mouvement de tablée, **dans la transaction du geste qu'il enregistre**.
+ *
+ * Séparée de ses deux voisines plutôt que pliée dans l'une d'elles : elle a un
+ * joueur concerné, que {@link consignerUnGesteDePartie} n'a pas, et pas de
+ * manche ni de charge utile, que {@link consignerUnGesteDeCase} exige. Les
+ * réunir ferait passer des `null` dont le type ne dirait plus lesquels sont
+ * obligatoires ici et interdits là.
+ *
+ * `Ecriture` et non `Base`, pour les mêmes deux raisons que ses voisines : un
+ * journal qui peut rater des lignes en silence est pire que pas de journal, et
+ * **aucun déclencheur ne porte sur `participant`** — c'est donc cette insertion
+ * qui fait bouger l'estampille de version, et hors de la transaction du départ
+ * elle laisserait les autres téléphones devant une tablée changée sans l'avoir
+ * appris. Voir `src/db/triggers.sql`.
+ */
+export async function consignerUnMouvementDeParticipant(
+  tx: Ecriture,
+  ligne: LigneDeParticipant,
+): Promise<void> {
+  await tx.insert(journal).values({
+    partieId: ligne.partieId,
+    geste: ligne.geste,
+    joueurAgissantId: ligne.agissant.joueurId,
+    appareilId: ligne.agissant.appareilId,
+    mancheNumero: null,
+    joueurConcerneId: ligne.joueurConcerneId,
+    detail: null,
     ecritLe: new Date(),
   });
 }

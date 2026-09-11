@@ -1,5 +1,5 @@
 import { eq } from "drizzle-orm";
-import type { Base } from "@/db/base";
+import type { Lecture } from "@/db/base";
 import { appareil } from "@/db/schema";
 import { idAppareilSchema } from "@/lib/appareil/cookie";
 
@@ -15,9 +15,14 @@ import { idAppareilSchema } from "@/lib/appareil/cookie";
  * Le lien est **global**, jamais par partie, et c'est une **déclaration, pas
  * une preuve** : ce que cette fonction rend sert à savoir sur quel écran
  * démarrer, jamais à autoriser quoi que ce soit.
+ *
+ * Prend une {@link Lecture} : la même question se pose depuis une page, qui a
+ * la base, et depuis l'intérieur d'une écriture qui doit savoir **qui agit**
+ * avant de consigner sa ligne de journal. Une seconde version pour la
+ * transaction divergerait de celle-ci le jour où l'une est corrigée seule.
  */
 export async function lireLeJoueurDeLAppareil(
-  base: Base,
+  base: Lecture,
   valeurDuCookie: string | undefined,
 ): Promise<number | null> {
   const id = idAppareilSchema.safeParse(valeurDuCookie);
