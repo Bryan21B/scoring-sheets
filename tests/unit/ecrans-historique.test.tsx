@@ -120,3 +120,53 @@ describe("le filtre de l'historique", () => {
     expect(liens).toContain('href="/historique?jeu=uno"');
   });
 });
+
+describe("un historique vide", () => {
+  it("renvoie au catalogue, sans inventer d'écran vide", () => {
+    // Ce que l'accueil fait déjà quand aucune partie ne tourne : rien n'a été
+    // terminé, et commencer une partie est à un appui.
+    const html = rendre({ lignes: [] });
+
+    expect(html).toContain("Aucune partie n’est encore finie");
+    for (const entree of ENTREES) {
+      expect(html).toContain(`href="/creer/${entree.id}"`);
+    }
+  });
+
+  it("ne propose pas de filtrer une liste qui n'a rien à filtrer", () => {
+    const liens = liensDHistorique(rendre({ lignes: [] }));
+
+    expect(liens).toEqual([]);
+  });
+
+  it("garde le chemin du retour quand c'est le filtre qui ne rend rien", () => {
+    // Un historique bien rempli qui ne montre rien parce qu'on a choisi Uno
+    // n'est pas un historique vide : sans les onglets, on resterait coincé.
+    const html = rendre({ lignes: [], filtre: { jeuId: "uno", combien: 20 } });
+
+    expect(html).toContain("Uno : aucune partie n’est encore finie");
+    expect(liensDHistorique(html)).toContain('href="/historique"');
+  });
+});
+
+describe("le « voir plus » de l'historique", () => {
+  it("déroule une page de plus, sans numéroter quoi que ce soit", () => {
+    // Aucune pagination à dix joueurs : le lien augmente le nombre de lignes
+    // montrées, il ne saute pas à une page.
+    const html = rendre({ encore: true });
+
+    expect(html).toContain("Voir plus");
+    expect(html).toContain('href="/historique?voir=40"');
+  });
+
+  it("garde le jeu choisi en déroulant", () => {
+    const html = rendre({ encore: true, filtre: { jeuId: "uno", combien: 20 } });
+
+    // `&amp;` : c'est le balisage rendu, pas l'adresse une fois relue.
+    expect(html).toContain('href="/historique?jeu=uno&amp;voir=40"');
+  });
+
+  it("ne promet rien de plus quand la page a tout montré", () => {
+    expect(rendre({ encore: false })).not.toContain("Voir plus");
+  });
+});

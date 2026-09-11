@@ -1,11 +1,12 @@
 import type { ReactElement } from "react";
+import { CatalogueListe } from "@/components/catalogue-liste";
 import { LISTE } from "@/components/champs";
 import { Ecran } from "@/components/ecran";
-import type { EntreeCatalogue, JeuId } from "@/lib/jeux/catalogue";
+import { type EntreeCatalogue, type JeuId, trouverEntree } from "@/lib/jeux/catalogue";
 import { horodatage } from "@/lib/journal/tiroir";
 import { adresseDePartie } from "@/lib/partie/adresse";
 import type { FiltreDHistorique, LigneDHistorique, VueDHistorique } from "@/lib/partie/historique";
-import { adresseDeLHistorique } from "@/lib/partie/historique-url";
+import { adresseDeLHistorique, PAGE_DHISTORIQUE } from "@/lib/partie/historique-url";
 
 /**
  * Une entrée du catalogue **désignable par une adresse**.
@@ -35,18 +36,84 @@ export function Historique({
   filtre: FiltreDHistorique;
   entrees: readonly EntreeFiltrable[];
 }): ReactElement {
+  const vide = vue.lignes.length === 0;
+
   return (
     <Ecran>
       <h1 className="font-semibold text-2xl tracking-tight">Historique</h1>
 
-      <FiltreParJeu entrees={entrees} choisi={filtre.jeuId} />
+      {/* Rien à filtrer et aucun filtre posé : les onglets n'ouvriraient que
+          d'autres listes vides. Ils restent dès qu'un jeu est choisi — sans eux,
+          on serait coincé sur le seul jeu auquel on n'a pas encore fini de
+          partie. */}
+      {vide && filtre.jeuId === null ? null : (
+        <FiltreParJeu entrees={entrees} choisi={filtre.jeuId} />
+      )}
 
-      <ul className={LISTE}>
-        {vue.lignes.map((une) => (
-          <Ligne key={une.code} ligne={une} />
-        ))}
-      </ul>
+      {vide ? (
+        <RenvoiAuCatalogue entrees={entrees} choisi={filtre.jeuId} />
+      ) : (
+        <ul className={LISTE}>
+          {vue.lignes.map((une) => (
+            <Ligne key={une.code} ligne={une} />
+          ))}
+        </ul>
+      )}
+
+      {vue.encore ? <VoirPlus filtre={filtre} /> : null}
     </Ecran>
+  );
+}
+
+/**
+ * Le « voir plus » : **une page de plus, jamais une page numérotée**.
+ *
+ * À dix joueurs, l'historique entier tient sous le pouce, et une numérotation
+ * demanderait de savoir où l'on va avant d'y aller. Le lien rallonge la liste et
+ * reconduit le jeu choisi — dérouler n'est pas changer de filtre.
+ *
+ * Il n'apparaît que si `lireLHistorique` a vu une ligne de plus que demandé :
+ * rien n'est compté pour l'afficher, et il ne promet donc jamais une suite vide.
+ */
+function VoirPlus({ filtre }: { filtre: FiltreDHistorique }): ReactElement {
+  return (
+    <a
+      href={adresseDeLHistorique(filtre.jeuId, filtre.combien + PAGE_DHISTORIQUE)}
+      className="text-muted-foreground text-sm underline"
+    >
+      Voir plus
+    </a>
+  );
+}
+
+/**
+ * L'état vide : **un renvoi au catalogue**, et pas un écran inventé pour lui.
+ *
+ * C'est déjà ce que l'accueil fait quand aucune partie ne tourne — rien n'a
+ * encore été fini, et commencer une partie est à un appui. La même liste, pas
+ * une seconde qui lui ressemble : deux catalogues divergeraient le jour où l'un
+ * est corrigé seul.
+ *
+ * La phrase nomme le jeu quand c'est le filtre qui ne rend rien. « Aucune partie
+ * n'est encore finie » sur un historique bien rempli où l'on vient de choisir
+ * Uno serait faux, et ferait douter de la liste plutôt que du filtre.
+ */
+function RenvoiAuCatalogue({
+  entrees,
+  choisi,
+}: {
+  entrees: readonly EntreeFiltrable[];
+  choisi: JeuId | null;
+}): ReactElement {
+  const sujet = choisi === null ? "Aucune" : `${trouverEntree(choisi).nom} : aucune`;
+
+  return (
+    <>
+      <p className="text-muted-foreground text-sm">
+        {`${sujet} partie n’est encore finie. On en commence une ?`}
+      </p>
+      <CatalogueListe entrees={entrees} />
+    </>
   );
 }
 
