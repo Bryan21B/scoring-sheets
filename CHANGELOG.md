@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.11.0](https://github.com/Bryan21B/scoring-sheets/compare/v0.10.0...v0.11.0) (2026-09-11)
+
+### Fonctionnalités
+
+* **partie:** Abandonner une partie, et le dire au journal ([80a16d2](https://github.com/Bryan21B/scoring-sheets/commit/80a16d278f4f6c81a211f343ff0659b7503c7703)), closes [#38](https://github.com/Bryan21B/scoring-sheets/issues/38)
+* **partie:** Reprendre une partie abandonnée, et fermer le scellement ([5094056](https://github.com/Bryan21B/scoring-sheets/commit/5094056ba22cc84c12152a84c80f20feba92eaf4)), closes [#38](https://github.com/Bryan21B/scoring-sheets/issues/38)
+* **partie:** Supprimer une partie tant que son journal est vide ([eeb8190](https://github.com/Bryan21B/scoring-sheets/commit/eeb8190130291580245b54638bd3fef5a7016905)), closes [#38](https://github.com/Bryan21B/scoring-sheets/issues/38)
+* **tiroir:** Offrir l'abandon, la reprise et la suppression sous le ⋯ ([2817184](https://github.com/Bryan21B/scoring-sheets/commit/2817184b93a9a5632385bea441f112fc0310d391)), closes [#38](https://github.com/Bryan21B/scoring-sheets/issues/38)
+
+### Corrections
+
+* **partie:** Sonder la fiche d'une partie abandonnée, et resserrer la revue ([f3d0b15](https://github.com/Bryan21B/scoring-sheets/commit/f3d0b154f2307da3b6681b5fcc2abe5bf97da1b6)), closes [#38](https://github.com/Bryan21B/scoring-sheets/issues/38)
+
 ## [0.10.0](https://github.com/Bryan21B/scoring-sheets/compare/v0.9.0...v0.10.0) (2026-09-11)
 
 ### Fonctionnalités
