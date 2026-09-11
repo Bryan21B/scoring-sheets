@@ -127,10 +127,14 @@ export async function ecrireLaCaseAction(
 /**
  * Le participant que cette case concerne, relu de la tablée.
  *
- * `ecrireLaCase` a déjà refusé un joueur étranger à la partie quand cette
- * fonction s'exécute : elle ne garde donc aucune garde, et lever ici serait
- * doubler une frontière qui a déjà tranché. Elle ne sert qu'à **nommer** —
- * l'écran de refus dit « la case de Paul », et un identifiant nu ne se lit pas.
+ * Elle sert à **nommer** : l'écran de refus dit « la case de Paul », et un
+ * identifiant nu ne se lit pas. Ce n'est pas une frontière — `ecrireLaCase` a
+ * déjà refusé un joueur étranger à la partie quand on arrive ici, et c'est elle
+ * qui tient la règle.
+ *
+ * @throws si la tablée ne porte pas ce joueur. Inatteignable par le chemin
+ * normal, donc une `Error` nue : rendre un nom de repli inventerait un joueur
+ * dans une phrase qu'on lit pour décider.
  */
 function concerne(partie: VueDePartie, joueurConcerneId: FormDataEntryValue | null): JoueurConnu {
   const trouve = partie.participants.find(

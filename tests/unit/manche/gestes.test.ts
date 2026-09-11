@@ -51,6 +51,17 @@ describe("ce qu'une manche attend encore, dérivé du mode", () => {
     ]);
   });
 
+  it("ne tait aucune ligne d'Uno quand deux désignations sont passées en même temps", () => {
+    // La politique de conflit porte sur la case et jamais sur la partie : deux
+    // téléphones qui désignent deux joueurs au même instant écrivent deux cases
+    // différentes, et passent tous les deux. La clôture refusera cette manche —
+    // le récapitulatif doit donc dire ce qui la bloque, et non se taire sur la
+    // foi de la première ligne trouvée.
+    const deuxLignes = [caseDe(MARIE, 24, true), caseDe(PAUL, null, true), caseDe(LEA, null)];
+
+    expect(gestesAttendus(uno, deuxLignes)).toEqual([{ geste: "valeur", joueur: PAUL }]);
+  });
+
   it("n'attend plus rien à Uno dès que le total est tapé", () => {
     expect(gestesAttendus(uno, cases(null, 24, null))).toEqual([]);
   });

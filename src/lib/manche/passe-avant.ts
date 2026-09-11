@@ -1,3 +1,4 @@
+import type { JoueurId } from "@/lib/jeux/moteur";
 import type { Regles } from "@/lib/jeux/regles";
 import {
   bornesDeSaisie,
@@ -63,7 +64,7 @@ export type DepartDePasseAvant =
 export function departDeLaPasseAvant(
   regles: Regles,
   cases: readonly CaseDeManche[],
-  joueurDeLAppareil: number | null,
+  joueurDeLAppareil: JoueurId | null,
 ): DepartDePasseAvant | undefined {
   const bornes = bornesDeSaisie(regles);
   const sienne = caseQuiSeTape(regles, cases, joueurDeLAppareil);

@@ -277,9 +277,9 @@ export function gagnantDeManche(regles: Regles, manche: Manche): JoueurId | unde
  * qui le fixe — tandis que `jetons` s'indexe depuis zéro. Le décalage entre les
  * deux s'écrit ici, une seule fois, plutôt que dans chaque lecture.
  *
- * Exporté parce que la saisie en a besoin pour borner ce qu'une case de podium
- * accepte : un rang recopié là-bas dériverait de celui-ci le jour où l'un des
- * deux est corrigé seul.
+ * Exporté parce que les écrans de saisie comptent les rangs comme la colonne
+ * les compte — un rang de tête recopié là-bas dériverait de celui-ci le jour où
+ * l'un des deux est corrigé seul.
  */
 export const PREMIER = 1;
 

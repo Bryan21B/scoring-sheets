@@ -30,22 +30,6 @@ export type DetailDuTiroir =
   | { forme: "correction"; ancienne: number | null; nouvelle: number | null }
   | { forme: "aucun" };
 
-/**
- * Un nombre du journal, mis en mots — et le vide **nommé** plutôt que rendu en
- * blanc.
- *
- * Une case vide est un état du domaine, pas une absence d'information : c'est
- * la désignation d'Uno, celle qui dit « il est sorti » avant que son total soit
- * tapé. Une ligne du tiroir qui n'afficherait rien se lirait « le journal n'a
- * rien gardé », ce qui est faux.
- */
-export function valeurEnMots(valeur: number | null): string {
-  return valeur === null ? VIDE : String(valeur);
-}
-
-/** Le mot du vide, un seul, pour que deux lignes du tiroir le disent pareil. */
-const VIDE = "vide";
-
 /** Une ligne du journal, telle que le tiroir la montre. */
 export type LigneDuTiroir = {
   id: number;

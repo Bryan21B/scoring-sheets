@@ -1,4 +1,4 @@
-import { rangsDuPodium } from "@/lib/jeux/moteur";
+import { type JoueurId, PREMIER, rangsDuPodium } from "@/lib/jeux/moteur";
 import type { Regles } from "@/lib/jeux/regles";
 import type { CaseDeManche } from "@/lib/manche/lecture";
 import type { Tapee } from "@/lib/manche/pave";
@@ -48,13 +48,20 @@ export function gestesAttendus(regles: Regles, cases: readonly CaseDeManche[]): 
 
     case "sommeAuGagnant": {
       // La ligne **est** la désignation : le gagnant est celui qui en a une.
-      const ligne = cases.find((une) => une.touchee);
+      const lignes = cases.filter((une) => une.touchee);
 
-      if (ligne === undefined) {
-        return [{ geste: "designation", rang: PREMIER_RANG }];
+      if (lignes.length === 0) {
+        return [{ geste: "designation", rang: PREMIER }];
       }
 
-      return ligne.valeur === null ? [{ geste: "valeur", joueur: ligne.joueur }] : [];
+      // Toutes les lignes touchées, et pas seulement la première : deux
+      // téléphones qui désignent deux joueurs au même instant écrivent deux
+      // cases différentes, que la politique de conflit laisse passer par
+      // construction. N'en lire qu'une ferait taire le récapitulatif sur une
+      // manche que la clôture refuse pourtant.
+      return lignes
+        .filter((une) => une.valeur === null)
+        .map((une) => ({ geste: "valeur", joueur: une.joueur }));
     }
 
     case "podium": {
@@ -105,7 +112,7 @@ export function bornesDeSaisie(regles: Regles): Bornes | null {
 export function caseQuiSeTape(
   regles: Regles,
   cases: readonly CaseDeManche[],
-  joueurId: number | null,
+  joueurId: JoueurId | null,
 ): CaseDeManche | undefined {
   if (regles.saisie.mode === "podium") {
     return undefined;
@@ -180,14 +187,15 @@ export function candidatsADesigner(
   regles: Regles,
   cases: readonly CaseDeManche[],
 ): readonly JoueurConnu[] {
-  const dejaPlaces =
-    regles.saisie.mode === "podium"
-      ? new Set(rangsDuPodium(regles.saisie.jetons))
-      : new Set<number>();
+  const { saisie } = regles;
 
-  return cases
-    .filter((une) => une.valeur === null || !dejaPlaces.has(une.valeur))
-    .map((une) => une.joueur);
+  if (saisie.mode !== "podium") {
+    return cases.map((une) => une.joueur);
+  }
+
+  const rangs = new Set(rangsDuPodium(saisie.jetons));
+
+  return cases.filter((une) => !rangs.has(une.valeur ?? 0)).map((une) => une.joueur);
 }
 
 /** Une ligne du récapitulatif : un joueur, et ce que la manche porte pour lui. */
@@ -279,14 +287,20 @@ function estUneDesignation(regles: Regles, valeurPosee: ValeurDeCase): boolean {
  */
 export function valeurEnMots(regles: Regles, valeur: ValeurDeCase): string {
   if (valeur === null) {
-    return "vide";
+    return VIDE;
   }
 
   return regles.saisie.mode === "podium" ? enRang(valeur) : String(valeur);
 }
 
-/** Le rang de tête, sous le nom que les écrans lui donnent. */
-const PREMIER_RANG = 1;
+/**
+ * Le mot du vide, un seul, pour que deux écrans le disent pareil.
+ *
+ * Exporté pour le tiroir du journal, qui montre les mêmes valeurs de case sans
+ * connaître le mode : une case vide y est un état — la désignation d'Uno avant
+ * son total — et non une absence d'information.
+ */
+export const VIDE = "vide";
 
 /**
  * Ce qu'une case attendue affiche tant qu'elle n'a rien reçu.

@@ -9,8 +9,8 @@ import {
   type LigneDuTiroir,
   type Portee,
   type VueDuTiroir,
-  valeurEnMots,
 } from "@/lib/journal/tiroir";
+import { VIDE } from "@/lib/manche/gestes";
 
 /**
  * Ce qu'une ligne **enregistre**, nommé au participe et jamais au verbe conjugué.
@@ -376,6 +376,12 @@ function cibleDeLaLigne(ligne: LigneDuTiroir): string {
  * Une correction montre **les deux valeurs** : sans l'ancienne, le journal
  * enregistre que quelque chose a changé sans dire depuis quoi, ce qui est la
  * seule chose qu'on serait venu y lire.
+ *
+ * Le vide se **nomme**, parce qu'il est un état et non une absence : c'est la
+ * désignation d'Uno, celle qui dit « il est sorti » avant que son total soit
+ * tapé, et une ligne rendue en blanc se lirait « le journal n'a rien gardé ».
+ * Il ne se dit pas dans les mots du mode, en revanche : le journal ne se migre
+ * jamais, et une ligne garde pour toujours la forme de son époque.
  */
 function Valeurs({ detail }: { detail: DetailDuTiroir }): ReactElement | null {
   if (detail.forme === "aucun") {
@@ -385,8 +391,8 @@ function Valeurs({ detail }: { detail: DetailDuTiroir }): ReactElement | null {
   return (
     <p className="font-mono text-base tabular-nums">
       {detail.forme === "correction"
-        ? `${valeurEnMots(detail.ancienne)} → ${valeurEnMots(detail.nouvelle)}`
-        : valeurEnMots(detail.valeur)}
+        ? `${detail.ancienne ?? VIDE} → ${detail.nouvelle ?? VIDE}`
+        : (detail.valeur ?? VIDE)}
     </p>
   );
 }

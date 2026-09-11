@@ -293,6 +293,21 @@ amont.
   Le 2–10 du jeu de base n'est, lui, ni confirmé ni contredit par la source : le
   livret ne l'affiche nulle part, seule la boîte tranche.
 
+- **2026-09-11** — une **désignation s'écrit dans une case**, par le même chemin
+  conditionnel qu'une valeur : le **rang** au podium, le **vide** à Uno — où la
+  ligne *est* la désignation. Ce document disait ce qu'une case porte sans dire
+  comment elle y arrive, et « les jetons ne sont jamais une saisie » se lisait
+  comme « rien ne s'écrit ». Conséquence tenue en même temps : une case
+  **absente** et une case **touchée mais vide** portent toutes deux `NULL`, et
+  le moteur ne reçoit que les cases touchées — les confondre rendait toute
+  manche d'Uno incomplète pour toujours, puisque chaque perdant comptait pour
+  une case vide attendue. Écrit par [Les deux autres modes de saisie : Uno et Dnup](https://github.com/Bryan21B/scoring-sheets/issues/33).
+  Limite connue et non traitée : deux téléphones qui désignent deux joueurs au
+  même instant écrivent deux cases différentes, que la politique de conflit
+  laisse passer par construction ; la manche devient alors impossible à clore, et
+  la réparer demanderait d'**effacer** une case — un geste que le journal ne sait
+  pas encore enregistrer.
+
 - **2026-09-09 (4)** — `finSelonJoueurs` devient **`varianteSelonJoueurs`**, et
   surcharge la `saisie` autant que la `fin`. Ce document ne portait que la
   condition de fin, si bien que Dnup résolu à deux joueurs gardait un barème
