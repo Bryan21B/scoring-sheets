@@ -7,6 +7,7 @@ import { MancheSuivante } from "@/components/manche-suivante";
 import { RejoindreParCode } from "@/components/rejoindre-par-code";
 import type { EntreeCatalogue } from "@/lib/jeux/catalogue";
 import type { VueDeGrille } from "@/lib/manche/lecture";
+import { ADRESSE_HISTORIQUE } from "@/lib/partie/historique-url";
 import type { VueDePartie } from "@/lib/partie/lecture";
 import { libelleDeFin } from "@/lib/partie/tablee";
 
@@ -60,6 +61,7 @@ export function Accueil({
         <h1 className="font-semibold text-2xl tracking-tight">On joue à quoi ?</h1>
         <CatalogueListe entrees={entrees} />
         <RejoindreParCode />
+        <LienVersLHistorique />
       </Ecran>
     );
   }
@@ -83,6 +85,8 @@ export function Accueil({
         La partie, sa tablée et son code
       </a>
 
+      <LienVersLHistorique />
+
       <details className="flex flex-col gap-4">
         <summary className="cursor-pointer text-muted-foreground text-sm">
           Ouvrir une autre partie
@@ -95,5 +99,24 @@ export function Accueil({
 
       {sondage}
     </Ecran>
+  );
+}
+
+/**
+ * La porte de l'historique, **le seul chemin vers une partie déjà finie**.
+ *
+ * Une partie scellée n'est plus en cours : elle quitte l'accueil au moment même
+ * où elle se termine, et sa fiche renvoie à l'historique. Sans ce lien, la
+ * retrouver demanderait de se souvenir de son code — et la liste que sa fiche
+ * promet n'aurait aucune entrée.
+ *
+ * Discret et en bas, dans les deux états de l'accueil : ce qu'on vient chercher
+ * trente fois dans la soirée est la partie en cours, pas celles d'avant.
+ */
+function LienVersLHistorique(): ReactElement {
+  return (
+    <a href={ADRESSE_HISTORIQUE} className="text-muted-foreground text-sm underline">
+      Les parties déjà jouées
+    </a>
   );
 }

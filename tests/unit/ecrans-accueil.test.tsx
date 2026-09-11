@@ -178,6 +178,12 @@ describe("l'accueil sans partie en cours", () => {
     expect(html).not.toContain("<table");
     expect(html).not.toContain("Saisir la manche suivante");
   });
+
+  it("mène à l'historique, seule porte des parties déjà finies", () => {
+    // Une partie scellée disparaît de l'accueil — elle n'est plus en cours — et
+    // sa fiche renvoie ici. Sans ce lien, la retrouver demanderait son code.
+    expect(accueil(null)).toContain('href="/historique"');
+  });
 });
 
 describe("l'accueil quand une partie tourne", () => {
@@ -210,6 +216,13 @@ describe("l'accueil quand une partie tourne", () => {
 
   it("mène à la page de la partie, où vivent la tablée et le reste", () => {
     expect(accueil(enCours(ligne(1, 8)))).toContain('href="/p/A1B2C3"');
+  });
+
+  it("mène encore à l'historique, sans lui donner le devant de la scène", () => {
+    const html = accueil(enCours(ligne(1, 8)));
+
+    expect(html).toContain('href="/historique"');
+    expect(html.indexOf("<table")).toBeLessThan(html.indexOf('href="/historique"'));
   });
 
   it("montre la partie même avant sa première manche, sans grille vide", () => {
