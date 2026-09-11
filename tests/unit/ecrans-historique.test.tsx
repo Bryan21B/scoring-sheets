@@ -1,8 +1,22 @@
 import { describe, expect, it } from "bun:test";
 import { renderToStaticMarkup } from "react-dom/server";
 import { Historique } from "@/components/historique";
+import type { Base } from "@/db/base";
 import { CATALOGUE, trouverEntree } from "@/lib/jeux/catalogue";
-import type { FiltreDHistorique, LigneDHistorique } from "@/lib/partie/historique";
+import { estampillerLaFin } from "@/lib/partie/fin";
+import {
+  type FiltreDHistorique,
+  type LigneDHistorique,
+  lireLHistorique,
+} from "@/lib/partie/historique";
+import { filtreDeLAdresse } from "@/lib/partie/historique-url";
+import type { ParametresDeRecherche } from "@/lib/partie/identite-url";
+import { creerBaseDeTest } from "./helpers/base-de-test";
+import {
+  joueurDeLaPartie,
+  ouvrirUnePartieDeTest,
+  type PartieDeTest,
+} from "./helpers/partie-de-test";
 import { MARIE } from "./helpers/tablee";
 
 const SIX_QUI_PREND = trouverEntree("6-qui-prend");
@@ -168,5 +182,97 @@ describe("le « voir plus » de l'historique", () => {
 
   it("ne promet rien de plus quand la page a tout montré", () => {
     expect(rendre({ encore: false })).not.toContain("Voir plus");
+  });
+});
+
+/**
+ * L'écran **tel que la page le sert** : une vraie base, l'adresse, le lecteur.
+ *
+ * Ce que les tests précédents ne peuvent pas montrer, parce qu'ils fabriquent
+ * leurs lignes : que `VueDHistorique` et le balisage se rejoignent vraiment, et
+ * qu'un paramètre d'URL arrive jusqu'à ce qui est affiché. La base se crée dans
+ * chaque test plutôt que dans un `beforeEach` — les quatorze tests de rendu
+ * au-dessus n'ont rien à faire d'une migration.
+ */
+async function rendreDepuisLaBase(base: Base, recherche: ParametresDeRecherche): Promise<string> {
+  const filtre = filtreDeLAdresse(recherche);
+
+  return renderToStaticMarkup(
+    <Historique vue={await lireLHistorique(base, filtre)} filtre={filtre} entrees={ENTREES} />,
+  );
+}
+
+/**
+ * Une partie abandonnée, **estampillée à la main**.
+ *
+ * Le geste d'abandon n'existe pas encore — il se construit en parallèle — donc
+ * aucune partie abandonnée ne peut naître d'un chemin d'écriture ici. Les
+ * colonnes de fin, elles, existent : `estampillerLaFin` écrit exactement celles
+ * que l'abandon écrira, et c'est la seule chose dont l'historique dépend.
+ */
+async function abandonner(base: Base, partie: PartieDeTest, le: Date): Promise<void> {
+  await base.transaction((tx) =>
+    estampillerLaFin(tx, partie.partieId, {
+      le,
+      cause: "abandonnee",
+      par: joueurDeLaPartie(partie, 0),
+    }),
+  );
+}
+
+describe("l'historique lu depuis une vraie base", () => {
+  it("marque la partie abandonnée et ne nomme personne à sa place", async () => {
+    const baseDeTest = creerBaseDeTest();
+
+    try {
+      const partie = await ouvrirUnePartieDeTest(baseDeTest.base, {
+        noms: ["Marie", "Paul", "Léa"],
+      });
+      await abandonner(baseDeTest.base, partie, FIN);
+
+      const html = await rendreDepuisLaBase(baseDeTest.base, {});
+
+      expect(html).toContain(`href="/p/${partie.code}"`);
+      expect(html).toContain("Abandonnée");
+      expect(html).toContain("3 joueurs");
+      expect(html).toContain("08/09/2026 à 21:45");
+      // Personne à table ne s'affiche : ni vainqueur inventé, ni tablée
+      // recopiée depuis une partie qui ne s'est pas jouée jusqu'au bout.
+      expect(html).not.toContain("Marie");
+      expect(html).not.toContain("l’emporte");
+    } finally {
+      baseDeTest.fermer();
+    }
+  });
+
+  it("ne montre que le jeu que l'adresse demande", async () => {
+    const baseDeTest = creerBaseDeTest();
+
+    try {
+      const six = await ouvrirUnePartieDeTest(baseDeTest.base, { noms: ["Marie", "Paul", "Léa"] });
+      await abandonner(baseDeTest.base, six, new Date("2026-09-07T19:00:00.000Z"));
+      const uno = await ouvrirUnePartieDeTest(baseDeTest.base, {
+        jeuId: "uno",
+        finValeur: "500",
+        noms: ["Zoé", "Hugo", "Ana"],
+      });
+      await abandonner(baseDeTest.base, uno, new Date("2026-09-08T19:00:00.000Z"));
+
+      const html = await rendreDepuisLaBase(baseDeTest.base, { jeu: "uno" });
+
+      expect(html).toContain(`href="/p/${uno.code}"`);
+      expect(html).not.toContain(`href="/p/${six.code}"`);
+      expect(html).toContain('href="/historique?jeu=uno" aria-current="page"');
+
+      // Sans le paramètre, les deux sont là : c'est ce qui fait que l'absence
+      // ci-dessus porte sur le filtre, et non sur une liste vide pour une
+      // autre raison.
+      const toutes = await rendreDepuisLaBase(baseDeTest.base, {});
+
+      expect(toutes).toContain(`href="/p/${uno.code}"`);
+      expect(toutes).toContain(`href="/p/${six.code}"`);
+    } finally {
+      baseDeTest.fermer();
+    }
   });
 });
