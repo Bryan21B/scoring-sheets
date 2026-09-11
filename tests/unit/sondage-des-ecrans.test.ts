@@ -57,6 +57,10 @@ describe("la passe avant reste sans poll", () => {
   // que je tape ». Le garde-fou est mécanique plutôt qu'en prose.
   const ecransSansPoll = [
     "src/components/passe-avant.tsx",
+    // La désignation est la passe avant sous son autre forme : elle ne montre
+    // ni total ni alerte, et la question « ma valeur est-elle remplacée
+    // pendant que je tape » s'y dissout de la même façon.
+    "src/components/designation.tsx",
     "src/app/p/[code]/manche/[numero]/page.tsx",
   ] as const;
 
