@@ -2,10 +2,20 @@ import { afterEach, beforeEach, describe, expect, it } from "bun:test";
 import { eq } from "drizzle-orm";
 import type { Base } from "@/db/base";
 import { joueur, journal, partie as tablePartie } from "@/db/schema";
+import { creerIdAppareil } from "@/lib/appareil/cookie";
 import type { Agissant } from "@/lib/journal/ligne";
-import { abandonnerLaPartie, RefusDeCycle } from "@/lib/partie/cycle";
+import { cloturerLaManche } from "@/lib/manche/cloture";
+import { ouvrirLaMancheSuivante } from "@/lib/manche/ouverture";
+import { ecrireLaCase } from "@/lib/manche/saisie";
+import { abandonnerLaPartie, RefusDeCycle, reprendreLaPartie } from "@/lib/partie/cycle";
 import { lirePartieEnCours } from "@/lib/partie/en-cours";
-import { lireLaFin, PartieScellee } from "@/lib/partie/fin";
+import { type FinDePartie, lireLaFin, PartieScellee, RepriseImpossible } from "@/lib/partie/fin";
+import {
+  estGelee,
+  RefusDArrivee,
+  rejoindrePartie,
+  retirerParticipant,
+} from "@/lib/partie/salle-attente";
 import { type BaseDeTest, creerBaseDeTest } from "../helpers/base-de-test";
 import {
   joueurDeLaPartie,
@@ -40,17 +50,18 @@ async function unSpectateur(): Promise<Agissant> {
   return { joueurId: ligne.id, appareilId: null };
 }
 
+/** Une ligne du journal, réduite à ce que ces tests regardent. */
+type LigneEnBase = {
+  geste: string;
+  joueurAgissantId: number;
+  appareilId: string | null;
+  mancheNumero: number | null;
+  joueurConcerneId: number | null;
+  detail: string | null;
+};
+
 /** Les lignes du journal de la partie, dans l'ordre où elles ont été écrites. */
-async function lignesDuJournal(): Promise<
-  {
-    geste: string;
-    joueurAgissantId: number;
-    appareilId: string | null;
-    mancheNumero: number | null;
-    joueurConcerneId: number | null;
-    detail: string | null;
-  }[]
-> {
+async function lignesDuJournal(): Promise<LigneEnBase[]> {
   return base
     .select({
       geste: journal.geste,
@@ -63,6 +74,45 @@ async function lignesDuJournal(): Promise<
     .from(journal)
     .where(eq(journal.partieId, partie.partieId))
     .orderBy(journal.id);
+}
+
+/** La ligne qu'un geste de partie écrit : aucune manche, aucun joueur concerné. */
+function ligneSansCase(geste: string): LigneEnBase {
+  return {
+    geste,
+    joueurAgissantId: marie(),
+    appareilId: partie.idAppareil,
+    mancheNumero: null,
+    joueurConcerneId: null,
+    detail: null,
+  };
+}
+
+/**
+ * Termine la partie par la **vraie porte** : une manche remplie au-delà du
+ * seuil, puis close. Fabriquer la fin à la main ne dirait rien de la façon dont
+ * elle arrive, et c'est précisément la fin qu'on veut voir refuser la reprise.
+ */
+async function terminerLaPartie(): Promise<FinDePartie> {
+  const mancheId = (await ouvrirLaMancheSuivante(base, partie.partieId)).id;
+
+  for (const [rang, valeur] of [70, 3, 0].entries()) {
+    await ecrireLaCase(base, {
+      mancheId,
+      joueurConcerneId: joueurDeLaPartie(partie, rang),
+      valeurMontree: null,
+      valeur,
+      agissant: agissantDeMarie(),
+    });
+  }
+
+  const cloture = await cloturerLaManche(base, { mancheId, parJoueurId: marie() });
+
+  if (cloture.fin === null) {
+    throw new Error("La clôture devait terminer la partie.");
+  }
+
+  return cloture.fin;
 }
 
 /** L'estampille que les autres téléphones sondent. */
@@ -145,5 +195,142 @@ describe("abandonner une partie", () => {
     await abandonnerLaPartie(base, partie.partieId, agissantDeMarie());
 
     expect(await lirePartieEnCours(base)).toBeNull();
+  });
+});
+
+// Le scellement ne regarde que la **présence** d'une fin, jamais sa cause : une
+// partie abandonnée refuse donc tout ce qu'une partie terminée refuse, par le
+// même garde-fou. Ce qui la distingue n'est pas une permission de plus, c'est
+// une porte de sortie — la reprise, qui exige l'inverse du scellement.
+describe("une partie abandonnée n'accepte que la reprise", () => {
+  let mancheId: number;
+
+  beforeEach(async () => {
+    mancheId = (await ouvrirLaMancheSuivante(base, partie.partieId)).id;
+
+    for (const [rang, valeur] of [5, 3, 0].entries()) {
+      await ecrireLaCase(base, {
+        mancheId,
+        joueurConcerneId: joueurDeLaPartie(partie, rang),
+        valeurMontree: null,
+        valeur,
+        agissant: agissantDeMarie(),
+      });
+    }
+
+    await abandonnerLaPartie(base, partie.partieId, agissantDeMarie());
+  });
+
+  it("refuse une saisie", async () => {
+    const ecriture = ecrireLaCase(base, {
+      mancheId,
+      joueurConcerneId: marie(),
+      valeurMontree: 5,
+      valeur: 9,
+      agissant: agissantDeMarie(),
+    });
+
+    expect(ecriture).rejects.toBeInstanceOf(PartieScellee);
+  });
+
+  it("refuse la clôture d'une manche, même complète", async () => {
+    const cloture = cloturerLaManche(base, { mancheId, parJoueurId: marie() });
+
+    expect(cloture).rejects.toBeInstanceOf(PartieScellee);
+  });
+
+  it("refuse qu'on touche à la tablée", async () => {
+    const retrait = retirerParticipant(base, partie.partieId, {
+      idAppareil: partie.idAppareil,
+      joueurId: joueurDeLaPartie(partie, 1),
+    });
+
+    expect(retrait).rejects.toBeInstanceOf(PartieScellee);
+  });
+
+  it("refuse qu'on la rejoigne", async () => {
+    const arrivee = rejoindrePartie(base, partie.partieId, {
+      idAppareil: creerIdAppareil(),
+      identite: { mode: "nouveau", nom: "Nour" },
+    });
+
+    expect(arrivee).rejects.toBeInstanceOf(PartieScellee);
+  });
+
+  it("accepte la reprise, et retrouve alors tous ses gestes", async () => {
+    await reprendreLaPartie(base, partie.partieId, agissantDeMarie());
+
+    const cloture = await cloturerLaManche(base, { mancheId, parJoueurId: marie() });
+
+    expect(cloture.statut).toBe("close");
+  });
+});
+
+describe("reprendre une partie abandonnée", () => {
+  it("efface les trois colonnes de fin, et la partie revient à l'accueil", async () => {
+    await abandonnerLaPartie(base, partie.partieId, agissantDeMarie());
+
+    await reprendreLaPartie(base, partie.partieId, agissantDeMarie());
+
+    expect(await lireLaFin(base, partie.partieId)).toBeNull();
+    expect((await lirePartieEnCours(base))?.code).toBe(partie.code);
+  });
+
+  it("écrit sa ligne de journal, en paire avec l'abandon et sans case", async () => {
+    await abandonnerLaPartie(base, partie.partieId, agissantDeMarie());
+
+    await reprendreLaPartie(base, partie.partieId, agissantDeMarie());
+
+    expect(await lignesDuJournal()).toEqual([ligneSansCase("abandon"), ligneSansCase("reprise")]);
+  });
+
+  it("fait bouger l'estampille : la partie se remet à bouger sous les autres", async () => {
+    await abandonnerLaPartie(base, partie.partieId, agissantDeMarie());
+    const avant = await versionEnBase();
+
+    await reprendreLaPartie(base, partie.partieId, agissantDeMarie());
+
+    expect(await versionEnBase()).toBeGreaterThan(avant);
+  });
+
+  it("refuse une partie en cours : il n'y a rien à reprendre", async () => {
+    const reprise = reprendreLaPartie(base, partie.partieId, agissantDeMarie());
+
+    expect(reprise).rejects.toBeInstanceOf(RepriseImpossible);
+    expect(await lignesDuJournal()).toEqual([]);
+  });
+
+  it("refuse une partie terminée : vouloir continuer, c'est vouloir changer le seuil", async () => {
+    const fin = await terminerLaPartie();
+
+    const reprise = reprendreLaPartie(base, partie.partieId, agissantDeMarie());
+
+    expect(reprise).rejects.toBeInstanceOf(RepriseImpossible);
+    expect(await lireLaFin(base, partie.partieId)).toEqual(fin);
+  });
+
+  it("refuse le spectateur, et laisse la partie abandonnée", async () => {
+    const abandon = await abandonnerLaPartie(base, partie.partieId, agissantDeMarie());
+
+    const reprise = reprendreLaPartie(base, partie.partieId, await unSpectateur());
+
+    expect(reprise).rejects.toBeInstanceOf(RefusDeCycle);
+    expect(await lireLaFin(base, partie.partieId)).toEqual(abandon);
+  });
+
+  it("laisse le gel en place : il se déduit d'une manche que l'abandon n'a pas effacée", async () => {
+    await ouvrirLaMancheSuivante(base, partie.partieId);
+    await abandonnerLaPartie(base, partie.partieId, agissantDeMarie());
+
+    await reprendreLaPartie(base, partie.partieId, agissantDeMarie());
+
+    expect(await estGelee(base, partie.partieId)).toBe(true);
+
+    const arrivee = rejoindrePartie(base, partie.partieId, {
+      idAppareil: creerIdAppareil(),
+      identite: { mode: "nouveau", nom: "Nour" },
+    });
+
+    expect(arrivee).rejects.toBeInstanceOf(RefusDArrivee);
   });
 });

@@ -5,7 +5,12 @@ import { manche, participant, partie } from "@/db/schema";
 import { estComplete } from "@/lib/jeux/moteur";
 import { parseRegles, type Regles } from "@/lib/jeux/regles";
 import { evaluerLaPartie, lireLaManche, mancheDuMoteur } from "@/lib/manche/lecture";
-import { estampillerLaFin, type FinDePartie, lireLaFin } from "@/lib/partie/fin";
+import {
+  estampillerLaFin,
+  exigerUnePartieOuverte,
+  type FinDePartie,
+  lireLaFin,
+} from "@/lib/partie/fin";
 
 /**
  * Ce que la clôture demande : quelle manche, et qui la déclare finie.
@@ -242,6 +247,8 @@ async function estampillerSiFinie(
  *
  * @throws {@link RefusDeCloture} sur une manche incomplète, ou si celui qui
  * clôt n'est pas de la partie.
+ * @throws {@link PartieScellee} si la partie porte déjà une fin — terminée, ou
+ * abandonnée pendant qu'un téléphone remplissait la manche suivante.
  */
 export async function cloturerLaManche(base: Base, brut: unknown): Promise<ResultatDeCloture> {
   const demande = demandeDeClotureSchema.parse(brut);
@@ -254,6 +261,12 @@ export async function cloturerLaManche(base: Base, brut: unknown): Promise<Resul
     if (contexte.closeLe !== null) {
       return { statut: "dejaClose", fin: await lireLaFin(tx, contexte.partieId) };
     }
+
+    // **Après** l'idempotence et pas avant : reposter la clôture qui vient de
+    // terminer la partie doit retrouver son annonce, pas un refus. Ce qui est
+    // refusé ici est la manche restée ouverte sous une partie déjà finie — la
+    // manche 2 d'une soirée abandonnée pendant qu'un téléphone la remplissait.
+    await exigerUnePartieOuverte(tx, contexte.partieId);
 
     if (!(await estCompleteEnBase(tx, contexte))) {
       throw new RefusDeCloture(MANCHE_INCOMPLETE);

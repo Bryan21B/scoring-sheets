@@ -90,6 +90,48 @@ export async function exigerUnePartieOuverte(base: Lecture, partieId: number): P
 }
 
 /**
+ * Un refus **écrit pour être lu** : cette partie-là ne se reprend pas.
+ *
+ * Une classe à part de {@link PartieScellee}, et non son message : les deux
+ * disent des choses opposées. Le scellement refuse d'écrire **dans** une partie
+ * finie ; celui-ci refuse de **défaire** une fin qui n'est pas un abandon. Les
+ * confondre ferait annoncer « elle ne bouge plus » à qui essaie de reprendre une
+ * partie en cours, qui bouge très bien.
+ */
+export class RepriseImpossible extends Error {
+  override readonly name = "RepriseImpossible";
+}
+
+/** Ce qu'on dit d'une partie sans fin : elle n'est pas arrêtée, il n'y a rien à rouvrir. */
+const PARTIE_EN_COURS = "Cette partie est en cours : il n’y a rien à reprendre.";
+
+/**
+ * Exige que la partie soit **abandonnée** : le miroir du scellement, et la seule
+ * porte de la reprise.
+ *
+ * Il ne suffit pas de refuser la partie en cours : une partie **terminée** porte
+ * elle aussi une fin, et c'est précisément celle qui ne se rouvre pas. Vouloir
+ * continuer au-delà du seuil, c'est vouloir changer le seuil, et l'instantané de
+ * règles est figé à la création exprès. La phrase du refus est alors celle du
+ * scellement, mot pour mot : « elle ne bouge plus » est vrai des deux côtés, et
+ * deux formulations feraient croire à deux situations.
+ *
+ * @throws {@link RepriseImpossible} si la partie n'a pas de fin, ou si sa fin
+ * n'est pas un abandon.
+ */
+export async function exigerUnePartieAbandonnee(base: Lecture, partieId: number): Promise<void> {
+  const fin = await lireLaFin(base, partieId);
+
+  if (fin === null) {
+    throw new RepriseImpossible(PARTIE_EN_COURS);
+  }
+
+  if (fin.cause !== "abandonnee") {
+    throw new RepriseImpossible(PARTIE_TERMINEE);
+  }
+}
+
+/**
  * Estampille la fin, **ou rend celle qui y est déjà**.
  *
  * La condition `fin_le IS NULL` est dans le SQL et non dans une relecture
@@ -130,4 +172,32 @@ export async function estampillerLaFin(
   }
 
   return dejaLa;
+}
+
+/**
+ * Efface la fin, **à condition qu'elle soit un abandon** : le geste de la reprise.
+ *
+ * Les trois colonnes partent dans **un seul `UPDATE`**, jamais trois : le
+ * `CHECK` `partie_fin_coherente` exige qu'elles soient absentes ou présentes
+ * ensemble, si bien qu'une écriture par colonne serait rejetée par la base dès
+ * la première. Ce n'est pas une optimisation, c'est la seule forme valide.
+ *
+ * La cause est dans le `WHERE` et non dans une relecture préalable, exactement
+ * comme `fin_le IS NULL` l'est pour {@link estampillerLaFin} : deux reprises
+ * lancées en même temps ont toutes les deux lu une partie abandonnée, et c'est
+ * le zéro ligne touchée qui départage. Elle protège aussi contre le seul
+ * enchaînement qui compte : une clôture qui termine la partie entre la lecture
+ * du garde-fou et cette écriture ne se fait pas effacer sa fin.
+ *
+ * @returns `true` si cette écriture-ci a effacé la fin, `false` si quelqu'un
+ * l'avait déjà fait — auquel cas il n'y a rien à consigner de plus.
+ */
+export async function effacerLaFin(tx: Ecriture, partieId: number): Promise<boolean> {
+  const touchees = await tx
+    .update(partie)
+    .set({ finLe: null, finCause: null, finPar: null })
+    .where(and(eq(partie.id, partieId), eq(partie.finCause, "abandonnee")))
+    .returning({ id: partie.id });
+
+  return touchees.length > 0;
 }

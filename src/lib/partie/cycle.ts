@@ -1,6 +1,12 @@
 import type { Base, Ecriture } from "@/db/base";
 import { type Agissant, agissantSchema, consignerUnGesteDePartie } from "@/lib/journal/ligne";
-import { estampillerLaFin, exigerUnePartieOuverte, type FinDePartie } from "@/lib/partie/fin";
+import {
+  effacerLaFin,
+  estampillerLaFin,
+  exigerUnePartieAbandonnee,
+  exigerUnePartieOuverte,
+  type FinDePartie,
+} from "@/lib/partie/fin";
 import { estParticipant, PAS_DE_LA_PARTIE } from "@/lib/partie/salle-attente";
 
 /**
@@ -94,5 +100,43 @@ export async function abandonnerLaPartie(
     await consignerUnGesteDePartie(tx, { partieId, geste: "abandon", agissant });
 
     return fin;
+  });
+}
+
+/**
+ * Reprend une partie abandonnée : **efface l'abandon** et la rend en cours.
+ *
+ * Elle n'existe que pour une partie abandonnée. Une partie régulièrement
+ * terminée ne se rouvre pas : vouloir continuer au-delà du seuil, c'est vouloir
+ * changer le seuil, et l'instantané de règles est figé à la création exprès.
+ *
+ * **Le gel survit.** Rien ici ne touche aux manches, et le gel se déduit de leur
+ * existence : la tablée d'une partie reprise est celle qu'elle avait en
+ * s'arrêtant, ce qui est la seule lecture honnête d'une soirée qu'on rallume.
+ *
+ * **Idempotente** : reprendre une partie que quelqu'un vient de reprendre ne
+ * fait rien et n'annonce rien — la partie est ouverte, c'est ce que les deux
+ * voulaient. La seconde n'écrit alors pas de ligne, sans quoi le journal
+ * raconterait deux réouvertures là où il n'y en a eu qu'une.
+ *
+ * @throws {@link RefusDeCycle} si l'agissant n'est pas de la tablée.
+ * @throws {@link RepriseImpossible} si la partie est en cours, ou terminée.
+ */
+export async function reprendreLaPartie(
+  base: Base,
+  partieId: number,
+  brut: unknown,
+): Promise<void> {
+  const agissant = agissantSchema.parse(brut);
+
+  await base.transaction(async (tx) => {
+    await exigerUnParticipant(tx, partieId, agissant);
+    await exigerUnePartieAbandonnee(tx, partieId);
+
+    if (!(await effacerLaFin(tx, partieId))) {
+      return;
+    }
+
+    await consignerUnGesteDePartie(tx, { partieId, geste: "reprise", agissant });
   });
 }
