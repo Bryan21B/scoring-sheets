@@ -9,7 +9,7 @@ import { trouverEntree } from "@/lib/jeux/catalogue";
 import type { EtatDeCloture } from "@/lib/manche/annonce";
 import type { CaseDeManche, VueDeManche } from "@/lib/manche/lecture";
 import type { RefusDEcriture } from "@/lib/manche/refus";
-import { casesDeLaTablee, LEA, MARIE, PAUL, TABLEE } from "./helpers/tablee";
+import { caseDe, casesDeLaTablee, LEA, MARIE, PAUL, TABLEE } from "./helpers/tablee";
 
 const SIX_QUI_PREND = trouverEntree("6-qui-prend");
 const ADRESSE = "/p/ABC123/manche/1";
@@ -65,12 +65,7 @@ function ecranDeRefus(refus: RefusDEcriture, enCours = false): string {
 
 function vueDeSaisie(refus: RefusDEcriture | null): string {
   return renderToStaticMarkup(
-    <VueDeSaisie
-      action={ADRESSE}
-      cadre={cadre({ joueur: PAUL, valeur: 8 })}
-      refus={refus}
-      enCours={false}
-    />,
+    <VueDeSaisie action={ADRESSE} cadre={cadre(caseDe(PAUL, 8))} refus={refus} enCours={false} />,
   );
 }
 
@@ -91,42 +86,42 @@ function recapitulatif(vue: VueDeManche, totaux: ReadonlyMap<number, number>): s
 
 describe("la passe avant", () => {
   it("nomme le joueur dont c'est la case", () => {
-    expect(passeAvant({ joueur: PAUL, valeur: null })).toContain("Paul");
+    expect(passeAvant(caseDe(PAUL, null))).toContain("Paul");
   });
 
   it("dit de quelle manche il s'agit", () => {
-    expect(passeAvant({ joueur: PAUL, valeur: null })).toContain("Manche 1");
+    expect(passeAvant(caseDe(PAUL, null))).toContain("Manche 1");
   });
 
   it("envoie la valeur montrée avec l'écriture : c'est elle qui la conditionne", () => {
-    const html = passeAvant({ joueur: PAUL, valeur: 15 });
+    const html = passeAvant(caseDe(PAUL, 15));
 
     expect(html).toContain('name="valeurMontree"');
     expect(html).toContain('value="15"');
   });
 
   it("envoie une valeur montrée vide quand la case l'est", () => {
-    const html = passeAvant({ joueur: PAUL, valeur: null });
+    const html = passeAvant(caseDe(PAUL, null));
 
     expect(html).toContain('name="valeurMontree"');
     expect(html).toContain('value=""');
   });
 
   it("dit quelle case elle écrit, et dans quelle manche", () => {
-    const html = passeAvant({ joueur: PAUL, valeur: null });
+    const html = passeAvant(caseDe(PAUL, null));
 
     expect(html).toContain('name="joueurConcerneId"');
     expect(html).toContain('name="mancheId"');
   });
 
   it("mène au récapitulatif : un écran, pas cinq", () => {
-    expect(passeAvant({ joueur: PAUL, valeur: null })).toContain(`href="${RECAPITULATIF}"`);
+    expect(passeAvant(caseDe(PAUL, null))).toContain(`href="${RECAPITULATIF}"`);
   });
 });
 
 describe("le pavé de la passe avant", () => {
   it("est maison : dix touches, et pas un champ que le clavier système remplirait", () => {
-    const html = passeAvant({ joueur: PAUL, valeur: null });
+    const html = passeAvant(caseDe(PAUL, null));
 
     for (const chiffre of [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]) {
       expect(html).toContain(`>${chiffre}</button>`);
@@ -136,7 +131,7 @@ describe("le pavé de la passe avant", () => {
   });
 
   it("est toujours ouvert : rien à déplier pour taper", () => {
-    const html = passeAvant({ joueur: PAUL, valeur: null });
+    const html = passeAvant(caseDe(PAUL, null));
 
     expect(html).not.toContain("<dialog");
     expect(html).not.toContain("<details");
@@ -145,13 +140,13 @@ describe("le pavé de la passe avant", () => {
 
 describe("ce que la passe avant ne montre pas", () => {
   it("n'affiche aucun total", () => {
-    const html = passeAvant({ joueur: PAUL, valeur: 15 }).toLowerCase();
+    const html = passeAvant(caseDe(PAUL, 15)).toLowerCase();
 
     expect(html).not.toContain("total");
   });
 
   it("n'affiche aucune alerte de seuil", () => {
-    const html = passeAvant({ joueur: PAUL, valeur: 15 }).toLowerCase();
+    const html = passeAvant(caseDe(PAUL, 15)).toLowerCase();
 
     expect(html).not.toContain("seuil");
     expect(html).not.toContain("s’arrête à");
@@ -235,21 +230,21 @@ describe("l'affichage optimiste de la saisie", () => {
   // valeur pendant que l'écriture est en vol, il n'attend pas le serveur pour
   // la porter. Ce test épingle la règle de rendu, pas le temps du navigateur.
   it("donne la valeur pour enregistrée pendant que l'écriture est en vol", () => {
-    const html = passeAvant({ joueur: PAUL, valeur: 12 }, true);
+    const html = passeAvant(caseDe(PAUL, 12), true);
 
     expect(html).toContain("12");
     expect(html).toContain("Enregistré");
   });
 
   it("n'affirme rien tant que rien n'est parti", () => {
-    expect(passeAvant({ joueur: PAUL, valeur: 12 })).not.toContain("Enregistré");
+    expect(passeAvant(caseDe(PAUL, 12))).not.toContain("Enregistré");
   });
 
   it("ne laisse pas retaper par dessus une écriture en vol", () => {
     // L'attribut rendu, et non la sous-chaîne « disabled » : les classes
     // Tailwind du bouton la portent déjà, et l'assertion passerait toujours.
-    expect(passeAvant({ joueur: PAUL, valeur: 12 }, true)).toContain('disabled=""');
-    expect(passeAvant({ joueur: PAUL, valeur: 12 })).not.toContain('disabled=""');
+    expect(passeAvant(caseDe(PAUL, 12), true)).toContain('disabled=""');
+    expect(passeAvant(caseDe(PAUL, 12))).not.toContain('disabled=""');
   });
 });
 

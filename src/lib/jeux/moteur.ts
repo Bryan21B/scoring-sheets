@@ -232,7 +232,7 @@ export function estComplete(regles: Regles, manche: Manche): boolean {
     }
     case "podium": {
       const rangs = new Set(remplies.map((uneCase) => uneCase.valeur));
-      return [...saisie.jetons.keys()].every((index) => rangs.has(index + PREMIER));
+      return rangsDuPodium(saisie.jetons).every((rang) => rangs.has(rang));
     }
   }
 }
@@ -276,8 +276,28 @@ export function gagnantDeManche(regles: Regles, manche: Manche): JoueurId | unde
  * La colonne porte le **rang**, `1` puis `2` — c'est `docs/specs/2026-09-09-schema.md`
  * qui le fixe — tandis que `jetons` s'indexe depuis zéro. Le décalage entre les
  * deux s'écrit ici, une seule fois, plutôt que dans chaque lecture.
+ *
+ * Exporté parce que la saisie en a besoin pour borner ce qu'une case de podium
+ * accepte : un rang recopié là-bas dériverait de celui-ci le jour où l'un des
+ * deux est corrigé seul.
  */
-const PREMIER = 1;
+export const PREMIER = 1;
+
+/**
+ * Les rangs qu'un barème de podium attend : `1`, puis `2`.
+ *
+ * Le barème dit ce que chaque rang **rapporte** ; cette fonction dit lesquels
+ * **se désignent**, ce qui n'est pas la même question — à Dnup à deux joueurs,
+ * `[0]` est un barème qui ne rapporte rien et qui attend pourtant un rang.
+ *
+ * Elle est ici, avec le décalage rang-vers-index, parce que la complétude et
+ * l'écran de désignation posent la même question : une seconde énumération des
+ * rangs laisserait la saisie proposer un troisième sorti que le moteur
+ * n'attendrait jamais.
+ */
+export function rangsDuPodium(jetons: readonly number[]): number[] {
+  return jetons.map((_, index) => index + PREMIER);
+}
 
 /** Le sens du classement, dérivé des règles plutôt que réécrit à côté. */
 type Direction = Regles["classement"]["direction"];

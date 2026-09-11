@@ -261,11 +261,11 @@ function grouper<Ligne, Valeur>(
  * Les lignes de grille d'une partie, reconstruites depuis la lecture groupée.
  *
  * Une case par participant, la vide comprise, exactement comme la jointure
- * gauche de `lireLesCases` les rend une partie à la fois. Ce n'est pas un
- * détail de forme : à Uno, une manche portant une seule valeur et deux cases
- * **absentes** se lirait complète, là où les deux cases vides la disent en
- * cours. Une case qui manque et une case vide doivent donc arriver au moteur de
- * la même façon.
+ * gauche de `lireLesCases` les rend une partie à la fois — et, comme elle,
+ * chacune dit si elle a été **touchée**. Ce n'est pas un détail de forme : à
+ * Uno, une case absente et une case touchée mais vide portent toutes deux
+ * `null`, et les confondre rendrait toute manche d'Uno incomplète, donc tout
+ * historique d'Uno sans vainqueur.
  */
 function lignesDeGrille(
   manches: readonly MancheDeLaPage[],
@@ -278,6 +278,7 @@ function lignesDeGrille(
     cases: tablee.map((joueur) => ({
       joueur,
       valeur: valeurs.get(une.id)?.get(joueur.id) ?? null,
+      touchee: valeurs.get(une.id)?.has(joueur.id) ?? false,
     })),
   }));
 }

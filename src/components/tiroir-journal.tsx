@@ -9,6 +9,7 @@ import {
   type LigneDuTiroir,
   type Portee,
   type VueDuTiroir,
+  valeurEnMots,
 } from "@/lib/journal/tiroir";
 
 /**
@@ -383,7 +384,9 @@ function Valeurs({ detail }: { detail: DetailDuTiroir }): ReactElement | null {
 
   return (
     <p className="font-mono text-base tabular-nums">
-      {detail.forme === "correction" ? `${detail.ancienne} → ${detail.nouvelle}` : detail.valeur}
+      {detail.forme === "correction"
+        ? `${valeurEnMots(detail.ancienne)} → ${valeurEnMots(detail.nouvelle)}`
+        : valeurEnMots(detail.valeur)}
     </p>
   );
 }

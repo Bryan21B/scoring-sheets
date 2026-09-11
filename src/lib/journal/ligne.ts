@@ -33,13 +33,18 @@ export type Agissant = z.infer<typeof agissantSchema>;
  * parce qu'une colonne `TEXT` ne promet rien de ce qu'on y a mis.
  */
 export const detailDeSaisieSchema = z.strictObject({
-  valeur: z.number().int().nonnegative(),
+  /**
+   * Nullable comme la colonne qu'elle enregistre : la **désignation** d'Uno
+   * pose le vide, et c'est un geste — la case du sorti existe désormais, son
+   * total reste à taper.
+   */
+  valeur: z.number().int().nonnegative().nullable(),
 });
 
 /** Ce qu'une ligne `correction` garde : d'où l'on venait, et où l'on va. */
 export const detailDeCorrectionSchema = z.strictObject({
-  ancienne: z.number().int().nonnegative(),
-  nouvelle: z.number().int().nonnegative(),
+  ancienne: z.number().int().nonnegative().nullable(),
+  nouvelle: z.number().int().nonnegative().nullable(),
 });
 
 /**

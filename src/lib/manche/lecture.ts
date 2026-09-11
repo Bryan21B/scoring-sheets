@@ -18,6 +18,15 @@ import type { JoueurConnu } from "@/lib/roster/noms";
 export type CaseDeManche = {
   joueur: JoueurConnu;
   valeur: ValeurDeCase;
+  /**
+   * La case existe-t-elle, c'est-à-dire quelqu'un l'a-t-il **touchée** ?
+   *
+   * Vraie dès qu'une ligne de `saisie` existe, la vide comprise. C'est le seul
+   * champ qui distingue « Paul est désigné, son total reste à taper » de « Paul
+   * n'est pas désigné » : les deux portent `valeur` à `null`, et les confondre
+   * rendrait toute manche d'Uno incomplète pour toujours.
+   */
+  touchee: boolean;
 };
 
 /**
@@ -50,14 +59,21 @@ async function lireLesCases(
   mancheId: number,
 ): Promise<CaseDeManche[]> {
   const lignes = await base
-    .select({ id: joueur.id, nom: joueur.nom, valeur: saisie.valeur })
+    .select({ id: joueur.id, nom: joueur.nom, valeur: saisie.valeur, caseId: saisie.id })
     .from(participant)
     .innerJoin(joueur, eq(joueur.id, participant.joueurId))
     .leftJoin(saisie, and(eq(saisie.mancheId, mancheId), eq(saisie.joueurId, participant.joueurId)))
     .where(and(eq(participant.partieId, partieId), isNull(participant.retireLe)))
     .orderBy(asc(participant.id));
 
-  return lignes.map(({ id, nom, valeur }) => ({ joueur: { id, nom }, valeur }));
+  // L'identifiant de la ligne de saisie ne sort que pour être jeté : il dit
+  // que la case existe, ce que `valeur` ne peut pas dire puisqu'une case
+  // touchée mais vide porte `NULL` comme une case absente.
+  return lignes.map(({ id, nom, valeur, caseId }) => ({
+    joueur: { id, nom },
+    valeur,
+    touchee: caseId !== null,
+  }));
 }
 
 /**
@@ -69,6 +85,13 @@ async function lireLesCases(
  * recopier depuis une seconde requête laisserait deux lectures de l'effectif
  * diverger, ce que le moteur ne pourrait pas rattraper.
  *
+ * Les **cases**, elles, ne sont que celles qui existent. Le moteur lit `null`
+ * comme « touchée mais vide » — l'état qu'Uno traverse entre la désignation et
+ * le total — et lui donner une case par participant lui ferait voir quatre
+ * perdants en attente de total là où il n'y en a aucun : la manche ne serait
+ * jamais complète, et Uno ne pourrait pas se clore. Le filtre est sans effet
+ * aux deux autres modes, qui ne lisent que les cases portant un nombre.
+ *
  * `close` reste un paramètre : la clôture est **déclarée** et ne se lit pas dans
  * les cases, ce que confondre les deux effacerait.
  */
@@ -76,7 +99,9 @@ export function mancheDuMoteur(cases: readonly CaseDeManche[], close: boolean): 
   return {
     close,
     participants: cases.map(({ joueur }) => joueur.id),
-    cases: cases.map(({ joueur, valeur }) => ({ joueurId: joueur.id, valeur })),
+    cases: cases
+      .filter(({ touchee }) => touchee)
+      .map(({ joueur, valeur }) => ({ joueurId: joueur.id, valeur })),
   };
 }
 

@@ -2,6 +2,7 @@ import { and, eq, isNull } from "drizzle-orm";
 import { z } from "zod";
 import type { Base, Ecriture } from "@/db/base";
 import { manche, participant, partie, saisie } from "@/db/schema";
+import { rangsDuPodium } from "@/lib/jeux/moteur";
 import { parseRegles, type Regles } from "@/lib/jeux/regles";
 import { agissantSchema, consignerUnGesteDeCase, type GesteDeCase } from "@/lib/journal/ligne";
 import { exigerUnePartieOuverte } from "@/lib/partie/fin";
@@ -15,26 +16,24 @@ import { exigerUnePartieOuverte } from "@/lib/partie/fin";
 export type ValeurDeCase = number | null;
 
 /**
+ * Ce qu'une case peut porter, à l'arrivée comme au départ : un entier, ou le
+ * vide.
+ *
  * Le vide arrive d'un formulaire en chaîne vide, et d'une action typée en
  * `null` : les deux disent la même chose, et la frontière les recolle ici
- * plutôt que dans chaque appelant.
+ * plutôt que dans chaque appelant. La chaîne vide est écartée **avant** toute
+ * coercition, parce que `Number("")` vaut zéro et que zéro est une manche
+ * réussie à 6 qui prend : coercer sans regarder écrirait un score que personne
+ * n'a tapé, et le journal le confirmerait.
+ *
+ * Un seul schéma pour la valeur montrée et pour la valeur à poser, parce que
+ * le vide est **une valeur** des deux côtés : c'est l'état qu'Uno traverse
+ * entre désigner le sorti et taper son total. Ce qui décide si ce vide est
+ * légal, c'est le mode — {@link verifierLaValeur} et personne d'autre.
  */
-const valeurMontreeSchema = z.preprocess(
+const valeurDeCaseSchema = z.preprocess(
   (brut) => (brut === "" || brut === undefined ? null : brut),
   z.coerce.number().int().nonnegative().nullable(),
-);
-
-/**
- * La valeur à poser, qui elle ne peut **pas** être vide.
- *
- * La chaîne vide est écartée avant toute coercition, parce que `Number("")`
- * vaut zéro et que zéro est une manche réussie à 6 qui prend : coercer sans
- * regarder écrirait un score que personne n'a tapé, et le journal le
- * confirmerait.
- */
-const valeurAPoserSchema = z.preprocess(
-  (brut) => (brut === "" ? undefined : brut),
-  z.coerce.number().int().nonnegative(),
 );
 
 /**
@@ -51,8 +50,8 @@ const valeurAPoserSchema = z.preprocess(
 export const demandeDEcritureSchema = z.strictObject({
   mancheId: z.coerce.number().int().positive(),
   joueurConcerneId: z.coerce.number().int().positive(),
-  valeurMontree: valeurMontreeSchema,
-  valeur: valeurAPoserSchema,
+  valeurMontree: valeurDeCaseSchema,
+  valeur: valeurDeCaseSchema,
   agissant: agissantSchema,
 });
 
@@ -74,9 +73,9 @@ export type DemandeDEcriture = z.infer<typeof demandeDEcritureSchema>;
  * survivre au remplacement de la saisie par lui.
  */
 export type ResultatDEcriture =
-  | { statut: "ecrite"; valeur: number }
-  | { statut: "sansEffet"; valeur: number }
-  | { statut: "refusee"; valeurArrivee: ValeurDeCase; valeurRefusee: number };
+  | { statut: "ecrite"; valeur: ValeurDeCase }
+  | { statut: "sansEffet"; valeur: ValeurDeCase }
+  | { statut: "refusee"; valeurArrivee: ValeurDeCase; valeurRefusee: ValeurDeCase };
 
 /** La partie à laquelle une manche appartient, et sous quelles règles. */
 type ContexteDeManche = {
@@ -111,38 +110,70 @@ async function lireLeContexte(tx: Ecriture, mancheId: number): Promise<ContexteD
 export type Bornes = { min: number; max: number };
 
 /**
- * Les bornes d'une case, ou `null` si ce mode **ne se saisit pas case par case**.
+ * Les bornes du **pavé**, ou `null` quand ce mode ne tape aucun chiffre.
  *
- * La question « ce jeu se tape-t-il un entier par joueur ? » se pose à trois
- * couches — le serveur qui écrit, la page qui décide d'ouvrir l'écran, le pavé
- * qui borne les touches — et chacune y répond autrement : une exception, un
- * 404, une borne haute. La poser une seule fois est ce qui laisse le ticket des
- * deux autres modes trouver les trois endroits d'un coup.
+ * Deux modes sur trois portent un nombre compté devant soi — l'entier par
+ * joueur à 6 qui prend, le total unique à Uno — et c'est la même borne haute
+ * qui les garde du doigt gras. `podium` rend `null` : on y **désigne** des
+ * joueurs, les jetons sont un résultat, et il n'y a pas de touche à borner.
+ *
+ * La question se pose à trois couches — le serveur qui écrit, la page qui
+ * décide de l'écran, le pavé qui borne les touches — et la poser une seule fois
+ * est ce qui garde les trois d'accord.
  */
 export function bornesDeSaisie(regles: Regles): Bornes | null {
-  return regles.saisie.mode === "entierParJoueur"
-    ? { min: regles.saisie.min, max: regles.saisie.max }
-    : null;
+  const { saisie } = regles;
+
+  return saisie.mode === "podium" ? null : { min: saisie.min, max: saisie.max };
 }
 
 /**
- * Vérifie que la valeur tient dans ce que le mode accepte.
+ * Vérifie que ce que la case reçoit est **de l'espèce que le mode attend**.
+ *
+ * Deux espèces de gestes décrivent les trois jeux, et c'est ici qu'elles se
+ * séparent. Une **valeur** est un nombre compté devant soi, borné par le
+ * garde-fou anti-doigt-gras. Une **désignation** nomme un joueur : au podium
+ * elle s'écrit comme le **rang** lui-même, à Uno comme le **vide** — la ligne
+ * y est la désignation, et le total se tape ensuite dans la même case.
+ *
+ * D'où les trois refus, un par mode : une case ne se vide pas à 6 qui prend,
+ * un rang que le barème ne porte pas n'existe pas, et une case de podium ne
+ * reste jamais vide puisque le rang **est** ce qu'on y pose.
  *
  * Le pavé refuse déjà, et sèchement ; ce contrôle-ci n'est pas un doublon
  * d'interface mais la frontière de confiance — une action serveur s'appelle
  * sans passer par le pavé. D'où une `Error` nue : rien à en dire à l'écran,
  * personne n'a pu taper ça.
  */
-function verifierLesBornes(regles: Regles, valeur: number): void {
-  const bornes = bornesDeSaisie(regles);
+function verifierLaValeur(regles: Regles, valeur: ValeurDeCase): void {
+  const { saisie } = regles;
 
-  if (bornes === null) {
-    throw new Error(`Le mode ${regles.saisie.mode} ne se saisit pas case par case.`);
+  if (saisie.mode === "podium") {
+    verifierLeRang(rangsDuPodium(saisie.jetons), valeur);
+    return;
   }
 
-  if (valeur < bornes.min || valeur > bornes.max) {
+  if (valeur === null) {
+    if (saisie.mode === "entierParJoueur") {
+      throw new Error("Une case ne se vide pas : ce mode attend un entier de chaque joueur.");
+    }
+
+    // Le vide d'Uno : la case du sorti existe, son total reste à taper.
+    return;
+  }
+
+  if (valeur < saisie.min || valeur > saisie.max) {
     throw new Error(
-      `Valeur hors des bornes du jeu : ${valeur} n'est pas entre ${bornes.min} et ${bornes.max}.`,
+      `Valeur hors des bornes du jeu : ${valeur} n'est pas entre ${saisie.min} et ${saisie.max}.`,
+    );
+  }
+}
+
+/** Le rang posé est-il l'un de ceux que ce barème fait désigner ? */
+function verifierLeRang(rangs: readonly number[], valeur: ValeurDeCase): void {
+  if (valeur === null || !rangs.includes(valeur)) {
+    throw new Error(
+      `Rang hors du podium : ${valeur ?? "le vide"} n'est pas un rang à désigner (${rangs.join(", ")}).`,
     );
   }
 }
@@ -183,24 +214,29 @@ async function verifierLeParticipant(
 }
 
 /**
- * Ce que la case porte à cet instant, le vide et l'absence confondus.
+ * Ce que la case porte à cet instant, et si elle **existe**.
  *
- * Les deux disent « vide » : une ligne n'existe qu'à partir du moment où la
- * case est **touchée**, et une case touchée mais non remplie porte `NULL`. Les
- * distinguer ici ferait deux régimes de condition là où le domaine n'en a qu'un.
+ * La condition d'écriture, elle, confond le vide et l'absence : les deux disent
+ * « vide », et les distinguer là ferait deux régimes de condition là où le
+ * domaine n'en a qu'un. L'existence ne sert qu'à une chose, et c'est
+ * {@link ecrireLaCase} qui la lit : poser le vide sur une case **absente** n'est
+ * pas sans effet, c'est la désignation d'Uno — la ligne naît, et le total reste
+ * à taper.
  */
+type EtatDeLaCase = { touchee: boolean; valeur: ValeurDeCase };
+
 async function lireLaCase(
   tx: Ecriture,
   mancheId: number,
   joueurConcerneId: number,
-): Promise<ValeurDeCase> {
+): Promise<EtatDeLaCase> {
   const [ligne] = await tx
     .select({ valeur: saisie.valeur })
     .from(saisie)
     .where(and(eq(saisie.mancheId, mancheId), eq(saisie.joueurId, joueurConcerneId)))
     .limit(1);
 
-  return ligne?.valeur ?? null;
+  return { touchee: ligne !== undefined, valeur: ligne?.valeur ?? null };
 }
 
 /**
@@ -211,6 +247,10 @@ async function lireLaCase(
  * vide, la case peut être absente — d'où l'upsert, dont le `setWhere` refuse de
  * réveiller une case qui aurait entre-temps reçu une valeur ; montrée pleine,
  * elle existe forcément et un `UPDATE` conditionné suffit.
+ *
+ * C'est la branche de l'upsert qui **crée** la case vide d'une désignation à
+ * Uno : la ligne existe, sa valeur est `NULL`, et la manche est dès lors en
+ * cours plutôt qu'absente.
  *
  * Rend le nombre de lignes touchées : zéro veut dire « quelqu'un est passé
  * avant », et c'est la seule lecture de la course qui ne puisse pas mentir.
@@ -255,8 +295,13 @@ async function ecrireSousCondition(tx: Ecriture, demande: DemandeDEcriture): Pro
  * pas : l'écran ne connaît qu'un geste, on retape la ligne, et lui demander
  * lequel c'était lui ferait porter une décision qu'il n'a pas les moyens de
  * prendre juste.
+ *
+ * La désignation d'Uno passe par la même porte : poser le vide sur une case
+ * absente est une `saisie`, et le journal garde `null` — « celui-là est sorti,
+ * son total reste à taper ». C'est un geste comme un autre, il a bougé quelque
+ * chose.
  */
-function gesteDe(avant: ValeurDeCase, nouvelle: number): GesteDeCase {
+function gesteDe(avant: ValeurDeCase, nouvelle: ValeurDeCase): GesteDeCase {
   return avant === null
     ? { geste: "saisie", detail: { valeur: nouvelle } }
     : { geste: "correction", detail: { ancienne: avant, nouvelle } };
@@ -279,9 +324,10 @@ function gesteDe(avant: ValeurDeCase, nouvelle: number): GesteDeCase {
  * clore la manche qui termine la partie.
  *
  * @throws {@link PartieScellee} si la partie porte une fin. Une `Error` nue si
- * la manche n'existe pas, si le mode n'est pas `entierParJoueur`, si la valeur
- * sort des bornes, ou si la case concerne quelqu'un qui n'est pas de la partie :
- * autant d'envois qu'aucun écran ne produit.
+ * la manche n'existe pas, si ce que la case reçoit n'est pas de l'espèce que
+ * son mode attend — voir {@link verifierLaValeur} — ou si la case concerne
+ * quelqu'un qui n'est pas de la partie : autant d'envois qu'aucun écran ne
+ * produit.
  */
 export async function ecrireLaCase(base: Base, brut: unknown): Promise<ResultatDEcriture> {
   const demande = demandeDEcritureSchema.parse(brut);
@@ -290,15 +336,20 @@ export async function ecrireLaCase(base: Base, brut: unknown): Promise<ResultatD
     const contexte = await lireLeContexte(tx, demande.mancheId);
 
     await exigerUnePartieOuverte(tx, contexte.partieId);
-    verifierLesBornes(contexte.regles, demande.valeur);
+    verifierLaValeur(contexte.regles, demande.valeur);
     await verifierLeParticipant(tx, contexte.partieId, demande.joueurConcerneId);
 
-    const avant = await lireLaCase(tx, demande.mancheId, demande.joueurConcerneId);
+    const etat = await lireLaCase(tx, demande.mancheId, demande.joueurConcerneId);
+    const avant = etat.valeur;
 
     // Avant la condition, et non après : deux joueurs qui font le même constat
     // à trois secondes d'intervalle corrigent vers la même valeur, et annoncer
     // un conflit dont le résultat est celui qu'on demandait serait absurde.
-    if (avant === demande.valeur) {
+    //
+    // `touchee` et non la seule valeur : désigner le sorti à Uno pose le vide
+    // sur une case qui n'existe pas encore, et la faire passer pour sans effet
+    // ne créerait jamais la ligne qui **est** la désignation.
+    if (etat.touchee && avant === demande.valeur) {
       return { statut: "sansEffet", valeur: demande.valeur };
     }
 
@@ -309,7 +360,7 @@ export async function ecrireLaCase(base: Base, brut: unknown): Promise<ResultatD
     if (!(await ecrireSousCondition(tx, demande))) {
       return {
         statut: "refusee",
-        valeurArrivee: await lireLaCase(tx, demande.mancheId, demande.joueurConcerneId),
+        valeurArrivee: (await lireLaCase(tx, demande.mancheId, demande.joueurConcerneId)).valeur,
         valeurRefusee: demande.valeur,
       };
     }

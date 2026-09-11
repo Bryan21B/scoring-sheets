@@ -38,6 +38,6 @@ describe("par où la passe avant démarre", () => {
     // autre joueur — c'est le récapitulatif qui reprend la main.
     const depart = caseDeDepart(cases(null, null, null), MARIE.id);
 
-    expect(depart).toEqual({ joueur: MARIE, valeur: null });
+    expect(depart).toEqual({ joueur: MARIE, valeur: null, touchee: false });
   });
 });

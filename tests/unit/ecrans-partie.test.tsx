@@ -8,7 +8,7 @@ import type { LigneDeGrille, VueDeGrille } from "@/lib/manche/lecture";
 import type { VueDePartie } from "@/lib/partie/lecture";
 import type { EtatDeSalle } from "@/lib/partie/salle-attente";
 import { AUCUNE_SORTIE } from "./helpers/sorties";
-import { MARIE, TABLEE, ZOE } from "./helpers/tablee";
+import { casesDeLaTablee, MARIE, TABLEE, ZOE } from "./helpers/tablee";
 
 const SIX_QUI_PREND = trouverEntree("6-qui-prend");
 const REGLES = resoudreRegles(SIX_QUI_PREND, { nombreDeJoueurs: 3 });
@@ -38,7 +38,7 @@ function ligne(numero: number, ...valeurs: readonly (number | null)[]): LigneDeG
   return {
     numero,
     close: true,
-    cases: TABLEE.map((joueur, rang) => ({ joueur, valeur: valeurs[rang] ?? null })),
+    cases: casesDeLaTablee(...valeurs),
   };
 }
 

@@ -17,8 +17,13 @@ import type { ResultatDEcriture, ValeurDeCase } from "@/lib/manche/saisie";
 export type RefusDEcriture = {
   /** Ce que la case porte maintenant — le vide compris, qui est une valeur. */
   valeurArrivee: ValeurDeCase;
-  /** Ce qui venait d'être tapé, gardé sous la main pour un seul appui. */
-  valeurTapee: number;
+  /**
+   * Ce qui venait d'être posé, gardé sous la main pour un seul appui.
+   *
+   * Le vide en fait partie : une **désignation** à Uno pose une case vide, et
+   * elle se refuse comme une autre quand quelqu'un est passé avant.
+   */
+  valeurTapee: ValeurDeCase;
 };
 
 /**
