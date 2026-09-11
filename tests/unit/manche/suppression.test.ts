@@ -1,13 +1,16 @@
 import { afterEach, beforeEach, describe, expect, it } from "bun:test";
 import { eq } from "drizzle-orm";
 import type { Base } from "@/db/base";
-import { manche, saisie } from "@/db/schema";
+import { joueur, manche, saisie } from "@/db/schema";
 import { lireLeTiroir } from "@/lib/journal/lecture";
 import type { Agissant } from "@/lib/journal/ligne";
 import type { LigneDuTiroir } from "@/lib/journal/tiroir";
+import { cloturerLaManche } from "@/lib/manche/cloture";
 import { ouvrirLaMancheSuivante } from "@/lib/manche/ouverture";
 import { ecrireLaCase } from "@/lib/manche/saisie";
-import { supprimerLaManche } from "@/lib/manche/suppression";
+import { RefusDeSuppression, supprimerLaManche } from "@/lib/manche/suppression";
+import { abandonnerLaPartie } from "@/lib/partie/cycle";
+import { PartieScellee } from "@/lib/partie/fin";
 import { type BaseDeTest, creerBaseDeTest } from "../helpers/base-de-test";
 import {
   joueurDeLaPartie,
@@ -32,6 +35,9 @@ function paul(): number {
 function agissant(): Agissant {
   return { joueurId: marie(), appareilId: partie.idAppareil };
 }
+
+/** Le seuil de fin qu'`ouvrirUnePartieDeTest` pose par défaut, à 6 qui prend. */
+const SEUIL = 66;
 
 /**
  * Une case écrite par le **vrai** chemin d'écriture.
@@ -149,6 +155,77 @@ describe("supprimer une manche", () => {
     });
 
     expect(second.statut).toBe("dejaSupprimee");
+  });
+});
+
+describe("ce qui refuse la suppression", () => {
+  /**
+   * Scelle la partie **par le vrai chemin** : la tablée remplit la manche, l'un
+   * d'eux la clôt, et c'est la clôture qui estampille la fin parce que le seuil
+   * est franchi.
+   *
+   * Poser `fin_le` à la main aurait écrit un sceau que la production ne pose
+   * jamais ainsi, et c'est précisément du garde-fou de scellement qu'on veut
+   * prouver qu'il atteint aussi la suppression de manche.
+   */
+  async function scellerParLaCloture(mancheId: number): Promise<void> {
+    await ecrire(mancheId, marie(), SEUIL);
+    await ecrire(mancheId, paul(), 0);
+    await ecrire(mancheId, joueurDeLaPartie(partie, 2), 0);
+
+    const resultat = await cloturerLaManche(base, { mancheId, parJoueurId: marie() });
+
+    // Le sceau est vérifié plutôt que supposé : un fixture qui n'aurait rien
+    // scellé ferait passer le test qui suit sans rien prouver du tout.
+    expect(resultat.fin?.cause).toBe("terminee");
+  }
+
+  it("refuse sur une partie terminée : elle ne bouge plus", async () => {
+    const premiere = await ouvrirLaMancheSuivante(base, partie.partieId);
+    await scellerParLaCloture(premiere.id);
+
+    await expect(
+      supprimerLaManche(base, partie.partieId, { numero: 1, agissant: agissant() }),
+    ).rejects.toThrow(PartieScellee);
+  });
+
+  it("laisse la manche et ses cases en place quand la partie est scellée", async () => {
+    const premiere = await ouvrirLaMancheSuivante(base, partie.partieId);
+    await scellerParLaCloture(premiere.id);
+
+    await expect(
+      supprimerLaManche(base, partie.partieId, { numero: 1, agissant: agissant() }),
+    ).rejects.toThrow(PartieScellee);
+
+    expect(await numerosDesManches()).toEqual([1]);
+    expect(await casesRestantes()).toBe(3);
+  });
+
+  it("refuse sur une partie abandonnée : il faut la reprendre avant d'y écrire", async () => {
+    const premiere = await ouvrirLaMancheSuivante(base, partie.partieId);
+    await ecrire(premiere.id, marie(), 12);
+    await abandonnerLaPartie(base, partie.partieId, agissant());
+
+    await expect(
+      supprimerLaManche(base, partie.partieId, { numero: 1, agissant: agissant() }),
+    ).rejects.toThrow(PartieScellee);
+  });
+
+  it("refuse à qui n'est pas de la tablée : le code donne la lecture, pas l'écriture", async () => {
+    await ouvrirLaMancheSuivante(base, partie.partieId);
+    const [zoe] = await base
+      .insert(joueur)
+      .values({ nom: "Zoé", creeLe: new Date() })
+      .returning({ id: joueur.id });
+
+    await expect(
+      supprimerLaManche(base, partie.partieId, {
+        numero: 1,
+        agissant: { joueurId: zoe?.id ?? 0, appareilId: partie.idAppareil },
+      }),
+    ).rejects.toThrow(RefusDeSuppression);
+
+    expect(await numerosDesManches()).toEqual([1]);
   });
 });
 

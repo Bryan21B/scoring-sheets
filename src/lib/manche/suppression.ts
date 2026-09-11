@@ -8,6 +8,7 @@ import {
   type ValeurEffacee,
 } from "@/lib/journal/ligne";
 import { numeroDeMancheSchema } from "@/lib/manche/ouverture";
+import { exigerUnePartieOuverte } from "@/lib/partie/fin";
 
 /**
  * Ce que la suppression demande : **quelle manche, par son numéro**, et qui agit.
@@ -41,6 +42,44 @@ export type DemandeDeSuppression = z.infer<typeof demandeDeSuppressionSchema>;
 export type ResultatDeSuppression = { statut: "supprimee" | "dejaSupprimee" };
 
 /**
+ * Un refus **écrit pour être lu**, et non une `Error` nue.
+ *
+ * Nommé comme {@link RefusDeCloture} l'est à la clôture, et pour la même
+ * raison : ce qui se montre à la table est séparé de ce qui ne regarde que le
+ * serveur.
+ */
+export class RefusDeSuppression extends Error {
+  override readonly name = "RefusDeSuppression";
+}
+
+/** La phrase de qui n'est pas de la tablée, et où se trouve l'entrée. */
+const SUPPRESSION_HORS_TABLEE =
+  "Le code d'une partie donne la lecture ; supprimer une manche demande d'en être. Rejoignez la tablée pour agir dessus.";
+
+/**
+ * Qui supprime doit être de la tablée.
+ *
+ * Le code d'une partie donne la **lecture** ; l'**écriture** demande d'être
+ * participant. Un participant **retiré** passe, comme à la clôture : il a joué
+ * la manche avant de partir. Ce qu'on refuse ici, c'est l'étranger.
+ */
+async function verifierLeSupprimant(
+  tx: Ecriture,
+  partieId: number,
+  joueurId: number,
+): Promise<void> {
+  const [inscrit] = await tx
+    .select({ id: participant.id })
+    .from(participant)
+    .where(and(eq(participant.partieId, partieId), eq(participant.joueurId, joueurId)))
+    .limit(1);
+
+  if (inscrit === undefined) {
+    throw new RefusDeSuppression(SUPPRESSION_HORS_TABLEE);
+  }
+}
+
+/**
  * Supprime une manche entière : on s'est trompé, on l'annule.
  *
  * **Un trou reste, les numéros ne se réutilisent jamais.** Supprimer la manche 2
@@ -71,6 +110,12 @@ export async function supprimerLaManche(
   const demande = demandeDeSuppressionSchema.parse(brut);
 
   return base.transaction(async (tx) => {
+    // Le scellement d'abord : une partie finie ne bouge plus, et la même garde
+    // sert ici qu'à la saisie et aux mouvements de tablée. Une partie
+    // abandonnée refuse aussi — il faut la reprendre avant d'y écrire.
+    await exigerUnePartieOuverte(tx, partieId);
+    await verifierLeSupprimant(tx, partieId, demande.agissant.joueurId);
+
     const valeurs = await lireLesValeurs(tx, partieId, demande.numero);
 
     if (!(await effacer(tx, partieId, demande.numero))) {
