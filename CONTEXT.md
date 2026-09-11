@@ -296,15 +296,19 @@ Tranché par [Journal d'audit : ce qu'une ligne contient et quand elle s'écrit]
   manche ni la fin d'une partie n'en sont : la première ne déplace aucune valeur,
   la seconde se dérive.
 - **Tiroir** — la **lecture** du journal, ouverte par une entrée de menu `⋯` sur
-  la page de partie. Il montre par défaut les seules **corrections et
-  suppressions**, avec une bascule « tout afficher » : trente-cinq saisies de
-  routine enterreraient la ligne qu'on est venu chercher. **Tout reste écrit,
-  c'est la lecture qui filtre, jamais l'écriture.** Il s'ouvre à **quiconque peut
-  lire la partie**, spectateurs compris et partie scellée comprise — il ne
-  demande aucune identité et ne lit pas l'état de la partie. Sa formulation
-  n'attribue jamais un geste à une personne, seulement à un appareil **se
-  déclarant** quelqu'un : le lien appareil vers joueur est une déclaration, pas
-  une preuve (`docs/adr/0004`).
+  la page de partie. Il montre par défaut **ce qui sort de la routine** —
+  corrections, suppressions de manche, abandon et reprise — avec une bascule
+  « tout afficher » : trente-cinq saisies de routine enterreraient la ligne qu'on
+  est venu chercher. **Tout reste écrit, c'est la lecture qui filtre, jamais
+  l'écriture.** Il s'ouvre à **quiconque peut lire la partie**, spectateurs
+  compris et partie scellée comprise — il ne demande aucune identité et ne lit
+  pas l'état de la partie. Sa formulation n'attribue jamais un geste à une
+  personne, seulement à un appareil **se déclarant** quelqu'un : le lien appareil
+  vers joueur est une déclaration, pas une preuve (`docs/adr/0004`).
+  C'est aussi de là qu'on **range la partie** — abandon, reprise, suppression —
+  et pour la même raison qui y a mis le journal : ce ne sont pas des gestes de
+  tous les soirs. La lecture, elle, n'est offerte à personne en particulier ; ces
+  trois-là ne le sont qu'aux participants.
 - **Étiquette d'appareil** — « l'appareil A », « l'appareil B » : le rang du
   téléphone dans la partie, du plus ancien au plus récent. Jamais l'identifiant
   lui-même, qui est la valeur du cookie. C'est elle qui rend lisible l'anomalie

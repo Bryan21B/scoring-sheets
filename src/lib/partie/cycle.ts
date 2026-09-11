@@ -116,10 +116,12 @@ export async function abandonnerLaPartie(
  * existence : la tablée d'une partie reprise est celle qu'elle avait en
  * s'arrêtant, ce qui est la seule lecture honnête d'une soirée qu'on rallume.
  *
- * **Idempotente** : reprendre une partie que quelqu'un vient de reprendre ne
- * fait rien et n'annonce rien — la partie est ouverte, c'est ce que les deux
- * voulaient. La seconde n'écrit alors pas de ligne, sans quoi le journal
- * raconterait deux réouvertures là où il n'y en a eu qu'une.
+ * **Elle n'est pas idempotente, et c'est le garde-fou qui le décide** : reprendre
+ * une partie que quelqu'un vient de reprendre lève « il n'y a rien à reprendre »,
+ * ce qui est vrai et se lit. Le retour `false` d'{@link effacerLaFin} ne couvre
+ * donc que la vraie course — deux transactions qui ont toutes les deux lu une
+ * partie abandonnée — et il n'écrit alors pas de seconde ligne, sans quoi le
+ * journal raconterait deux réouvertures là où il n'y en a eu qu'une.
  *
  * @throws {@link RefusDeCycle} si l'agissant n'est pas de la tablée.
  * @throws {@link RepriseImpossible} si la partie est en cours, ou terminée.
@@ -253,6 +255,11 @@ export function sortiesDePartie(entree: {
   return {
     abandon: entree.fin === null,
     reprise: entree.fin?.cause === "abandonnee",
-    suppression: entree.journalVide,
+    // La fin **et** le journal, alors que l'un implique l'autre en pratique :
+    // le scellement dit « aucune suppression », et le faire tenir par le seul
+    // journal vide serait un invariant tenu par accident. L'écriture, elle,
+    // garde la règle de la spec — « tant que son journal est vide » — parce
+    // que c'est elle qui porte la phrase qu'on a envie de lire.
+    suppression: entree.fin === null && entree.journalVide,
   };
 }

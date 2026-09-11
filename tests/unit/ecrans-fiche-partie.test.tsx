@@ -1,4 +1,5 @@
 import { describe, expect, it } from "bun:test";
+import type { ReactNode } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { FicheDePartie } from "@/components/fiche-partie";
 import type { GestesDuTiroir } from "@/components/tiroir-journal";
@@ -9,6 +10,7 @@ import type { VueDuTiroir } from "@/lib/journal/tiroir";
 import type { LigneDeGrille, VueDeGrille } from "@/lib/manche/lecture";
 import type { FinDePartie } from "@/lib/partie/fin";
 import type { VueDePartie } from "@/lib/partie/lecture";
+import { AUCUNE_SORTIE } from "./helpers/sorties";
 import { LEA, MARIE, PAUL, TABLEE } from "./helpers/tablee";
 
 const SIX_QUI_PREND = trouverEntree("6-qui-prend");
@@ -35,13 +37,6 @@ const ABANDONNEE: FinDePartie = {
   le: new Date("2026-09-08T19:45:00.000Z"),
   cause: "abandonnee",
   par: MARIE.id,
-};
-
-/** Rien à ranger : ce que `sortiesDePartie` rend sur une partie terminée. */
-const AUCUNE_SORTIE: GestesDuTiroir = {
-  abandonner: undefined,
-  reprendre: undefined,
-  supprimer: undefined,
 };
 
 /** Ce qu'elle rend sur une partie abandonnée, pour qui est de la tablée. */
@@ -78,6 +73,7 @@ function rendre(
     fin?: FinDePartie;
     tiroir?: VueDuTiroir;
     gestesDuTiroir?: GestesDuTiroir;
+    sondage?: ReactNode;
     erreur?: string;
   } = {},
 ): string {
@@ -88,6 +84,7 @@ function rendre(
       fin={options.fin ?? TERMINEE}
       tiroir={options.tiroir ?? { etat: "ferme" }}
       gestesDuTiroir={options.gestesDuTiroir ?? AUCUNE_SORTIE}
+      sondage={options.sondage ?? null}
       erreur={options.erreur}
     />,
   );
@@ -196,6 +193,14 @@ describe("la fiche d'une partie abandonnée", () => {
 
     expect(html).toContain('action="/p/reprendre"');
     expect(html).toContain("Reprendre la partie");
+  });
+
+  it("se sonde : la reprise doit arriver aux autres sans qu'ils rechargent", () => {
+    // L'abandon a fait bouger l'estampille et les a amenés ici ; sans sondage
+    // ils y resteraient pendant que la soirée a redémarré sans eux.
+    const html = rendre({ fin: ABANDONNEE, sondage: <p>estampille</p> });
+
+    expect(html).toContain("estampille");
   });
 
   it("ne la propose pas sur une partie terminée : celle-là ne se rouvre pas", () => {

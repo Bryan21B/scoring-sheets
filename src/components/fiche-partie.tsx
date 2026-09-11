@@ -1,4 +1,4 @@
-import type { ReactElement } from "react";
+import type { ReactElement, ReactNode } from "react";
 import { BandeauDeRefus } from "@/components/bandeau-de-refus";
 import { Ecran } from "@/components/ecran";
 import { GrilleDeScore } from "@/components/grille-score";
@@ -32,13 +32,17 @@ const SORT_DE_LA_PARTIE: Record<FinDePartie["cause"], string> = {
  * un objet pour une information qu'on a déjà sous les yeux.
  *
  * **Ce n'est pas `EcranDePartie` avec des morceaux éteints.** Cet écran-là est
- * fait pour une soirée qui bouge : il porte quatre gestes d'écriture, une salle
- * d'attente et un sondage, et les quatre n'ont aucun sens ici — le scellement
- * refuse toute écriture, la liste ne bouge plus, et une partie finie ne changera
- * plus sous un autre téléphone. Lui passer des gestes morts et un sondage inerte
- * pour en éteindre la moitié déformerait les deux écrans à la fois. Ce qui se
- * réutilise, c'est ce qui est vraiment commun : la coquille, **la grille** et
- * **le tiroir**, chacun déjà son propre composant.
+ * fait pour une soirée qui bouge : il porte quatre gestes d'écriture et une
+ * salle d'attente, et aucun n'a de sens ici — le scellement refuse toute
+ * écriture, et la liste ne bouge plus. Lui passer des gestes morts pour en
+ * éteindre la moitié déformerait les deux écrans à la fois. Ce qui se réutilise,
+ * c'est ce qui est vraiment commun : la coquille, **la grille** et **le
+ * tiroir**, chacun déjà son propre composant.
+ *
+ * Le **sondage**, lui, dépend de la cause et non de l'écran : une partie
+ * terminée ne changera plus, une partie abandonnée change dès que quelqu'un la
+ * reprend. La fiche le reçoit donc de la page, comme l'écran d'une partie
+ * vivante — voir la prop.
  *
  * **Le journal reste accessible**, depuis le même `⋯` que sur une partie
  * vivante : une partie scellée n'est pas une partie muette, et c'est précisément
@@ -58,6 +62,7 @@ export function FicheDePartie({
   fin,
   tiroir,
   gestesDuTiroir,
+  sondage,
   erreur,
 }: {
   partie: VueDePartie;
@@ -74,6 +79,18 @@ export function FicheDePartie({
    * écran, où elle ne se vérifie qu'à l'œil.
    */
   gestesDuTiroir: GestesDuTiroir;
+  /**
+   * `<SondageDePartie>` sur une partie **abandonnée**, `null` sur une partie
+   * terminée.
+   *
+   * Exigé et non optionnel, parce que c'est une décision et non un détail. Une
+   * partie terminée ne changera plus sous un autre téléphone, et la sonder
+   * serait une requête toutes les trois secondes pour une réponse connue
+   * d'avance. Une partie **abandonnée** change, elle : c'est exactement ce que
+   * la reprise fait, et sans sondage les quatre autres resteraient sur cette
+   * fiche pendant que la soirée a redémarré.
+   */
+  sondage: ReactNode;
   /**
    * Le refus rapporté par l'adresse, s'il y en a un.
    *
@@ -107,6 +124,8 @@ export function FicheDePartie({
       <a href={ADRESSE_HISTORIQUE} className="text-muted-foreground text-sm underline">
         Revenir à l’historique
       </a>
+
+      {sondage}
     </Ecran>
   );
 }

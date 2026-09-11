@@ -170,16 +170,7 @@ describe("abandonner une partie", () => {
   it("écrit sa ligne de journal, et elle ne porte aucune case", async () => {
     await abandonnerLaPartie(base, partie.partieId, agissantDeMarie());
 
-    expect(await lignesDuJournal()).toEqual([
-      {
-        geste: "abandon",
-        joueurAgissantId: marie(),
-        appareilId: partie.idAppareil,
-        mancheNumero: null,
-        joueurConcerneId: null,
-        detail: null,
-      },
-    ]);
+    expect(await lignesDuJournal()).toEqual([ligneSansCase("abandon")]);
   });
 
   it("fait bouger l'estampille, sans quoi les autres téléphones ne l'apprendraient pas", async () => {
@@ -452,6 +443,14 @@ describe("sortiesDePartie", () => {
 
   it("offre la suppression tant que le journal est vide", () => {
     expect(sortiesDePartie({ ...EnCours, journalVide: true }).suppression).toBe(true);
+  });
+
+  it("ne l'offre pas sur une partie qui porte une fin : scellée, elle ne s'efface pas", () => {
+    // Le journal d'une partie abandonnée n'est jamais vide — l'abandon vient
+    // d'y écrire — mais l'invariant ne doit pas tenir par cet accident-là.
+    expect(sortiesDePartie({ fin: Abandon, deLaPartie: true, journalVide: true }).suppression).toBe(
+      false,
+    );
   });
 
   it("n'offre rien au spectateur, pas même la suppression d'une partie vierge", () => {

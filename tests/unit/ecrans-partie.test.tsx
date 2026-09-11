@@ -1,13 +1,13 @@
 import { describe, expect, it } from "bun:test";
 import { renderToStaticMarkup } from "react-dom/server";
 import { EcranDePartie, type GestesDePartie } from "@/components/ecran-de-partie";
-import type { GestesDuTiroir } from "@/components/tiroir-journal";
 import { trouverEntree } from "@/lib/jeux/catalogue";
 import { evaluer, type Manche } from "@/lib/jeux/moteur";
 import { resoudreRegles } from "@/lib/jeux/resolution";
 import type { LigneDeGrille, VueDeGrille } from "@/lib/manche/lecture";
 import type { VueDePartie } from "@/lib/partie/lecture";
 import type { EtatDeSalle } from "@/lib/partie/salle-attente";
+import { AUCUNE_SORTIE } from "./helpers/sorties";
 import { MARIE, TABLEE, ZOE } from "./helpers/tablee";
 
 const SIX_QUI_PREND = trouverEntree("6-qui-prend");
@@ -31,16 +31,6 @@ const GESTES: GestesDePartie = {
   rejoindre: "/p/rejoindre",
   ajouter: "/p/ajouter",
   retirer: "/p/retirer",
-};
-
-/**
- * Le tiroir ne range rien dans ces tests : cet écran-ci ne le montre que fermé,
- * et ce que le tiroir offre se vérifie sur le tiroir.
- */
-const AUCUNE_SORTIE: GestesDuTiroir = {
-  abandonner: undefined,
-  reprendre: undefined,
-  supprimer: undefined,
 };
 
 /** Une ligne de grille pour la tablée de trois, valeurs manquantes vides. */

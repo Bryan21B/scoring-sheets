@@ -127,6 +127,15 @@ export default async function PageDePartie(props: PageProps<"/p/[code]">): Promi
         fin={fin}
         tiroir={await lireLeTiroir(db, partie.id, await props.searchParams)}
         gestesDuTiroir={gestesDuTiroir}
+        // Une partie terminée ne changera plus : la sonder serait une requête
+        // toutes les trois secondes pour une réponse connue d'avance. Une
+        // partie abandonnée, elle, se reprend — et les quatre autres doivent
+        // l'apprendre sans recharger, comme ils ont appris l'abandon.
+        sondage={
+          fin.cause === "abandonnee" ? (
+            <SondageDePartie code={partie.code} version={partie.version} />
+          ) : null
+        }
         erreur={erreur.success ? erreur.data : undefined}
       />
     );

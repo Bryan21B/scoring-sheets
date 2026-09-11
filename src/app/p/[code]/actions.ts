@@ -180,10 +180,10 @@ export async function cloturerLaMancheAction(
  * `redirect` est appelé **hors** du `try` : il fonctionne en levant, et
  * l'attraper transformerait chaque navigation réussie en erreur.
  */
-async function rangerLaPartie(
+async function agirSurLeCycle(
   code: string,
   geste: (partieId: number, agissant: Agissant) => Promise<void>,
-  apres: (partie: VueDePartie) => string,
+  apres: (code: string) => string,
 ): Promise<void> {
   const partie = await exigerLaPartie(code);
   const bocal = await cookies();
@@ -197,7 +197,7 @@ async function rangerLaPartie(
 
   try {
     await geste(partie.id, { joueurId, appareilId: idAppareil ?? null });
-    destination = apres(partie);
+    destination = apres(partie.code);
   } catch (erreur) {
     destination = avecRefus(partie.code, refusDuCycle(erreur));
   }
@@ -240,23 +240,23 @@ function refusDuCycle(erreur: unknown): string {
  * scellée — d'où part la reprise, si quelqu'un s'est trompé de bouton.
  */
 export async function abandonnerLaPartieAction(code: string): Promise<void> {
-  await rangerLaPartie(
+  await agirSurLeCycle(
     code,
     async (partieId, agissant) => {
       await abandonnerLaPartie(db, partieId, agissant);
     },
-    (partie) => adresseDePartie(partie.code),
+    (code) => adresseDePartie(code),
   );
 }
 
 /** Reprend une partie abandonnée : elle redevient la soirée en cours. */
 export async function reprendreLaPartieAction(code: string): Promise<void> {
-  await rangerLaPartie(
+  await agirSurLeCycle(
     code,
     async (partieId, agissant) => {
       await reprendreLaPartie(db, partieId, agissant);
     },
-    (partie) => adresseDePartie(partie.code),
+    (code) => adresseDePartie(code),
   );
 }
 
@@ -267,7 +267,7 @@ export async function reprendreLaPartieAction(code: string): Promise<void> {
  * revenir donnerait un 404 pour toute confirmation.
  */
 export async function supprimerLaPartieAction(code: string): Promise<void> {
-  await rangerLaPartie(
+  await agirSurLeCycle(
     code,
     async (partieId, agissant) => {
       await supprimerLaPartie(db, partieId, agissant);
