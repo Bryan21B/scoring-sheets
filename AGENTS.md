@@ -136,7 +136,11 @@ rien en base, le lien vers un joueur ne s'écrivant qu'au moment où on se chois
 d'appareil (drapeaux et valeur opaque du cookie, lien vers un joueur, lecture de
 la requête), le roster, la désambiguïsation des homonymes et la résolution d'une
 identité déclarée, et la partie : code Crockford, adresse, tablée, création,
-lecture, recherche limitée en débit et salle d'attente. **Toute fonction qui
+lecture, recherche limitée en débit et salle d'attente. La **fin** est dans
+`partie/fin.ts` — l'estampille, le **scellement** qui refuse toute écriture, et
+son miroir qui n'ouvre que la reprise ; les trois gestes qui la posent ou
+l'effacent sont dans `partie/cycle.ts` (abandon, reprise, suppression tant que
+le journal est vide). **Toute fonction qui
 touche la base prend `Base` en paramètre**
 (`src/db/base.ts`), jamais le singleton de `@/db` : c'est ce qui la rend
 vérifiable contre une base jetable (`tests/unit/helpers/base-de-test.ts`).
