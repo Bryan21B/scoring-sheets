@@ -22,6 +22,7 @@ import { PartieScellee, RepriseImpossible } from "@/lib/partie/fin";
 import type { VueDePartie } from "@/lib/partie/lecture";
 import { lirePartieParCode } from "@/lib/partie/lecture";
 import { PAS_DE_LA_PARTIE } from "@/lib/partie/salle-attente";
+import type { JoueurConnu } from "@/lib/roster/noms";
 
 /** La partie que ce code désigne, ou un 404 : le code **est** l'adresse. */
 async function exigerLaPartie(code: string): Promise<VueDePartie> {
@@ -68,6 +69,11 @@ export async function ouvrirLaMancheSuivanteAction(code: string): Promise<void> 
  * paramètre après ce que la page a lié. Il n'est pas lu : chaque envoi porte sa
  * propre condition dans ses champs cachés, et l'état d'avant ne rejuge rien.
  *
+ * Le joueur que la case concerne voyage **avec le refus** : l'écran de
+ * désignation n'a pas de case à lui avant d'en poser une, et ne saurait donc
+ * pas de qui le refus parle. Il se relit de la tablée que la page tient déjà,
+ * jamais du nom qu'un formulaire aurait envoyé.
+ *
  * @throws si l'appareil ne se déclare **aucun** joueur. La passe avant s'ouvre
  * quand même à un tel appareil — elle démarre alors sur la première case
  * manquante, c'est le contrat — mais elle ne peut pas valider : le journal fige
@@ -89,14 +95,16 @@ export async function ecrireLaCaseAction(
     throw new Error("Cet appareil ne se déclare aucun joueur : il n'y a personne pour écrire.");
   }
 
+  const joueurConcerneId = formulaire.get("joueurConcerneId");
   const refus = refusDe(
     await ecrireLaCase(db, {
       mancheId: formulaire.get("mancheId"),
-      joueurConcerneId: formulaire.get("joueurConcerneId"),
+      joueurConcerneId,
       valeurMontree: formulaire.get("valeurMontree"),
       valeur: formulaire.get("valeur"),
       agissant: { joueurId: joueurAgissantId, appareilId: idAppareil ?? null },
     }),
+    concerne(partie, joueurConcerneId),
   );
 
   if (refus !== null) {
@@ -104,6 +112,26 @@ export async function ecrireLaCaseAction(
   }
 
   redirect(`/p/${partie.code}/manche/${retour.numero}/recapitulatif`);
+}
+
+/**
+ * Le participant que cette case concerne, relu de la tablée.
+ *
+ * `ecrireLaCase` a déjà refusé un joueur étranger à la partie quand cette
+ * fonction s'exécute : elle ne garde donc aucune garde, et lever ici serait
+ * doubler une frontière qui a déjà tranché. Elle ne sert qu'à **nommer** —
+ * l'écran de refus dit « la case de Paul », et un identifiant nu ne se lit pas.
+ */
+function concerne(partie: VueDePartie, joueurConcerneId: FormDataEntryValue | null): JoueurConnu {
+  const trouve = partie.participants.find(
+    (participant) => String(participant.id) === String(joueurConcerneId),
+  );
+
+  if (trouve === undefined) {
+    throw new Error(`Le joueur ${joueurConcerneId} n'est pas de la partie ${partie.code}.`);
+  }
+
+  return trouve;
 }
 
 /**

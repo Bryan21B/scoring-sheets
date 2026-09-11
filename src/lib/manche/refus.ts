@@ -1,5 +1,6 @@
 import { enTapee, type Tapee } from "@/lib/manche/pave";
 import type { ResultatDEcriture, ValeurDeCase } from "@/lib/manche/saisie";
+import type { JoueurConnu } from "@/lib/roster/noms";
 
 /**
  * Ce qu'un refus laisse à l'écran, et rien de plus.
@@ -15,6 +16,14 @@ import type { ResultatDEcriture, ValeurDeCase } from "@/lib/manche/saisie";
  * remplacement de la saisie par lui.
  */
 export type RefusDEcriture = {
+  /**
+   * Le joueur que la case **concerne**, jamais celui qui a écrit avant.
+   *
+   * Il voyage avec le refus plutôt que d'être relu de l'écran d'où part le
+   * geste : une **désignation** n'a pas de case à elle avant d'être posée, et
+   * l'écran qui la propose ne sait donc pas de qui le refus va parler.
+   */
+  joueur: JoueurConnu;
   /** Ce que la case porte maintenant — le vide compris, qui est une valeur. */
   valeurArrivee: ValeurDeCase;
   /**
@@ -33,9 +42,9 @@ export type RefusDEcriture = {
  * obtient ce qu'il demandait, et l'écriture sans effet aussi. Annoncer un
  * conflit dont le résultat est celui qu'on voulait serait absurde.
  */
-export function refusDe(resultat: ResultatDEcriture): RefusDEcriture | null {
+export function refusDe(resultat: ResultatDEcriture, joueur: JoueurConnu): RefusDEcriture | null {
   return resultat.statut === "refusee"
-    ? { valeurArrivee: resultat.valeurArrivee, valeurTapee: resultat.valeurRefusee }
+    ? { joueur, valeurArrivee: resultat.valeurArrivee, valeurTapee: resultat.valeurRefusee }
     : null;
 }
 

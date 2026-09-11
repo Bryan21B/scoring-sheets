@@ -106,27 +106,6 @@ async function lireLeContexte(tx: Ecriture, mancheId: number): Promise<ContexteD
   return { partieId: ligne.partieId, numero: ligne.numero, regles: parseRegles(ligne.regles) };
 }
 
-/** Ce qu'une case accepte : le garde-fou anti-doigt-gras, pas une règle de jeu. */
-export type Bornes = { min: number; max: number };
-
-/**
- * Les bornes du **pavé**, ou `null` quand ce mode ne tape aucun chiffre.
- *
- * Deux modes sur trois portent un nombre compté devant soi — l'entier par
- * joueur à 6 qui prend, le total unique à Uno — et c'est la même borne haute
- * qui les garde du doigt gras. `podium` rend `null` : on y **désigne** des
- * joueurs, les jetons sont un résultat, et il n'y a pas de touche à borner.
- *
- * La question se pose à trois couches — le serveur qui écrit, la page qui
- * décide de l'écran, le pavé qui borne les touches — et la poser une seule fois
- * est ce qui garde les trois d'accord.
- */
-export function bornesDeSaisie(regles: Regles): Bornes | null {
-  const { saisie } = regles;
-
-  return saisie.mode === "podium" ? null : { min: saisie.min, max: saisie.max };
-}
-
 /**
  * Vérifie que ce que la case reçoit est **de l'espèce que le mode attend**.
  *

@@ -10,8 +10,7 @@ import { lireLeJoueurDeLAppareil } from "@/lib/appareil/lecture";
 import { adresseDuTiroir } from "@/lib/journal/tiroir";
 import { lireLaManche } from "@/lib/manche/lecture";
 import { numeroDeMancheSchema } from "@/lib/manche/ouverture";
-import { caseDeDepart } from "@/lib/manche/passe-avant";
-import { bornesDeSaisie } from "@/lib/manche/saisie";
+import { departDeLaPasseAvant } from "@/lib/manche/passe-avant";
 import { premierParametre } from "@/lib/partie/identite-url";
 import { lirePartieParCode } from "@/lib/partie/lecture";
 
@@ -32,16 +31,17 @@ const joueurDemandeSchema = z.coerce.number().int().positive();
 export const dynamic = "force-dynamic";
 
 /**
- * La passe avant : **une case, un écran**.
+ * La passe avant : **un geste, un écran**.
  *
- * Elle démarre sur le joueur de l'appareil, et sur la première case manquante
- * quand l'appareil n'est rattaché à aucun participant. Le paramètre `joueur`
- * l'emporte : c'est par lui que le récapitulatif renvoie retaper une ligne
- * précise, et que l'on saisit pour un participant sans appareil.
+ * Elle démarre sur le joueur de l'appareil là où le mode lui fait taper une
+ * valeur, et sur le premier geste que la manche attend sinon. Le paramètre
+ * `joueur` l'emporte : c'est par lui que le récapitulatif renvoie retaper une
+ * ligne précise, et que l'on saisit pour un participant sans appareil.
  *
- * Ce n'est que du câblage : la décision du démarrage vit dans `caseDeDepart`,
- * pure et vérifiée à part, et le choix entre le pavé et l'écran de refus dans
- * `VueDeSaisie`.
+ * Ce n'est que du câblage : la décision du démarrage vit dans
+ * `departDeLaPasseAvant`, pure et vérifiée à part, et le choix entre le pavé, la
+ * désignation et l'écran de refus dans `VueDeSaisie`. Les trois modes passent
+ * donc par cette page-ci sans qu'elle ait à les connaître.
  *
  * L'adresse du tiroir part d'ici plutôt que d'être fabriquée par l'écran de
  * refus : c'est la page qui connaît le code de la partie, et le refus n'a
@@ -55,15 +55,6 @@ export default async function PageDeSaisie(
   const partie = await lirePartieParCode(db, parametres.code);
 
   if (!numero.success || partie === null) {
-    notFound();
-  }
-
-  // Les deux autres modes de saisie suivent leur propre ticket, sur les mêmes
-  // rails : cet écran ne sait taper qu'un entier par joueur, et prétendre le
-  // contraire écrirait une valeur qui ne veut rien dire.
-  const bornes = bornesDeSaisie(partie.regles);
-
-  if (bornes === null) {
     notFound();
   }
 
@@ -81,11 +72,11 @@ export default async function PageDeSaisie(
   const cible = demande.success
     ? demande.data
     : await lireLeJoueurDeLAppareil(db, (await cookies()).get(NOM_COOKIE_APPAREIL)?.value);
-  const caseASaisir = caseDeDepart(manche.cases, cible);
+  const depart = departDeLaPasseAvant(partie.regles, manche.cases, cible);
 
-  // Plus rien à saisir et aucune case à soi : la passe avant s'arrête là, et
+  // Plus rien à poser et aucune case à soi : la passe avant s'arrête là, et
   // c'est le récapitulatif qui prend la main.
-  if (caseASaisir === undefined) {
+  if (depart === undefined) {
     redirect(recapitulatif);
   }
 
@@ -96,8 +87,8 @@ export default async function PageDeSaisie(
         cadre={{
           mancheId: manche.id,
           mancheNumero: manche.numero,
-          caseASaisir,
-          max: bornes.max,
+          depart,
+          regles: partie.regles,
           unite: partie.jeu.unite,
           recapitulatif,
           journal: adresseDuTiroir(partie.code, "corrections"),

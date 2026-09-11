@@ -51,6 +51,7 @@ export default async function PageDeRecapitulatif(
       <Recapitulatif
         manche={manche}
         totaux={etat.totaux}
+        regles={partie.regles}
         unite={partie.jeu.unite}
         adresseDeLaManche={`${adresseDeLaPartie}/manche/${manche.numero}`}
       />

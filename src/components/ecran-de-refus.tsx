@@ -2,8 +2,10 @@ import type { ReactElement } from "react";
 import type { Action } from "@/components/champs";
 import { Button } from "@/components/ui/button";
 import type { EntreeCatalogue } from "@/lib/jeux/catalogue";
+import type { Regles } from "@/lib/jeux/regles";
+import { valeurEnMots } from "@/lib/manche/gestes";
 import { type RefusDEcriture, reappliquer } from "@/lib/manche/refus";
-import type { JoueurConnu } from "@/lib/roster/noms";
+import type { ValeurDeCase } from "@/lib/manche/saisie";
 
 /**
  * Ce que la case porte maintenant, dit d'une phrase.
@@ -11,11 +13,37 @@ import type { JoueurConnu } from "@/lib/roster/noms";
  * Le vide se **nomme** plutôt que de se montrer : un grand tiret au milieu d'un
  * écran de refus se lit « il n'y a rien à dire », alors qu'une case redevenue
  * vide est précisément ce qui vient de se passer.
+ *
+ * La valeur passe par les mots du **mode** : au podium, la colonne porte un
+ * rang, et « la case de Paul porte maintenant 1 » se lirait comme un jeton.
  */
-function phraseDeLaCase(nom: string, valeurArrivee: number | null): string {
+function phraseDeLaCase(regles: Regles, nom: string, valeurArrivee: ValeurDeCase): string {
   return valeurArrivee === null
     ? `La case de ${nom} est redevenue vide.`
-    : `La case de ${nom} porte maintenant ${valeurArrivee}.`;
+    : `La case de ${nom} porte maintenant ${valeurEnMots(regles, valeurArrivee)}.`;
+}
+
+/**
+ * Ce qui vient d'être refusé, dit comme le geste que c'était.
+ *
+ * Une **désignation** ne tape aucun nombre : « ton — n'a pas été écrit » ne se
+ * lit pas, et prétendre qu'une valeur a été tapée serait faux. Les deux espèces
+ * de gestes se disent donc chacune dans ses mots.
+ */
+function phraseDuGeste(regles: Regles, valeurTapee: ValeurDeCase): string {
+  const quoi =
+    valeurTapee === null
+      ? "Ta désignation n’a pas été écrite"
+      : `Ton ${valeurEnMots(regles, valeurTapee)} n’a pas été écrit`;
+
+  return `${quoi} : la case avait changé depuis qu’elle t’a été montrée.`;
+}
+
+/** Le seul bouton de l'écran, nommé par le geste qu'il repose. */
+function libelleDeReapplication(regles: Regles, valeurTapee: ValeurDeCase): string {
+  return valeurTapee === null
+    ? "Réappliquer la désignation"
+    : `Réappliquer ${valeurEnMots(regles, valeurTapee)}`;
 }
 
 /**
@@ -40,8 +68,8 @@ function phraseDeLaCase(nom: string, valeurArrivee: number | null): string {
 export function EcranDeRefus({
   action,
   mancheId,
-  joueur,
   refus,
+  regles,
   unite,
   journal,
   recapitulatif,
@@ -49,9 +77,10 @@ export function EcranDeRefus({
 }: {
   action: Action;
   mancheId: number;
-  /** Le joueur que la case concerne — jamais celui qui a écrit avant. */
-  joueur: JoueurConnu;
+  /** Le refus, qui porte le joueur que la case concerne — jamais l'auteur. */
   refus: RefusDEcriture;
+  /** Les règles figées, pour dire une valeur dans les mots de son mode. */
+  regles: Regles;
   unite: EntreeCatalogue["unite"];
   /** L'adresse du tiroir : « qui » est à un appui, il n'est pas dans le flux. */
   journal: string;
@@ -73,29 +102,29 @@ export function EcranDeRefus({
       <div className="flex flex-col gap-1">
         <p className="text-muted-foreground text-sm">Quelqu’un a été plus rapide</p>
         <h1 className="font-semibold text-3xl tracking-tight">
-          {phraseDeLaCase(joueur.nom, refus.valeurArrivee)}
+          {phraseDeLaCase(regles, refus.joueur.nom, refus.valeurArrivee)}
         </h1>
       </div>
 
       <div className="flex flex-col items-center gap-1">
-        <p className="font-mono text-6xl tabular-nums">{refus.valeurArrivee ?? "—"}</p>
+        <p className="font-mono text-6xl tabular-nums">
+          {refus.valeurArrivee === null ? "—" : valeurEnMots(regles, refus.valeurArrivee)}
+        </p>
         <p className="text-muted-foreground text-sm">
           {refus.valeurArrivee === null ? "case vide" : unite.plusieurs}
         </p>
       </div>
 
-      <p className="text-muted-foreground text-sm">
-        {`Ton ${refus.valeurTapee} n’a pas été écrit : la case avait changé depuis qu’elle t’a été montrée.`}
-      </p>
+      <p className="text-muted-foreground text-sm">{phraseDuGeste(regles, refus.valeurTapee)}</p>
 
       <div className="mt-auto flex flex-col gap-3">
         <form action={action} method="post">
           <input type="hidden" name="mancheId" value={mancheId} />
-          <input type="hidden" name="joueurConcerneId" value={joueur.id} />
+          <input type="hidden" name="joueurConcerneId" value={refus.joueur.id} />
           <input type="hidden" name="valeurMontree" value={repose.valeurMontree} />
           <input type="hidden" name="valeur" value={repose.valeur} />
           <Button type="submit" size="lg" className="w-full" disabled={enCours}>
-            {`Réappliquer ${refus.valeurTapee}`}
+            {libelleDeReapplication(regles, refus.valeurTapee)}
           </Button>
         </form>
 
