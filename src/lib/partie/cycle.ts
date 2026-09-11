@@ -1,4 +1,6 @@
-import type { Base, Ecriture } from "@/db/base";
+import { eq } from "drizzle-orm";
+import type { Base, Ecriture, Lecture } from "@/db/base";
+import { journal, manche, participant, partie } from "@/db/schema";
 import { type Agissant, agissantSchema, consignerUnGesteDePartie } from "@/lib/journal/ligne";
 import {
   effacerLaFin,
@@ -138,5 +140,75 @@ export async function reprendreLaPartie(
     }
 
     await consignerUnGesteDePartie(tx, { partieId, geste: "reprise", agissant });
+  });
+}
+
+/** Ce qu'on dit d'une partie qui a commencé à laisser une trace. */
+const JOURNAL_NON_VIDE =
+  "Cette partie a déjà une histoire : elle ne se supprime plus, elle s’abandonne.";
+
+/**
+ * Le journal de cette partie est-il encore vide ?
+ *
+ * La question qui décide de la suppression, et **la seule** : le journal est
+ * append-only et jamais purgé, tenu par des déclencheurs, donc une partie qui
+ * porte une ligne ne peut plus s'effacer sans faire un trou dedans. Une partie
+ * ouverte par erreur, elle, n'a rien à protéger.
+ *
+ * Exportée parce que l'écran pose la même question avant d'offrir le geste :
+ * un bouton qui refuserait à l'appui ne servirait qu'à faire douter.
+ *
+ * `limit(1)` et non un `count` : on demande s'il existe une ligne, pas combien.
+ */
+export async function journalEstVide(base: Lecture, partieId: number): Promise<boolean> {
+  const [ligne] = await base
+    .select({ id: journal.id })
+    .from(journal)
+    .where(eq(journal.partieId, partieId))
+    .limit(1);
+
+  return ligne === undefined;
+}
+
+/**
+ * Supprime une partie, **tant que son journal est vide**.
+ *
+ * C'est le pendant de l'abandon et ce qui ferme le cycle : une partie créée par
+ * erreur, encore en salle d'attente, n'a rien à protéger — son journal est vide
+ * par construction, puisqu'on ne journalise pas les mouvements de participants
+ * tant qu'il l'est. Passé la première manche saisie, la sortie est l'abandon, et
+ * l'invariant du journal reste entier sans qu'on ait eu à inventer une
+ * suppression douce.
+ *
+ * Elle emporte la tablée et les manches encore vides : une manche ouverte sans
+ * qu'aucune case n'ait été saisie ne consigne rien, si bien qu'une partie peut
+ * en porter une avec un journal vide. Les `saisie` partent par la cascade que
+ * leur clé étrangère déclare.
+ *
+ * **Rien n'est journalisé**, et pour une raison qui n'est pas un oubli : il n'y
+ * aurait plus de partie à laquelle rattacher la ligne, et `journal.partie_id`
+ * est une clé étrangère — c'est même ce qui la rend sûre, puisqu'une partie ne
+ * s'efface qu'avec un journal vide.
+ *
+ * @throws {@link RefusDeCycle} si l'agissant n'est pas de la tablée, ou si le
+ * journal porte au moins une ligne.
+ */
+export async function supprimerLaPartie(
+  base: Base,
+  partieId: number,
+  brut: unknown,
+): Promise<void> {
+  const agissant = agissantSchema.parse(brut);
+
+  await base.transaction(async (tx) => {
+    await exigerUnParticipant(tx, partieId, agissant);
+
+    if (!(await journalEstVide(tx, partieId))) {
+      throw new RefusDeCycle(JOURNAL_NON_VIDE);
+    }
+
+    await tx.delete(manche).where(eq(manche.partieId, partieId));
+    await tx.delete(participant).where(eq(participant.partieId, partieId));
+    await tx.delete(partie).where(eq(partie.id, partieId));
   });
 }

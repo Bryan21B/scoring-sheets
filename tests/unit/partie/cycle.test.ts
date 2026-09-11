@@ -1,15 +1,22 @@
 import { afterEach, beforeEach, describe, expect, it } from "bun:test";
 import { eq } from "drizzle-orm";
 import type { Base } from "@/db/base";
-import { joueur, journal, partie as tablePartie } from "@/db/schema";
+import { joueur, journal, manche, participant, partie as tablePartie } from "@/db/schema";
 import { creerIdAppareil } from "@/lib/appareil/cookie";
 import type { Agissant } from "@/lib/journal/ligne";
 import { cloturerLaManche } from "@/lib/manche/cloture";
 import { ouvrirLaMancheSuivante } from "@/lib/manche/ouverture";
 import { ecrireLaCase } from "@/lib/manche/saisie";
-import { abandonnerLaPartie, RefusDeCycle, reprendreLaPartie } from "@/lib/partie/cycle";
+import {
+  abandonnerLaPartie,
+  journalEstVide,
+  RefusDeCycle,
+  reprendreLaPartie,
+  supprimerLaPartie,
+} from "@/lib/partie/cycle";
 import { lirePartieEnCours } from "@/lib/partie/en-cours";
 import { type FinDePartie, lireLaFin, PartieScellee, RepriseImpossible } from "@/lib/partie/fin";
+import { lirePartieParCode } from "@/lib/partie/lecture";
 import {
   estGelee,
   RefusDArrivee,
@@ -113,6 +120,16 @@ async function terminerLaPartie(): Promise<FinDePartie> {
   }
 
   return cloture.fin;
+}
+
+/** Ce qui pend encore à la partie, et que la suppression doit emporter. */
+async function participantsEnBase(): Promise<number> {
+  return (await base.select().from(participant).where(eq(participant.partieId, partie.partieId)))
+    .length;
+}
+
+async function manchesEnBase(): Promise<number> {
+  return (await base.select().from(manche).where(eq(manche.partieId, partie.partieId))).length;
 }
 
 /** L'estampille que les autres téléphones sondent. */
@@ -332,5 +349,71 @@ describe("reprendre une partie abandonnée", () => {
     });
 
     expect(arrivee).rejects.toBeInstanceOf(RefusDArrivee);
+  });
+});
+
+describe("supprimer une partie", () => {
+  it("l'efface tant que son journal est vide : elle n'a rien à protéger", async () => {
+    await supprimerLaPartie(base, partie.partieId, agissantDeMarie());
+
+    expect(await lirePartieParCode(base, partie.code)).toBeNull();
+    expect(await participantsEnBase()).toBe(0);
+  });
+
+  it("emporte la manche ouverte que personne n'a encore remplie", async () => {
+    await ouvrirLaMancheSuivante(base, partie.partieId);
+
+    await supprimerLaPartie(base, partie.partieId, agissantDeMarie());
+
+    expect(await lirePartieParCode(base, partie.code)).toBeNull();
+    expect(await manchesEnBase()).toBe(0);
+  });
+
+  it("refuse dès que le journal porte une ligne : passé là, la sortie est l'abandon", async () => {
+    const mancheId = (await ouvrirLaMancheSuivante(base, partie.partieId)).id;
+    await ecrireLaCase(base, {
+      mancheId,
+      joueurConcerneId: marie(),
+      valeurMontree: null,
+      valeur: 8,
+      agissant: agissantDeMarie(),
+    });
+
+    const suppression = supprimerLaPartie(base, partie.partieId, agissantDeMarie());
+
+    expect(suppression).rejects.toBeInstanceOf(RefusDeCycle);
+    expect((await lirePartieParCode(base, partie.code))?.code).toBe(partie.code);
+  });
+
+  it("refuse une partie abandonnée : l'abandon lui a justement écrit une ligne", async () => {
+    await abandonnerLaPartie(base, partie.partieId, agissantDeMarie());
+
+    const suppression = supprimerLaPartie(base, partie.partieId, agissantDeMarie());
+
+    expect(suppression).rejects.toBeInstanceOf(RefusDeCycle);
+    expect((await lirePartieParCode(base, partie.code))?.code).toBe(partie.code);
+  });
+
+  it("refuse le spectateur, et laisse la partie en place", async () => {
+    const suppression = supprimerLaPartie(base, partie.partieId, await unSpectateur());
+
+    expect(suppression).rejects.toBeInstanceOf(RefusDeCycle);
+    expect((await lirePartieParCode(base, partie.code))?.code).toBe(partie.code);
+  });
+});
+
+describe("journalEstVide", () => {
+  it("est vrai en salle d'attente, où rien n'a encore été consigné", async () => {
+    expect(await journalEstVide(base, partie.partieId)).toBe(true);
+  });
+
+  it("devient faux à la première ligne, et ne revient jamais", async () => {
+    await abandonnerLaPartie(base, partie.partieId, agissantDeMarie());
+
+    expect(await journalEstVide(base, partie.partieId)).toBe(false);
+
+    await reprendreLaPartie(base, partie.partieId, agissantDeMarie());
+
+    expect(await journalEstVide(base, partie.partieId)).toBe(false);
   });
 });
