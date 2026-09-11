@@ -1,5 +1,19 @@
 # Changelog
 
+## [0.10.0](https://github.com/Bryan21B/scoring-sheets/compare/v0.9.0...v0.10.0) (2026-09-11)
+
+### Fonctionnalités
+
+* **accueil:** Ouvrir l'historique depuis l'accueil, dans ses deux états ([8f78bcf](https://github.com/Bryan21B/scoring-sheets/commit/8f78bcfc7c0aba25c4c325408c35539a1f4b8ef6)), closes [#40](https://github.com/Bryan21B/scoring-sheets/issues/40)
+* **historique:** Filtrer par jeu, et par rien d'autre ([df72272](https://github.com/Bryan21B/scoring-sheets/commit/df72272bb4ae1e25a40c7c98e8101631a3efa1c6)), closes [#40](https://github.com/Bryan21B/scoring-sheets/issues/40)
+* **historique:** Rendre une ligne, et ce qu'elle dit d'une partie finie ([8bb2fe0](https://github.com/Bryan21B/scoring-sheets/commit/8bb2fe07cbf91d5591e2bb4908b784a6d38cb791)), closes [#40](https://github.com/Bryan21B/scoring-sheets/issues/40)
+* **historique:** Renvoyer au catalogue à vide, et dérouler d'une page ([e2fc679](https://github.com/Bryan21B/scoring-sheets/commit/e2fc67968ce107ed450c0396e3248aff14dbef98)), closes [#40](https://github.com/Bryan21B/scoring-sheets/issues/40)
+* **historique:** Servir la liste à /historique, adresse comprise ([4e597bf](https://github.com/Bryan21B/scoring-sheets/commit/4e597bf0111e02fe23fd8d8adbe003f7a7101a50)), closes [#38](https://github.com/Bryan21B/scoring-sheets/issues/38) [#40](https://github.com/Bryan21B/scoring-sheets/issues/40)
+
+### Corrections
+
+* **historique:** Arrêter le « voir plus » au plafond, qu'il dépassait ([a644046](https://github.com/Bryan21B/scoring-sheets/commit/a64404671ef7b9ebd85aad62c4847f960636fb11)), closes [#40](https://github.com/Bryan21B/scoring-sheets/issues/40)
+
 ## [0.9.0](https://github.com/Bryan21B/scoring-sheets/compare/v0.8.0...v0.9.0) (2026-09-11)
 
 ### Fonctionnalités
