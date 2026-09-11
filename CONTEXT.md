@@ -88,15 +88,25 @@ Tranché par [Qui pilote la passe avant, quand chacun compte pour soi](https://g
 
 - **Désignation** — nommer un joueur : « qui est sorti ? » à Uno, « premier ? »
   et « deuxième ? » à Dnup. L'information est publique, toute la table l'a vue,
-  et une seule personne la pose.
+  et une seule personne la pose. Elle s'**écrit dans une case** comme une
+  valeur : le **rang** au podium, le **vide** à Uno — où la ligne *est* la
+  désignation, et où le total se tape ensuite dans cette case-là.
 - **Valeur** — un nombre compté devant soi, que la case concerne. Les têtes de
   bœuf à 6 qui prend en sont le seul cas : c'est le seul mode qui en porte
   plusieurs par manche.
+- **Case touchée** — une case dont la **ligne existe**, la vide comprise. Une
+  case absente et une case touchée mais vide portent toutes deux `NULL`, et les
+  confondre effacerait l'état qu'Uno traverse entre la désignation et le total :
+  le moteur ne reçoit que les cases touchées, une par participant seulement là
+  où chacun compte devant soi.
 - **Passe avant** — le parcours de saisie d'une manche, un écran à la fois.
   Elle enchaîne les désignations d'abord, puis les valeurs. Elle **démarre sur
   soi** et s'arrête là : elle ne pousse jamais vers l'écran d'un autre joueur.
-  Sans appareil rattaché à un participant de la partie, elle démarre sur la
-  première case manquante.
+  Sans appareil rattaché à un participant de la partie, elle démarre sur le
+  premier geste que la manche attend. Elle se **distribue** exactement quand la
+  manche porte plus d'une valeur — donc au seul 6 qui prend : ailleurs, un seul
+  geste est en cours pour toute la table, et les cinq téléphones montrent le
+  même écran.
 - **Pavé** — le clavier numérique **maison** de la passe avant : dix touches
   toujours ouvertes, jamais le clavier système. Un chiffre qui ferait sortir des
   bornes du mode ne prend **pas** — refus sec, sans boîte de dialogue, et sans

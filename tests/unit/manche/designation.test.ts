@@ -4,7 +4,13 @@ import { trouverEntree } from "@/lib/jeux/catalogue";
 import { estComplete, gagnantDeManche } from "@/lib/jeux/moteur";
 import type { Regles } from "@/lib/jeux/regles";
 import { resoudreRegles } from "@/lib/jeux/resolution";
-import { lireLaManche, mancheDuMoteur, type VueDeManche } from "@/lib/manche/lecture";
+import { cloturerLaManche, RefusDeCloture } from "@/lib/manche/cloture";
+import {
+  evaluerLaPartie,
+  lireLaManche,
+  mancheDuMoteur,
+  type VueDeManche,
+} from "@/lib/manche/lecture";
 import { ouvrirLaMancheSuivante } from "@/lib/manche/ouverture";
 import { ecrireLaCase } from "@/lib/manche/saisie";
 import { type BaseDeTest, creerBaseDeTest } from "../helpers/base-de-test";
@@ -214,5 +220,79 @@ describe("Dnup à deux joueurs : sans jetons, en manches gagnées", () => {
     const table = await dnupADeux();
 
     await expect(ecrire(table, 0, "2")).rejects.toThrow();
+  });
+});
+
+describe("clore une manche des deux autres modes, de bout en bout", () => {
+  /** Clôt la manche en cours, par le joueur qui tient le téléphone. */
+  async function clore(table: TableDeTest, mancheId = table.mancheId) {
+    return cloturerLaManche(base, { mancheId, parJoueurId: joueurDeLaPartie(table.partie, 0) });
+  }
+
+  it("refuse de clore une manche d'Uno dont le total n'est pas tapé", async () => {
+    const table = await uno();
+
+    await ecrire(table, 1, "");
+
+    await expect(clore(table)).rejects.toThrow(RefusDeCloture);
+  });
+
+  it("clôt une manche d'Uno saisie en deux gestes", async () => {
+    const table = await uno();
+
+    await ecrire(table, 1, "");
+    await ecrire(table, 1, "24", "");
+
+    expect((await clore(table)).statut).toBe("close");
+  });
+
+  it("refuse de clore une manche de Dnup à qui il manque le deuxième sorti", async () => {
+    const table = await dnup();
+
+    await ecrire(table, 2, "1");
+
+    await expect(clore(table)).rejects.toThrow(RefusDeCloture);
+  });
+
+  it("clôt une manche de Dnup désignée de bout en bout, et distribue les jetons", async () => {
+    const table = await dnup();
+
+    await ecrire(table, 2, "1");
+    await ecrire(table, 0, "2");
+
+    expect((await clore(table)).statut).toBe("close");
+
+    const etat = await evaluerLaPartie(base, table.partie.partieId, table.regles);
+
+    expect(etat.totaux.get(joueurDeLaPartie(table.partie, 2))).toBe(2);
+    expect(etat.totaux.get(joueurDeLaPartie(table.partie, 0))).toBe(1);
+    expect(etat.totaux.get(joueurDeLaPartie(table.partie, 1))).toBe(0);
+  });
+
+  it("termine Dnup à deux sur deux manches gagnées, sans jamais créditer un jeton", async () => {
+    const table = await dnupADeux();
+    const marie = joueurDeLaPartie(table.partie, 0);
+
+    await ecrire(table, 0, "1");
+    expect((await clore(table)).fin).toBeNull();
+
+    const seconde = await ouvrirLaMancheSuivante(base, table.partie.partieId);
+
+    await ecrireLaCase(base, {
+      mancheId: seconde.id,
+      joueurConcerneId: marie,
+      valeurMontree: null,
+      valeur: "1",
+      agissant: { joueurId: marie, appareilId: table.partie.idAppareil },
+    });
+
+    const derniere = await clore(table, seconde.id);
+
+    expect(derniere.fin?.cause).toBe("terminee");
+
+    const etat = await evaluerLaPartie(base, table.partie.partieId, table.regles);
+
+    expect(etat.manchesGagnees.get(marie)).toBe(2);
+    expect([...etat.totaux.values()]).toEqual([0, 0]);
   });
 });
