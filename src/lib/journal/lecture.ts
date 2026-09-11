@@ -1,8 +1,12 @@
 import { desc, eq } from "drizzle-orm";
 import { alias } from "drizzle-orm/sqlite-core";
 import type { Base } from "@/db/base";
-import { joueur, journal } from "@/db/schema";
-import { detailDeCorrectionSchema, detailDeSaisieSchema } from "@/lib/journal/ligne";
+import { joueur, journal, participant } from "@/db/schema";
+import {
+  detailDeCorrectionSchema,
+  detailDeSaisieSchema,
+  detailDeSuppressionSchema,
+} from "@/lib/journal/ligne";
 import {
   type DetailDuTiroir,
   etiquetteDAppareil,
@@ -42,6 +46,36 @@ function lireUneCorrection(charge: unknown): DetailDuTiroir {
   return correction.success ? { forme: "correction", ...correction.data } : sansDetail();
 }
 
+/** Les noms de la tablée, par identifiant de joueur. */
+type NomsDeTablee = ReadonlyMap<number, string>;
+
+/**
+ * Le nom qu'on donne à un joueur que la tablée ne porte plus.
+ *
+ * Inatteignable par le chemin normal — une ligne de `participant` ne s'efface
+ * qu'avec la partie entière, et une partie ne s'efface qu'avec un journal vide
+ * — mais le journal ne se migre **jamais** : une ligne garde pour toujours la
+ * forme de son époque, et un repli total vaut mieux qu'une valeur effacée qui
+ * disparaîtrait de la trace faute de savoir à qui l'attribuer.
+ */
+const JOUEUR_SORTI_DU_ROSTER = "joueur inconnu";
+
+function lireDesValeursEffacees(charge: unknown, noms: NomsDeTablee): DetailDuTiroir {
+  const suppression = detailDeSuppressionSchema.safeParse(charge);
+
+  if (!suppression.success) {
+    return sansDetail();
+  }
+
+  return {
+    forme: "valeursEffacees",
+    valeurs: suppression.data.valeurs.map(({ joueurId, valeur }) => ({
+      joueur: { id: joueurId, nom: noms.get(joueurId) ?? JOUEUR_SORTI_DU_ROSTER },
+      valeur,
+    })),
+  };
+}
+
 /**
  * Quelle charge utile chaque geste porte, **un par un et sans défaut**.
  *
@@ -50,30 +84,56 @@ function lireUneCorrection(charge: unknown): DetailDuTiroir {
  * geste non-`correction` comme une saisie, si bien qu'un geste futur portant sa
  * propre charge se serait fait lire comme une valeur au lieu d'être ignoré.
  *
- * `suppressionDeManche` est à `sansDetail` **faute d'écrivain** : la spec veut
- * qu'une suppression emporte les valeurs qu'elle efface, mais rien ne
- * l'écrit encore, et inventer ici la forme que prendra ce JSON serait deviner.
+ * `participantAjoute` et `participantRetire` sont à `sansDetail` **parce qu'ils
+ * n'ont rien de plus à dire** : le joueur concerné est une colonne, pas une
+ * charge utile, et le tiroir le nomme déjà comme cible de la ligne.
+ *
+ * Les noms de la tablée ne servent qu'à la suppression de manche, et sont
+ * passés à toutes : une signature commune est ce qui laisse le `Record` rester
+ * exhaustif par le type, donc ce qui fait échouer la compilation le jour où un
+ * geste entre au schéma sans qu'on décide ce qu'on en lit.
  */
-const LECTURE_DU_DETAIL: Record<Geste, (charge: unknown) => DetailDuTiroir> = {
+const LECTURE_DU_DETAIL: Record<Geste, (charge: unknown, noms: NomsDeTablee) => DetailDuTiroir> = {
   saisie: lireUneValeur,
   correction: lireUneCorrection,
-  suppressionDeManche: sansDetail,
+  suppressionDeManche: lireDesValeursEffacees,
   participantAjoute: sansDetail,
   participantRetire: sansDetail,
   abandon: sansDetail,
   reprise: sansDetail,
 };
 
-function lireLeDetail(geste: Geste, brut: string | null): DetailDuTiroir {
+function lireLeDetail(geste: Geste, brut: string | null, noms: NomsDeTablee): DetailDuTiroir {
   if (brut === null) {
     return sansDetail();
   }
 
   try {
-    return LECTURE_DU_DETAIL[geste](JSON.parse(brut));
+    return LECTURE_DU_DETAIL[geste](JSON.parse(brut), noms);
   } catch {
     return sansDetail();
   }
+}
+
+/**
+ * Les noms de tous ceux qui ont eu une place dans cette partie, retirés compris.
+ *
+ * Lus de `participant` et non de `joueur` en entier : une valeur effacée
+ * concerne toujours quelqu'un de la tablée — la saisie l'a vérifié avant
+ * d'écrire — et relire le roster global rapporterait des dizaines de noms pour
+ * en utiliser trois.
+ *
+ * Le retiré y est : ses valeurs ont existé, et la ligne qui les efface doit
+ * pouvoir le nommer.
+ */
+async function nomsDeLaTablee(base: Base, partieId: number): Promise<NomsDeTablee> {
+  const lignes = await base
+    .select({ id: joueur.id, nom: joueur.nom })
+    .from(participant)
+    .innerJoin(joueur, eq(joueur.id, participant.joueurId))
+    .where(eq(participant.partieId, partieId));
+
+  return new Map(lignes.map(({ id, nom }) => [id, nom]));
 }
 
 /**
@@ -111,6 +171,7 @@ async function lireLesLignes(base: Base, partieId: number): Promise<LigneDuTiroi
     .orderBy(desc(journal.ecritLe), desc(journal.id));
 
   const etiquettes = etiqueterLesAppareils(lignes);
+  const noms = await nomsDeLaTablee(base, partieId);
 
   return lignes.map((ligne) => ({
     id: ligne.id,
@@ -122,7 +183,7 @@ async function lireLesLignes(base: Base, partieId: number): Promise<LigneDuTiroi
         ? null
         : { id: ligne.concerneId, nom: ligne.concerneNom },
     mancheNumero: ligne.mancheNumero,
-    detail: lireLeDetail(ligne.geste, ligne.detail),
+    detail: lireLeDetail(ligne.geste, ligne.detail, noms),
     ecritLe: ligne.ecritLe,
   }));
 }

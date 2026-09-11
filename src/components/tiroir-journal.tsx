@@ -3,6 +3,7 @@ import type { Action } from "@/components/champs";
 import { Button } from "@/components/ui/button";
 import {
   adresseDuTiroir,
+  type CaseEffacee,
   type DetailDuTiroir,
   type Geste,
   horodatage,
@@ -375,7 +376,9 @@ function cibleDeLaLigne(ligne: LigneDuTiroir): string {
  *
  * Une correction montre **les deux valeurs** : sans l'ancienne, le journal
  * enregistre que quelque chose a changé sans dire depuis quoi, ce qui est la
- * seule chose qu'on serait venu y lire.
+ * seule chose qu'on serait venu y lire. Une **suppression de manche** les montre
+ * toutes, et pour la même raison : sans elles, la ligne dit que quelque chose a
+ * disparu sans dire quoi.
  *
  * Le vide se **nomme**, parce qu'il est un état et non une absence : c'est la
  * désignation d'Uno, celle qui dit « il est sorti » avant que son total soit
@@ -388,11 +391,42 @@ function Valeurs({ detail }: { detail: DetailDuTiroir }): ReactElement | null {
     return null;
   }
 
+  if (detail.forme === "valeursEffacees") {
+    return <ValeursEffacees valeurs={detail.valeurs} />;
+  }
+
   return (
     <p className="font-mono text-base tabular-nums">
       {detail.forme === "correction"
         ? `${detail.ancienne ?? VIDE} → ${detail.nouvelle ?? VIDE}`
         : (detail.valeur ?? VIDE)}
     </p>
+  );
+}
+
+/**
+ * Ce qu'une suppression de manche a emporté, une case par ligne.
+ *
+ * Une liste et non une phrase : c'est la ligne de grille qui vient de
+ * disparaître, et la rendre dans sa forme est ce qui la laisse se comparer à
+ * celle qu'on ressaisira. Chaque case porte **le nom de son joueur** — un
+ * nombre nu ne dirait pas de qui il était, ce qui est la moitié de ce qu'on
+ * vient lire.
+ *
+ * Rien du tout quand la manche ne portait rien : une manche ouverte que
+ * personne n'a remplie n'a effacé aucune valeur, et une liste vide s'annoncerait
+ * pour ne rien dire. Le libellé du geste et le numéro de manche suffisent alors.
+ */
+function ValeursEffacees({ valeurs }: { valeurs: readonly CaseEffacee[] }): ReactElement | null {
+  if (valeurs.length === 0) {
+    return null;
+  }
+
+  return (
+    <ul className="font-mono text-base tabular-nums">
+      {valeurs.map(({ joueur, valeur }) => (
+        <li key={joueur.id}>{`${joueur.nom} ${valeur ?? VIDE}`}</li>
+      ))}
+    </ul>
   );
 }

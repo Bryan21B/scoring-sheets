@@ -48,6 +48,47 @@ export const detailDeCorrectionSchema = z.strictObject({
 });
 
 /**
+ * Une case qu'une suppression a emportée : **de qui**, et ce qu'elle portait.
+ *
+ * L'identifiant du joueur et **jamais son nom**. Renommer propage partout,
+ * journal compris, parce que c'est le même humain qui a marqué le même score —
+ * graver « Marie » ici figerait le nom du jour de la suppression et ferait
+ * mentir le tiroir au premier renommage. Le nom se relit, comme il se relit
+ * déjà pour le joueur agissant et pour le joueur concerné.
+ *
+ * `valeur` est nullable comme la colonne qu'elle enregistre : une case
+ * **touchée mais vide** est la désignation d'Uno, et c'est une valeur — la
+ * taire ferait disparaître de la trace la seule chose que cette manche portait.
+ */
+export const valeurEffaceeSchema = z.strictObject({
+  joueurId: z.number().int().positive(),
+  valeur: z.number().int().nonnegative().nullable(),
+});
+
+/** Une case emportée par une suppression, validée. */
+export type ValeurEffacee = z.infer<typeof valeurEffaceeSchema>;
+
+/**
+ * Ce qu'une ligne `suppressionDeManche` garde : **toutes** les valeurs effacées.
+ *
+ * Sans elles, le journal enregistre que quelque chose a disparu sans dire quoi,
+ * ce qui est la seule chose qu'on serait venu y lire.
+ *
+ * Un tableau dans **une** charge utile, et non cinq lignes : une suppression à
+ * cinq joueurs reste un geste unique, et la décomposer la ferait lire comme
+ * cinq actes séparés. La liste peut être **vide** — une manche ouverte que
+ * personne n'a remplie n'efface rien — et c'est un état, pas un défaut : la
+ * ligne dit alors qu'il ne s'est rien perdu.
+ *
+ * Le numéro de la manche n'y est pas : il vit dans la colonne `manche_numero`,
+ * comme pour la saisie et la correction, et l'y redire ferait deux endroits à
+ * garder d'accord.
+ */
+export const detailDeSuppressionSchema = z.strictObject({
+  valeurs: z.array(valeurEffaceeSchema),
+});
+
+/**
  * Un geste **sur une case**, et la charge utile que son discriminant impose.
  *
  * Union discriminée plutôt que deux champs optionnels : une correction sans
@@ -89,6 +130,51 @@ export async function consignerUnGesteDeCase(tx: Ecriture, ligne: LigneDeCase): 
     mancheNumero: ligne.mancheNumero,
     joueurConcerneId: ligne.joueurConcerneId,
     detail: JSON.stringify(ligne.detail),
+    ecritLe: new Date(),
+  });
+}
+
+/**
+ * Une suppression de manche à consigner : la manche, et ce qu'elle emportait.
+ *
+ * Pas de `joueurConcerneId` : la ligne ne concerne **personne en particulier**,
+ * elle les concerne tous, et c'est la charge utile qui porte le détail. Y
+ * mettre le premier joueur de la tablée ferait lire un geste collectif comme
+ * une case.
+ */
+export type LigneDeSuppression = {
+  partieId: number;
+  /** Le numéro nu, celui qui ne se réutilisera jamais. */
+  mancheNumero: number;
+  valeurs: readonly ValeurEffacee[];
+  agissant: Agissant;
+};
+
+/**
+ * Écrit la ligne d'une suppression, **dans la transaction qui efface la manche**.
+ *
+ * Séparée de ses deux jumelles pour la même raison qu'elles le sont entre
+ * elles : chacune a une forme exacte, et les réunir obligerait chaque appelant
+ * à passer des `null` dont le type ne dirait plus qu'ils sont obligatoires ici
+ * et interdits là. Celle-ci est la seule à porter une manche **sans** joueur
+ * concerné.
+ *
+ * `Ecriture` et non `Base` : une manche effacée dont la ligne manquerait ferait
+ * disparaître des valeurs sans laisser de trace, ce qui est précisément ce que
+ * le journal existe pour empêcher.
+ */
+export async function consignerUneSuppressionDeManche(
+  tx: Ecriture,
+  ligne: LigneDeSuppression,
+): Promise<void> {
+  await tx.insert(journal).values({
+    partieId: ligne.partieId,
+    geste: "suppressionDeManche",
+    joueurAgissantId: ligne.agissant.joueurId,
+    appareilId: ligne.agissant.appareilId,
+    mancheNumero: ligne.mancheNumero,
+    joueurConcerneId: null,
+    detail: JSON.stringify({ valeurs: ligne.valeurs }),
     ecritLe: new Date(),
   });
 }

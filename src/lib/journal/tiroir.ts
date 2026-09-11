@@ -28,7 +28,18 @@ export type Geste = (typeof journal.$inferSelect)["geste"];
 export type DetailDuTiroir =
   | { forme: "valeur"; valeur: number | null }
   | { forme: "correction"; ancienne: number | null; nouvelle: number | null }
+  | { forme: "valeursEffacees"; valeurs: readonly CaseEffacee[] }
   | { forme: "aucun" };
+
+/**
+ * Une case qu'une suppression a emportée, telle que le tiroir la montre.
+ *
+ * Le joueur **nommé**, alors que la charge utile ne garde que son identifiant :
+ * le nom se relit au moment où l'on ouvre le tiroir, exactement comme celui du
+ * joueur agissant. Un nombre nu ne dirait pas de qui il était, ce qui est la
+ * moitié de ce qu'on vient lire.
+ */
+export type CaseEffacee = { joueur: JoueurConnu; valeur: number | null };
 
 /** Une ligne du journal, telle que le tiroir la montre. */
 export type LigneDuTiroir = {

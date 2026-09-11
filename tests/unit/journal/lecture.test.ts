@@ -1,11 +1,12 @@
 import { afterEach, beforeEach, describe, expect, it } from "bun:test";
 import type { Base } from "@/db/base";
-import { appareil, journal } from "@/db/schema";
+import { appareil } from "@/db/schema";
 import { creerIdAppareil, type IdAppareil } from "@/lib/appareil/cookie";
 import { lireLeTiroir } from "@/lib/journal/lecture";
 import { cloturerLaManche } from "@/lib/manche/cloture";
 import { ouvrirLaMancheSuivante } from "@/lib/manche/ouverture";
 import { ecrireLaCase } from "@/lib/manche/saisie";
+import { supprimerLaManche } from "@/lib/manche/suppression";
 import { abandonnerLaPartie, reprendreLaPartie } from "@/lib/partie/cycle";
 import { PartieScellee } from "@/lib/partie/fin";
 import { type BaseDeTest, creerBaseDeTest } from "../helpers/base-de-test";
@@ -82,22 +83,16 @@ async function unSecondTelephoneDe(joueurId: number): Promise<IdAppareil> {
 }
 
 /**
- * Une suppression de manche, posée à la main.
+ * Une suppression de manche, par le **vrai chemin d'écriture**.
  *
- * Le seul geste de ces tests qui n'ait pas de chemin d'écriture : supprimer une
- * manche n'est pas encore construit. On insère donc la ligne directement, ce
- * qui reste honnête ici — ce qu'on vérifie est le **filtre du lecteur sur le
- * geste**, pas la forme qu'un écrivain lui donnera.
+ * Elle emporte la manche 1 que le `beforeEach` a ouverte, donc les saisies que
+ * les tests viennent d'y poser. Les lignes de journal antérieures restent — le
+ * journal est append-only — et c'est bien ce que les portées doivent montrer.
  */
 async function consignerUneSuppression(): Promise<void> {
-  await base.insert(journal).values({
-    partieId: partie.partieId,
-    geste: "suppressionDeManche",
-    joueurAgissantId: marie(),
-    appareilId: partie.idAppareil,
-    mancheNumero: 1,
-    detail: null,
-    ecritLe: new Date(),
+  await supprimerLaManche(base, partie.partieId, {
+    numero: 1,
+    agissant: { joueurId: marie(), appareilId: partie.idAppareil },
   });
 }
 
@@ -327,11 +322,21 @@ describe("le tiroir d'une partie scellée", () => {
       .filter((ligne) => !/^\s*(\/\/|\/\*|\*)/.test(ligne))
       .join("\n");
 
-    // Les tables lues sont épinglées plutôt que cherchées par mot : « participant »
-    // apparaît légitimement dans le code sous les noms de gestes
-    // `participantAjoute` et `participantRetire`. Ajouter `participant` ou
-    // `partie` à cet import est ce qu'il faut attraper, et c'est ce que ça attrape.
-    expect(code).toContain('import { joueur, journal } from "@/db/schema";');
+    // Les deux tables interdites sont **nommées**, plutôt que la liste entière
+    // épinglée : `appareil` est l'identité de celui qui ouvre, `partie` est son
+    // état — les deux seules lectures qui fermeraient le tiroir ou le
+    // conditionneraient. `participant` n'en est pas : il donne les **noms de la
+    // tablée**, ce que le tiroir montre déjà pour le joueur concerné, et ce
+    // dont une suppression de manche a besoin pour dire de qui étaient les
+    // valeurs qu'elle a emportées. Épingler la liste exacte, comme ce test le
+    // faisait, interdisait cet ajout-là sans protéger davantage.
+    const tables = (/import \{([^}]*)\} from "@\/db\/schema";/.exec(code)?.[1] ?? "")
+      .split(",")
+      .map((nom) => nom.trim());
+
+    expect(tables).toContain("journal");
+    expect(tables).not.toContain("appareil");
+    expect(tables).not.toContain("partie");
     expect(code).not.toContain("@/lib/appareil");
     expect(code).not.toContain("finLe");
     expect(code).not.toContain("finCause");
