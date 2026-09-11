@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.9.0](https://github.com/Bryan21B/scoring-sheets/compare/v0.8.0...v0.9.0) (2026-09-11)
+
+### Fonctionnalités
+
+* **cloture:** Offrir la clôture au récapitulatif et n'y annoncer la fin qu'à ce moment ([906816d](https://github.com/Bryan21B/scoring-sheets/commit/906816defe20c2501818aedb563cb9246120b51b)), closes [#31](https://github.com/Bryan21B/scoring-sheets/issues/31)
+* **cloture:** Refuser la clôture à qui n'est pas de la tablée ([6a9e888](https://github.com/Bryan21B/scoring-sheets/commit/6a9e8885ad1820b0c8fbffd3bb711379a7f647bf)), closes [#31](https://github.com/Bryan21B/scoring-sheets/issues/31)
+* **historique:** Lire les parties finies, la plus récente d'abord ([d9670de](https://github.com/Bryan21B/scoring-sheets/commit/d9670de13c7c024270d0780e56013e289ead28a1)), closes [#40](https://github.com/Bryan21B/scoring-sheets/issues/40)
+* **historique:** Mener la liste à la fiche de partie, grille et journal compris ([944410f](https://github.com/Bryan21B/scoring-sheets/commit/944410f3e5f3416c14a094a6b0a98783f45f52ed)), closes [#40](https://github.com/Bryan21B/scoring-sheets/issues/40)
+* **saisie:** Arrêter le geste par un écran quand quelqu'un est passé avant ([c381d95](https://github.com/Bryan21B/scoring-sheets/commit/c381d951abfdf649d03b048f65cce3e4e7f0e1d1)), closes [#30](https://github.com/Bryan21B/scoring-sheets/issues/30)
+* **saisie:** Rendre le refus et la clôture lisibles jusqu'à l'écran ([749eb03](https://github.com/Bryan21B/scoring-sheets/commit/749eb0321b78ba7fceda5d08753e652fceadd2b4)), closes [#30](https://github.com/Bryan21B/scoring-sheets/issues/30) [#31](https://github.com/Bryan21B/scoring-sheets/issues/31)
+* **saisie:** Rendre un refus lisible plutôt qu'un statut à interpréter ([829a530](https://github.com/Bryan21B/scoring-sheets/commit/829a53005ff7fa0dfec29e7b545844b1e20f497e)), closes [#30](https://github.com/Bryan21B/scoring-sheets/issues/30)
+
 ## [0.8.0](https://github.com/Bryan21B/scoring-sheets/compare/v0.7.0...v0.8.0) (2026-09-10)
 
 ### Fonctionnalités
