@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.12.0](https://github.com/Bryan21B/scoring-sheets/compare/v0.11.0...v0.12.0) (2026-09-11)
+
+### Fonctionnalités
+
+* **manche:** Écrire une désignation, et distinguer une case touchée d'une absente ([c977d9f](https://github.com/Bryan21B/scoring-sheets/commit/c977d9f2c4cc1818905b7d1d955f023d5e2f4fa1)), closes [#33](https://github.com/Bryan21B/scoring-sheets/issues/33)
+* **manche:** Enchaîner les désignations plutôt que de repasser par le récapitulatif ([24f52f6](https://github.com/Bryan21B/scoring-sheets/commit/24f52f67a83bd45a0461a91969d0174a85e101fe)), closes [#33](https://github.com/Bryan21B/scoring-sheets/issues/33)
+* **manche:** Faire dériver la passe avant du mode, et lui donner l'écran de désignation ([e6a4c80](https://github.com/Bryan21B/scoring-sheets/commit/e6a4c8095605367e3a878ef256f1fc507bc8d102)), closes [#33](https://github.com/Bryan21B/scoring-sheets/issues/33)
+
+### Refactoring
+
+* **manche:** Refermer ce que la revue a trouvé, et dire vrai dans les JSDoc ([0d60098](https://github.com/Bryan21B/scoring-sheets/commit/0d6009885ceef21536b68cff95be6c227f06f298)), closes [#33](https://github.com/Bryan21B/scoring-sheets/issues/33)
+
 ## [0.11.0](https://github.com/Bryan21B/scoring-sheets/compare/v0.10.0...v0.11.0) (2026-09-11)
 
 ### Fonctionnalités
