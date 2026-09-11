@@ -101,7 +101,9 @@ déclarations de la même forme divergent le jour où l'une est corrigée seule.
 
 - `src/app/` — routes App Router. `page.tsx` est l'accueil, qui montre le
 catalogue tant qu'aucune partie n'est en cours ; `creer/[jeuId]/` la suite
-d'écrans de création et son action serveur ; `p/[code]/` la page d'une partie ;
+d'écrans de création et son action serveur ; `p/[code]/` la page d'une partie —
+en cours ou scellée, auquel cas sa fiche ; `historique/` la liste des parties
+finies, filtrable par jeu, d'où l'on rejoint ces fiches ;
 `health/route.ts` la sonde de santé, qui touche la base à dessein.
 - `src/components/ui/` — primitives shadcn/ui. Les ajouter avec
 `bunx shadcn@latest add <composant>`, ne pas les écrire à la main.

@@ -22,8 +22,13 @@ import { MARIE } from "./helpers/tablee";
 const SIX_QUI_PREND = trouverEntree("6-qui-prend");
 const ENTREES = Object.values(CATALOGUE);
 
-/** Tout l'historique, sans filtre : ce que `/historique` montre par défaut. */
-const TOUT: FiltreDHistorique = { jeuId: null, combien: 20 };
+/**
+ * Ce que `/historique` sans paramètre demande.
+ *
+ * Lu par `filtreDeLAdresse` plutôt que recopié : la page par défaut est une
+ * décision de l'adresse, et une copie ici vieillirait le jour où elle change.
+ */
+const TOUT: FiltreDHistorique = filtreDeLAdresse({});
 
 /** La date de fin des lignes de ces tests, fixe pour que l'heure lue le soit. */
 const FIN = new Date("2026-09-08T19:45:00.000Z");
@@ -73,6 +78,17 @@ describe("une ligne d'historique", () => {
     expect(html).toContain(FIN.toISOString());
     expect(html).toContain(MARIE.nom);
     expect(html).toContain("3 joueurs");
+  });
+
+  it("rend les lignes dans l'ordre reçu, sans en inventer un second", () => {
+    // L'ordre — la plus récente d'abord, par date de fin — est celui du lecteur,
+    // qui le tient de l'index partiel. Un tri refait ici le contredirait sans
+    // que rien ne proteste.
+    const html = rendre({
+      lignes: [ligne({ code: "A1B2C3" }), ligne({ code: "D4E5F6" })],
+    });
+
+    expect(html.indexOf('href="/p/A1B2C3"')).toBeLessThan(html.indexOf('href="/p/D4E5F6"'));
   });
 
   it("mène à la fiche de la partie, qui porte la grille et le journal", () => {
@@ -182,6 +198,21 @@ describe("le « voir plus » de l'historique", () => {
 
   it("ne promet rien de plus quand la page a tout montré", () => {
     expect(rendre({ encore: false })).not.toContain("Voir plus");
+  });
+
+  it("s'arrête au plafond au lieu de proposer une adresse qui rétrécit", () => {
+    // Au-delà du plafond, `filtreDeLAdresse` retombe sur la page par défaut :
+    // un « voir plus » qui demanderait 220 lignes en ramènerait 20, soit le
+    // contraire de ce que le lien promet.
+    const html = rendre({ encore: true, filtre: { jeuId: null, combien: 200 } });
+
+    expect(html).not.toContain("Voir plus");
+  });
+
+  it("déroule jusqu'au plafond, et pas d'une ligne de plus", () => {
+    const html = rendre({ encore: true, filtre: { jeuId: null, combien: 190 } });
+
+    expect(html).toContain('href="/historique?voir=200"');
   });
 });
 

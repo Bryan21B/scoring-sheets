@@ -72,6 +72,30 @@ export function filtreDeLAdresse(recherche: ParametresDeRecherche): FiltreDHisto
 }
 
 /**
+ * L'adresse qui déroule **une page de plus**, ou `null` quand il n'y en a plus.
+ *
+ * Le plafond se lit ici et nulle part ailleurs : c'est le même nombre qui borne
+ * ce qu'une adresse peut demander, et un « voir plus » qui le dépasserait
+ * écrirait `?voir=220` — que {@link filtreDeLAdresse} ramène à la page par
+ * défaut, si bien que le lien **rétrécirait** la liste au lieu de l'allonger.
+ * Le dernier pas s'arrête donc pile sur le plafond, et après lui il n'y a plus
+ * de lien du tout.
+ *
+ * `null` plutôt qu'une adresse inerte : c'est l'écran qui décide de ne rien
+ * montrer, et il ne peut pas se tromper sur une valeur qu'il n'a pas à comparer.
+ */
+export function adresseDeLaPageSuivante(filtre: FiltreDHistorique): string | null {
+  if (filtre.combien >= PLAFOND_DHISTORIQUE) {
+    return null;
+  }
+
+  return adresseDeLHistorique(
+    filtre.jeuId,
+    Math.min(filtre.combien + PAGE_DHISTORIQUE, PLAFOND_DHISTORIQUE),
+  );
+}
+
+/**
  * L'autre sens : l'adresse de l'historique sous ce filtre et cette page.
  *
  * Les valeurs par défaut ne s'écrivent pas — `/historique` tout court est la

@@ -6,7 +6,7 @@ import { type EntreeCatalogue, type JeuId, trouverEntree } from "@/lib/jeux/cata
 import { horodatage } from "@/lib/journal/tiroir";
 import { adresseDePartie } from "@/lib/partie/adresse";
 import type { FiltreDHistorique, LigneDHistorique, VueDHistorique } from "@/lib/partie/historique";
-import { adresseDeLHistorique, PAGE_DHISTORIQUE } from "@/lib/partie/historique-url";
+import { adresseDeLaPageSuivante, adresseDeLHistorique } from "@/lib/partie/historique-url";
 
 /**
  * Une entrée du catalogue **désignable par une adresse**.
@@ -37,18 +37,17 @@ export function Historique({
   entrees: readonly EntreeFiltrable[];
 }): ReactElement {
   const vide = vue.lignes.length === 0;
+  const suite = vue.encore ? adresseDeLaPageSuivante(filtre) : null;
+  // Rien à filtrer et aucun filtre posé : les onglets n'ouvriraient que
+  // d'autres listes vides. Ils restent dès qu'un jeu est choisi — sans eux, on
+  // serait coincé sur le seul jeu auquel on n'a pas encore fini de partie.
+  const aFiltrer = !vide || filtre.jeuId !== null;
 
   return (
     <Ecran>
       <h1 className="font-semibold text-2xl tracking-tight">Historique</h1>
 
-      {/* Rien à filtrer et aucun filtre posé : les onglets n'ouvriraient que
-          d'autres listes vides. Ils restent dès qu'un jeu est choisi — sans eux,
-          on serait coincé sur le seul jeu auquel on n'a pas encore fini de
-          partie. */}
-      {vide && filtre.jeuId === null ? null : (
-        <FiltreParJeu entrees={entrees} choisi={filtre.jeuId} />
-      )}
+      {aFiltrer ? <FiltreParJeu entrees={entrees} choisi={filtre.jeuId} /> : null}
 
       {vide ? (
         <RenvoiAuCatalogue entrees={entrees} choisi={filtre.jeuId} />
@@ -60,7 +59,7 @@ export function Historique({
         </ul>
       )}
 
-      {vue.encore ? <VoirPlus filtre={filtre} /> : null}
+      {suite === null ? null : <VoirPlus adresse={suite} />}
     </Ecran>
   );
 }
@@ -74,13 +73,12 @@ export function Historique({
  *
  * Il n'apparaît que si `lireLHistorique` a vu une ligne de plus que demandé :
  * rien n'est compté pour l'afficher, et il ne promet donc jamais une suite vide.
+ * L'adresse lui arrive toute faite, `adresseDeLaPageSuivante` ayant déjà dit
+ * s'il en existe une — le plafond se lit là où il est déclaré, pas ici.
  */
-function VoirPlus({ filtre }: { filtre: FiltreDHistorique }): ReactElement {
+function VoirPlus({ adresse }: { adresse: string }): ReactElement {
   return (
-    <a
-      href={adresseDeLHistorique(filtre.jeuId, filtre.combien + PAGE_DHISTORIQUE)}
-      className="text-muted-foreground text-sm underline"
-    >
+    <a href={adresse} className="text-muted-foreground text-sm underline">
       Voir plus
     </a>
   );
@@ -219,6 +217,10 @@ function Ligne({ ligne }: { ligne: LigneDHistorique }): ReactElement {
  * départage nulle part. « Sans vainqueur » pour les deux laisserait croire à un
  * abandon là où il y a eu une partie entière.
  *
+ * Un `switch` sans repli, comme le `Record` exhaustif de la fiche : une
+ * troisième cause ajoutée au schéma ne compilerait pas ici, là où un `if` sur
+ * l'abandon l'aurait rendue en victoire sans rien dire.
+ *
  * L'abandon est **marqué**, pas raconté : la fiche écrit « Partie abandonnée le
  * … » parce qu'elle a la place d'une phrase, la ligne porte une pastille parce
  * qu'elle doit se repérer en défilant. Deux formes pour deux écrans, et non une
@@ -226,22 +228,23 @@ function Ligne({ ligne }: { ligne: LigneDHistorique }): ReactElement {
  * changer l'étiquette d'ici.
  */
 function Denouement({ ligne }: { ligne: LigneDHistorique }): ReactElement {
-  if (ligne.cause === "abandonnee") {
-    return (
-      <span className="flex items-center gap-2 text-muted-foreground text-sm">
-        <span className="rounded-full bg-muted px-2 py-0.5 font-medium text-foreground text-xs">
-          Abandonnée
+  switch (ligne.cause) {
+    case "abandonnee":
+      return (
+        <span className="flex items-center gap-2 text-muted-foreground text-sm">
+          <span className="rounded-full bg-muted px-2 py-0.5 font-medium text-foreground text-xs">
+            Abandonnée
+          </span>
+          {effectif(ligne.nombreDeJoueurs)}
         </span>
-        {effectif(ligne.nombreDeJoueurs)}
-      </span>
-    );
+      );
+    case "terminee":
+      return (
+        <span className="text-muted-foreground text-sm">
+          {`${ligne.vainqueur === null ? "Égalité en tête" : `${ligne.vainqueur.nom} l’emporte`} · ${effectif(ligne.nombreDeJoueurs)}`}
+        </span>
+      );
   }
-
-  return (
-    <span className="text-muted-foreground text-sm">
-      {`${ligne.vainqueur === null ? "Égalité en tête" : `${ligne.vainqueur.nom} l’emporte`} · ${effectif(ligne.nombreDeJoueurs)}`}
-    </span>
-  );
 }
 
 /**
