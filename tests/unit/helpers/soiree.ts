@@ -90,6 +90,13 @@ export type PartieJouee = { partieId: number; code: string };
  * recopiée : à Dnup, deux joueurs se jouent en manches gagnées et non en jetons,
  * et un `66` écrit en dur ici ouvrirait une partie sur des règles que la table ne
  * joue pas.
+ *
+ * **Les manches doivent rester sous la condition de fin** quand le test lit la
+ * date. Une clôture qui franchit le seuil estampille la partie elle-même, à
+ * l'horloge du serveur, et `estampillerLaFin` ne réécrit jamais une fin déjà
+ * posée — `finLe` serait alors ignoré silencieusement. Deux manches à *6 qui
+ * prend — cartes spéciales*, qui s'arrête à deux manches fixes, suffisent à
+ * tomber dedans.
  */
 export async function jouerUnePartie(base: Base, soiree: SoireeDeTest): Promise<PartieJouee> {
   const { joueurs, finLe } = soiree;

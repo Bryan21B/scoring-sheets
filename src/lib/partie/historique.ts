@@ -3,6 +3,7 @@ import type { Lecture } from "@/db/base";
 import { partie } from "@/db/schema";
 import { type EntreeCatalogue, type JeuId, jeuIdSchema, trouverEntree } from "@/lib/jeux/catalogue";
 import { parseRegles } from "@/lib/jeux/regles";
+import { vainqueurDuClassement } from "@/lib/jeux/vainqueur";
 import { etatDesLignes } from "@/lib/manche/lecture";
 import type { CodeDePartie } from "@/lib/partie/code";
 import type { FinDePartie } from "@/lib/partie/fin";
@@ -152,23 +153,20 @@ async function lireLaPage(base: Lecture, filtre: FiltreDHistorique): Promise<Par
 }
 
 /**
- * Le vainqueur d'une partie terminée, ou personne.
+ * Le vainqueur d'une partie terminée, **nommé**.
  *
- * Le premier groupe du classement, **à condition qu'il n'y ait qu'un joueur
- * dedans**. Le moteur ne nomme jamais de gagnant — il constate l'ordre — et
- * c'est ici, une seule fois, que « premier tout seul » se lit.
+ * Qui a gagné se lit dans `jeux/vainqueur.ts`, partagé avec les compteurs de la
+ * fiche de joueur : deux définitions de « premier tout seul » laisseraient une
+ * ligne d'historique dire « Marie l'emporte » là où sa fiche ne compterait pas
+ * la victoire. Ne reste ici que la résolution du nom, qui est propre à l'écran.
  */
-function vainqueurDuClassement(
+function nommerLeVainqueur(
   classement: readonly (readonly number[])[],
   tablee: readonly JoueurConnu[],
 ): JoueurConnu | null {
-  const tete = classement[0];
+  const gagnant = vainqueurDuClassement(classement);
 
-  if (tete === undefined || tete.length !== 1) {
-    return null;
-  }
-
-  return tablee.find((joueur) => joueur.id === tete[0]) ?? null;
+  return tablee.find((joueur) => joueur.id === gagnant) ?? null;
 }
 
 /**
@@ -236,10 +234,7 @@ export async function lireLHistorique(
         vainqueur:
           une.cause === "abandonnee"
             ? null
-            : vainqueurDuClassement(
-                etatDesLignes(parseRegles(une.regles), grille).classement,
-                tablee,
-              ),
+            : nommerLeVainqueur(etatDesLignes(parseRegles(une.regles), grille).classement, tablee),
         nombreDeJoueurs: tablee.length,
       };
     }),
