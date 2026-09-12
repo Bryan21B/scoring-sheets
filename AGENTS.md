@@ -103,8 +103,9 @@ déclarations de la même forme divergent le jour où l'une est corrigée seule.
 catalogue tant qu'aucune partie n'est en cours ; `creer/[jeuId]/` la suite
 d'écrans de création et son action serveur ; `p/[code]/` la page d'une partie —
 en cours ou scellée, auquel cas sa fiche ; `historique/` la liste des parties
-finies, filtrable par jeu, d'où l'on rejoint ces fiches ;
-`health/route.ts` la sonde de santé, qui touche la base à dessein.
+finies, filtrable par jeu, d'où l'on rejoint ces fiches ; `palmares/` la liste
+des joueurs et `j/[joueurId]/` la fiche de l'un d'eux, la seconde paire liste et
+fiche ; `health/route.ts` la sonde de santé, qui touche la base à dessein.
 - `src/components/ui/` — primitives shadcn/ui. Les ajouter avec
 `bunx shadcn@latest add <composant>`, ne pas les écrire à la main.
 - `src/db/` — `schema.ts` (les sept tables Drizzle), `triggers.sql` (les
@@ -124,6 +125,19 @@ d'une partie (`resolution.ts`). Deux schémas Zod : le catalogue porte
 (`moteur.ts`) ferme le dossier : pur, sans base, il ne reçoit que des règles
 résolues et des manches, et n'importe donc ni `@/db` ni le catalogue — un test
 le vérifie sur la source.
+- `src/lib/palmares/` — la seconde paire d'agrégats. `taux.ts` est **pur** : la
+formule `(battus + 0,5 × ex æquo) / (n − 1)` sur les groupes de rang, le plancher
+de parties, l'ordre et les rangs partagés à égalité. `lecture.ts` lit les parties
+terminées et les fait passer par le moteur ; `fiche.ts` en tire les compteurs par
+entrée, groupés par famille ; `adresse.ts` porte les deux adresses, pur pour que
+les écrans n'importent rien de la base. Le découpage pur / base est celui de
+`partie/historique-url.ts` et `partie/historique.ts`.
+- `src/lib/partie/lecture-groupee.ts` — les trois lectures groupées — tablées,
+manches, valeurs — dont le **nombre de requêtes ne dépend pas du nombre de
+parties**. L'historique en lit vingt, le palmarès les lit toutes, et les deux
+finissent sur le même `etatDesLignes` que la fiche d'une partie. « Premier tout
+seul » est dans `jeux/vainqueur.ts`, partagé pour que la ligne d'historique et le
+compteur de victoires ne puissent pas diverger.
 - `src/lib/zod.ts` — mise en forme des défauts d'un parse Zod, partagée par
 toutes les frontières qui valident.
 - `scripts/*.mjs` — outillage runtime en JS pur, exécutable sans toolchain TS :

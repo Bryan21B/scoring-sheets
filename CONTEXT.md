@@ -239,8 +239,15 @@ joueur sur **toutes** les siennes, le **Palmarès** est la page qui les range.
   joueur. Il normalise la taille de la tablée : gagner à six vaut plus que gagner
   à deux.
 - **Hors classement** — l'état d'un joueur sous le plancher de parties : présent
-  en bas du palmarès, sans rang, parce qu'un taux sur trois parties ne veut rien
-  dire.
+  en bas du palmarès, sans rang **et sans taux**, parce qu'un taux sur trois
+  parties ne veut rien dire. Le type de sa ligne n'en porte pas, si bien qu'aucun
+  écran ne peut en afficher un.
+- **Plancher de parties** — **cinq**, déclaré dans `src/lib/palmares/taux.ts`. Le
+  design doc nomme trois comme le nombre qui ne veut rien dire : un plancher à
+  trois ou quatre le frôlerait sans rien changer. Cinq laisse une marge au-dessus
+  tout en restant atteignable dans la saison, la recherche classement comptant 7 à
+  9 parties par joueur et par an. C'est un plancher et non une marche à dépasser :
+  cinq parties classent.
 - **Compteur** — un **fait** par couple joueur et entrée du catalogue : parties
   jouées, victoires, dernière partie. Jamais une estimation, donc insensible au
   découpage, et défini même pour une entrée **sans score** comme Dnup. Les
@@ -252,6 +259,17 @@ joueur sur **toutes** les siennes, le **Palmarès** est la page qui les range.
 
 **Les parties abandonnées ne pèsent sur aucun agrégat.** Le palmarès et la note ne
 lisent que les parties terminées.
+
+Une seule règle tient les deux agrégats : **une partie compte pour un joueur
+exactement quand il figure à son classement final.** Elle sort les abandonnées,
+qui ne sont jamais lues, et les parties qu'il a **quittées** — sa tablée relue ne
+le porte plus. Les compter en parties jouées sans jamais pouvoir les compter en
+victoires creuserait le chiffre d'un montant qui dépend de qui a quitté la table.
+
+Deux joueurs au **même taux partagent le même rang**, et le rang suivant est
+sauté — la même règle que le classement d'une partie, où un groupe de deux occupe
+une marche. Le palmarès liste **tout le roster** : un palmarès où l'on ne trouve
+pas son nom ne se relit pas deux fois.
 
 ### L'identité et l'arrivée
 
