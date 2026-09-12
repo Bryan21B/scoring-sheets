@@ -7,6 +7,7 @@ import { MancheSuivante } from "@/components/manche-suivante";
 import { RejoindreParCode } from "@/components/rejoindre-par-code";
 import type { EntreeCatalogue } from "@/lib/jeux/catalogue";
 import type { VueDeGrille } from "@/lib/manche/lecture";
+import { ADRESSE_PALMARES } from "@/lib/palmares/adresse";
 import { ADRESSE_HISTORIQUE } from "@/lib/partie/historique-url";
 import type { VueDePartie } from "@/lib/partie/lecture";
 import { libelleDeFin } from "@/lib/partie/tablee";
@@ -62,6 +63,7 @@ export function Accueil({
         <CatalogueListe entrees={entrees} />
         <RejoindreParCode />
         <LienVersLHistorique />
+        <LienVersLePalmares />
       </Ecran>
     );
   }
@@ -86,6 +88,7 @@ export function Accueil({
       </a>
 
       <LienVersLHistorique />
+      <LienVersLePalmares />
 
       <details className="flex flex-col gap-4">
         <summary className="cursor-pointer text-muted-foreground text-sm">
@@ -117,6 +120,23 @@ function LienVersLHistorique(): ReactElement {
   return (
     <a href={ADRESSE_HISTORIQUE} className="text-muted-foreground text-sm underline">
       Les parties déjà jouées
+    </a>
+  );
+}
+
+/**
+ * La porte du palmarès, **le seul chemin vers les joueurs**.
+ *
+ * Il est à côté de celui de l'historique parce que les deux listes sont la même
+ * idée vue de deux bouts — les parties, les joueurs — et qu'il n'y a qu'une
+ * navigation à apprendre : une liste mène à une fiche. Sans lui, la fiche de
+ * joueur n'aurait aucune entrée, le palmarès n'étant lié depuis nulle part
+ * ailleurs.
+ */
+function LienVersLePalmares(): ReactElement {
+  return (
+    <a href={ADRESSE_PALMARES} className="text-muted-foreground text-sm underline">
+      Le palmarès
     </a>
   );
 }
