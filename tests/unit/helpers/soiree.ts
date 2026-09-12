@@ -185,3 +185,15 @@ export async function retirerDeLaTablee(
     .set({ retireLe: new Date() })
     .where(and(eq(participant.partieId, partieId), eq(participant.joueurId, joueurId)));
 }
+
+/**
+ * Le énième soir d'un même janvier, à un jour d'intervalle.
+ *
+ * Une date **fixe et ordonnée**, parce que ce que les agrégats lisent d'une fin
+ * de partie est sa date : l'horloge du serveur rendrait « la dernière partie »
+ * intestable. Ici plutôt que recopiée dans chaque fichier de test — deux
+ * calendriers voisins finiraient par ne plus dire le même jour.
+ */
+export function leJour(numero: number): Date {
+  return new Date(2026, 0, numero + 1);
+}

@@ -4,6 +4,7 @@ import { Ecran } from "@/components/ecran";
 import { horodatage } from "@/lib/journal/tiroir";
 import { ADRESSE_PALMARES } from "@/lib/palmares/adresse";
 import type { Compteur, FicheDeJoueur, GroupeDeFamille, SousTotal } from "@/lib/palmares/fiche";
+import { parties, victoires } from "@/lib/palmares/mots";
 
 /**
  * La fiche d'un joueur : **ses compteurs, entrée par entrée**.
@@ -111,14 +112,4 @@ function Faits({ compteur }: { compteur: Compteur }): ReactElement {
       </time>
     </span>
   );
-}
-
-/** Un nombre de parties, au singulier près. */
-function parties(combien: number): string {
-  return combien > 1 ? `${combien} parties` : `${combien} partie`;
-}
-
-/** Un nombre de victoires, au singulier près. */
-function victoires(combien: number): string {
-  return combien > 1 ? `${combien} victoires` : `${combien} victoire`;
 }

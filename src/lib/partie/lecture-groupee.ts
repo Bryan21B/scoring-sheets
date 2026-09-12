@@ -22,7 +22,18 @@ import type { JoueurConnu } from "@/lib/roster/noms";
  * eux que ça se décide.
  */
 
-/** Range des lignes plates sous la clé qui les groupe, dans l'ordre reçu. */
+/**
+ * Range des lignes plates sous la clé qui les groupe, **dans l'ordre reçu**.
+ *
+ * L'ordre est le contrat, et pas un effet de bord : les tablées sortent dans
+ * l'ordre de la tablée — celui que les colonnes d'une grille suivent — et les
+ * manches dans l'ordre des numéros. Un regroupement qui rebattrait les lignes
+ * ferait des colonnes qui changent de place d'une lecture à l'autre.
+ *
+ * Une seule requête à plat puis ce regroupement, plutôt qu'un `GROUP BY` ou une
+ * requête par partie : c'est ce qui tient le nombre de requêtes constant quand
+ * le nombre de parties grandit.
+ */
 export function grouper<Ligne, Valeur>(
   lignes: readonly Ligne[],
   cle: (ligne: Ligne) => number,

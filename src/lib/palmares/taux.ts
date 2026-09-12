@@ -8,7 +8,8 @@ import type { JoueurConnu } from "@/lib/roster/noms";
  * vecteurs de rangs écrits à la main — un classement à six, une tête à égalité —
  * là où une vérification passant par une partie réelle demanderait de fabriquer
  * six soirées pour tester une division. La lecture qui produit ces vecteurs est
- * dans `palmares/lecture.ts`, et l'écran n'importe que ce fichier-ci.
+ * dans `palmares/lecture.ts`, les nombres se mettent en mots dans
+ * `palmares/mots.ts`, et l'écran n'importe que ces deux-là.
  */
 
 /**
@@ -210,21 +211,4 @@ function numeroter(ordonnes: readonly JoueurMoyenne[]): JoueurClasse[] {
 
     return { ...ligne, rang };
   });
-}
-
-/** L'espace insécable qui tient le nombre et son signe sur la même ligne. */
-const INSECABLE = "\u00a0";
-
-/**
- * Un taux mis en mots : un pourcentage entier.
- *
- * Aucune décimale. Le taux est une moyenne sur une poignée de parties, et
- * écrire « 62,5 % » lui prêterait une précision que cinq soirées n'ont pas.
- *
- * Assemblé à la main plutôt que par `Intl.NumberFormat` : la sortie de celui-ci
- * varie d'une version d'ICU à l'autre — même raison qu'à l'horodatage du
- * journal — et un écran dont le texte dépend du runtime n'est pas vérifiable.
- */
-export function pourcentage(taux: number): string {
-  return `${Math.round(taux * 100)}${INSECABLE}%`;
 }

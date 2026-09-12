@@ -13,7 +13,7 @@ import {
 import { PLANCHER_DE_PARTIES } from "@/lib/palmares/taux";
 import type { JoueurConnu } from "@/lib/roster/noms";
 import { type BaseDeTest, creerBaseDeTest } from "../helpers/base-de-test";
-import { inscrireLeRoster, jouerUnePartie, type ManchesDeTest } from "../helpers/soiree";
+import { inscrireLeRoster, jouerUnePartie, leJour, type ManchesDeTest } from "../helpers/soiree";
 
 let baseDeTest: BaseDeTest;
 let base: Base;
@@ -31,11 +31,6 @@ let zoe: JoueurConnu;
  * partie perdrait.
  */
 const REQUETES_DU_PALMARES = 5;
-
-/** Une soirée de plus, le même soir de janvier décalé d'un jour. */
-function leJour(numero: number): Date {
-  return new Date(2026, 0, numero + 1);
-}
 
 /**
  * Autant de parties identiques qu'il en faut pour franchir le plancher.

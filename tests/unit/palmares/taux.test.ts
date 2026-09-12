@@ -1,11 +1,7 @@
 import { describe, expect, it } from "bun:test";
 import type { JoueurId } from "@/lib/jeux/moteur";
-import {
-  ordonnerLePalmares,
-  PLANCHER_DE_PARTIES,
-  pourcentage,
-  tauxDUnePartie,
-} from "@/lib/palmares/taux";
+import { pourcentage } from "@/lib/palmares/mots";
+import { ordonnerLePalmares, PLANCHER_DE_PARTIES, tauxDUnePartie } from "@/lib/palmares/taux";
 import type { JoueurConnu } from "@/lib/roster/noms";
 
 const MARIE: JoueurConnu = { id: 1, nom: "Marie" };

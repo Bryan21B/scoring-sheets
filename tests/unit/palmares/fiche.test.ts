@@ -1,21 +1,17 @@
 import { afterEach, beforeEach, describe, expect, it } from "bun:test";
 import type { Base } from "@/db/base";
 import { CATALOGUE } from "@/lib/jeux/catalogue";
-import { type FicheDeJoueur, lireLaFicheDeJoueur } from "@/lib/palmares/fiche";
+import { compterLesParties, type FicheDeJoueur, lireLaFicheDeJoueur } from "@/lib/palmares/fiche";
+import { tauxDUnePartie } from "@/lib/palmares/taux";
 import type { JoueurConnu } from "@/lib/roster/noms";
 import { type BaseDeTest, creerBaseDeTest } from "../helpers/base-de-test";
-import { inscrireLeRoster, jouerUnePartie } from "../helpers/soiree";
+import { inscrireLeRoster, jouerUnePartie, leJour } from "../helpers/soiree";
 
 let baseDeTest: BaseDeTest;
 let base: Base;
 let marie: JoueurConnu;
 let paul: JoueurConnu;
 let lea: JoueurConnu;
-
-/** Une soirée de plus, le même janvier décalé d'un jour. */
-function leJour(numero: number): Date {
-  return new Date(2026, 0, numero + 1);
-}
 
 /** La fiche de Marie, qui ne peut pas être absente dans ces tests. */
 async function ficheDeMarie(): Promise<FicheDeJoueur> {
@@ -160,27 +156,36 @@ describe("les compteurs de la fiche de joueur", () => {
   });
 });
 
+/**
+ * Trois soirées du jeu de base gagnées par Marie, une de la variante gagnée par
+ * Paul — le décor de la famille, et la seule chose que fusionner cacherait.
+ *
+ * La variante ne joue **qu'une manche** alors qu'elle s'arrête à deux : une
+ * deuxième ferait franchir la condition de fin à la clôture, qui estampille
+ * alors la partie à l'horloge du serveur, et la date de fin ne se testerait plus.
+ */
+async function troisDeBaseEtUneVariante(): Promise<void> {
+  for (const numero of [0, 1, 2]) {
+    await jouerUnePartie(base, {
+      joueurs: [marie, paul],
+      manches: [[1, 9]],
+      finLe: leJour(numero),
+    });
+  }
+
+  await jouerUnePartie(base, {
+    joueurs: [marie, paul],
+    manches: [[9, 1]],
+    jeuId: "6-qui-prend-cartes-speciales",
+    finLe: leJour(3),
+  });
+}
+
 describe("la famille de la fiche de joueur", () => {
   it("groupe les deux 6 qui prend sans les fusionner", async () => {
     // Trois parties du jeu de base, une de la variante. Un compteur fusionné
     // dirait « 4 parties » et cacherait exactement ce qu'on vient lire.
-    for (const numero of [0, 1, 2]) {
-      await jouerUnePartie(base, {
-        joueurs: [marie, paul],
-        manches: [[1, 9]],
-        finLe: leJour(numero),
-      });
-    }
-
-    // Une seule manche, alors que la variante s'arrête à deux : une deuxième
-    // ferait franchir la condition de fin à la clôture, qui estampille alors la
-    // partie à l'horloge du serveur — et la date de fin ne se testerait plus.
-    await jouerUnePartie(base, {
-      joueurs: [marie, paul],
-      manches: [[9, 1]],
-      jeuId: "6-qui-prend-cartes-speciales",
-      finLe: leJour(3),
-    });
+    await troisDeBaseEtUneVariante();
 
     const fiche = await ficheDeMarie();
     const famille = familleDe(fiche, "6-qui-prend");
@@ -194,23 +199,7 @@ describe("la famille de la fiche de joueur", () => {
   });
 
   it("sous-totalise la famille sans toucher aux compteurs", async () => {
-    for (const numero of [0, 1, 2]) {
-      await jouerUnePartie(base, {
-        joueurs: [marie, paul],
-        manches: [[1, 9]],
-        finLe: leJour(numero),
-      });
-    }
-
-    // Une seule manche, alors que la variante s'arrête à deux : une deuxième
-    // ferait franchir la condition de fin à la clôture, qui estampille alors la
-    // partie à l'horloge du serveur — et la date de fin ne se testerait plus.
-    await jouerUnePartie(base, {
-      joueurs: [marie, paul],
-      manches: [[9, 1]],
-      jeuId: "6-qui-prend-cartes-speciales",
-      finLe: leJour(3),
-    });
+    await troisDeBaseEtUneVariante();
 
     const famille = familleDe(await ficheDeMarie(), "6-qui-prend");
 
@@ -219,6 +208,28 @@ describe("la famille de la fiche de joueur", () => {
     expect(famille?.sousTotal.partiesJouees).toBe(4);
     expect(famille?.sousTotal.victoires).toBe(3);
     expect(famille?.sousTotal.dernierePartie).toEqual(leJour(3));
+  });
+
+  it("sous-totalise aussi une famille d'une seule entrée, dans la donnée", async () => {
+    // Le sous-total est porté par **toutes** les familles : c'est un fait, et le
+    // calculer partout est ce qui laisse l'écran décider seul de le montrer ou
+    // non — il ne l'affiche pas sur une famille d'une entrée, où il répéterait
+    // la ligne mot pour mot. La donnée ne connaît pas cette mise en page.
+    await jouerUnePartie(base, {
+      joueurs: [marie, paul, lea],
+      manches: [[1, 2, null]],
+      jeuId: "dnup",
+      finLe: leJour(0),
+    });
+
+    const famille = familleDe(await ficheDeMarie(), "dnup");
+
+    expect(famille?.compteurs).toHaveLength(1);
+    expect(famille?.sousTotal).toEqual({
+      partiesJouees: 1,
+      victoires: 1,
+      dernierePartie: leJour(0),
+    });
   });
 
   it("range chaque entrée sous la famille que le catalogue lui déclare", async () => {
@@ -235,5 +246,23 @@ describe("la famille de la fiche de joueur", () => {
     const fiche = await ficheDeMarie();
 
     expect(fiche.familles.map((famille) => famille.nom)).toEqual(["6 qui prend", "Uno", "Dnup"]);
+  });
+});
+
+describe("le compteur et le taux, là où ils ne comptent pas pareil", () => {
+  it("crédite une victoire là où le taux n'a personne à mesurer", async () => {
+    // Une partie que tout le monde a quittée sauf un : son classement ne retient
+    // qu'un joueur. C'est un fait qu'il l'a finie en tête — le compteur le dit —
+    // et le taux n'a rien à en tirer, une proportion d'adversaires battus
+    // n'existant pas sans adversaire. L'écart est voulu, et ce test est ce qui
+    // l'empêche de devenir un accident.
+    const classement = [[marie.id]];
+    const [compteur] = compterLesParties(marie.id, [
+      { partieId: 1, jeuId: "6-qui-prend", finLe: leJour(0), classement },
+    ]);
+
+    expect(compteur?.partiesJouees).toBe(1);
+    expect(compteur?.victoires).toBe(1);
+    expect(tauxDUnePartie(classement, marie.id)).toBeNull();
   });
 });

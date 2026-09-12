@@ -22,7 +22,13 @@ import { listerLeRoster } from "@/lib/roster/lecture";
  * Le taux du palmarès et les compteurs de la fiche de joueur posent deux
  * questions différentes à un seul objet — qui a battu qui, et à quel jeu. Les
  * faire partir de deux lectures laisserait un « 5 victoires » de fiche cesser de
- * correspondre au taux affiché à côté du même nom, sans que rien ne proteste.
+ * correspondre au classement dont le taux est tiré, sans que rien ne proteste.
+ *
+ * Ils lisent la même chose sans pour autant **compter pareil**, et le seul écart
+ * est voulu : une partie dont le classement ne retient qu'un joueur — les autres
+ * ayant quitté la table — vaut « 1 partie, 1 victoire » au compteur, qui est un
+ * fait, et **rien** au taux, qui est une proportion d'adversaires battus et n'en
+ * a aucun à mesurer. Compter zéro la lui retirerait, compter un la lui offrirait.
  *
  * Rien n'est stocké : le classement se recalcule depuis les manches à chaque
  * lecture, par le même `etatDesLignes` que la fiche d'une partie. C'est ce qui
@@ -46,7 +52,23 @@ export type PartieClassee = {
 };
 
 /**
- * Les parties **terminées**, et rien d'autre.
+ * Les quatre colonnes que les agrégats lisent d'une partie, et pas une de plus.
+ *
+ * Déclarées une fois pour les deux requêtes : elles rendent la **même** chose,
+ * et `classer` s'appuie dessus. Une projection recopiée dans chacune ferait, le
+ * jour où le moteur demande une colonne de plus, une fiche de joueur qui lève là
+ * où le palmarès passe. Le type de `PartieTerminee` s'en déduit plutôt que de
+ * les réécrire une troisième fois.
+ */
+const COLONNES_LUES = {
+  id: partie.id,
+  jeuId: partie.jeuId,
+  regles: partie.regles,
+  finLe: partie.finLe,
+};
+
+/**
+ * La condition qui dit « terminée », écrite une fois pour les deux requêtes.
  *
  * `fin_cause = 'terminee'` porte la décision de domaine : une partie abandonnée
  * ne pèse sur aucun agrégat, parce que la compter en parties jouées sans jamais
@@ -55,9 +77,19 @@ export type PartieClassee = {
  *
  * `fin_le IS NOT NULL` est redondant avec elle — le `CHECK` de la base tient les
  * trois colonnes de fin ensemble — et c'est pourtant lui qui compte : c'est la
- * condition qui rend l'**index partiel** `partie_fin_le_idx` utilisable, donc ce
- * qui laisse les parties encore en cours hors du parcours. Sans elle, le
- * planificateur relirait la table entière.
+ * condition qui rend l'**index partiel** `partie_fin_le_idx` utilisable. Sans
+ * elle, `EXPLAIN QUERY PLAN` retombe sur un `SCAN partie` franc, ce qu'un test
+ * vérifie dans les deux sens.
+ */
+function estTerminee() {
+  return and(isNotNull(partie.finLe), eq(partie.finCause, "terminee"));
+}
+
+/**
+ * Les parties **terminées**, et rien d'autre.
+ *
+ * Ce que « terminée » veut dire est dans {@link estTerminee}, partagé avec la
+ * requête d'un joueur.
  *
  * Aucun `ORDER BY` : l'ordre du palmarès est celui des taux calculés, pas celui
  * d'une colonne, et un tri demandé ici serait un tri payé pour rien.
@@ -67,10 +99,7 @@ export type PartieClassee = {
  * existe, jamais qu'il sert.
  */
 export function requeteDesPartiesTerminees(base: Lecture) {
-  return base
-    .select({ id: partie.id, jeuId: partie.jeuId, regles: partie.regles, finLe: partie.finLe })
-    .from(partie)
-    .where(and(isNotNull(partie.finLe), eq(partie.finCause, "terminee")));
+  return base.select(COLONNES_LUES).from(partie).where(estTerminee());
 }
 
 /**
@@ -81,27 +110,24 @@ export function requeteDesPartiesTerminees(base: Lecture) {
  * Lire toutes les parties puis jeter celles où il n'est pas ferait relire les
  * manches de toute la base pour une fiche.
  *
- * `retire_le IS NULL` est la même règle qu'ailleurs, appliquée une fois de plus :
- * un participant retiré ne figure pas au classement final, donc la partie n'est
- * pas la sienne, donc elle n'entre ni dans ses compteurs ni dans son taux.
+ * `retire_le IS NULL` **ne tient rien** : il rétrécit, il ne décide pas. La
+ * partie d'un joueur qui a quitté la table serait de toute façon écartée plus
+ * loin, sa tablée relue ne le portant plus et son identifiant n'apparaissant donc
+ * pas au classement. Le retirer d'ici ne fait échouer aucun test, et c'est la
+ * bonne nouvelle : la règle est tenue **une seule fois**, là où le classement se
+ * lit, et cette clause-là ne fait qu'éviter de relire les manches d'une partie
+ * qu'on s'apprête à jeter.
  */
 export function requeteDesPartiesDUnJoueur(base: Lecture, joueurId: number) {
   return base
-    .select({ id: partie.id, jeuId: partie.jeuId, regles: partie.regles, finLe: partie.finLe })
+    .select(COLONNES_LUES)
     .from(partie)
     .innerJoin(participant, eq(participant.partieId, partie.id))
-    .where(
-      and(
-        eq(participant.joueurId, joueurId),
-        isNull(participant.retireLe),
-        isNotNull(partie.finLe),
-        eq(partie.finCause, "terminee"),
-      ),
-    );
+    .where(and(eq(participant.joueurId, joueurId), isNull(participant.retireLe), estTerminee()));
 }
 
-/** Une partie terminée telle que la première requête la rend, avant le moteur. */
-type PartieTerminee = { id: number; jeuId: string; regles: string; finLe: Date | null };
+/** Une partie terminée telle que la requête la rend, nullabilité comprise. */
+type PartieTerminee = Awaited<ReturnType<typeof requeteDesPartiesTerminees>>[number];
 
 /**
  * Fait passer ces parties par le moteur, en **trois lectures groupées**.
@@ -160,12 +186,25 @@ async function classer(
   });
 }
 
-/** Toutes les parties terminées, classées. */
+/**
+ * Toutes les parties terminées de la base, chacune avec son classement.
+ *
+ * Sans filtre ni limite, à la différence de l'historique : un taux moyenné sur
+ * une page serait un taux qui dépend de la page. À dix joueurs et quelques
+ * centaines de soirées, tout lire est le comportement voulu — c'est le nombre de
+ * **requêtes** qui devait rester constant, et il l'est.
+ */
 export async function lireLesPartiesClassees(base: Lecture): Promise<PartieClassee[]> {
   return classer(base, await requeteDesPartiesTerminees(base));
 }
 
-/** Les parties terminées de ce joueur, classées. */
+/**
+ * Les parties terminées de ce joueur, chacune avec son classement.
+ *
+ * Le classement porte la **tablée entière**, pas le seul joueur demandé : c'est
+ * ce dont la formule a besoin pour compter les battus, et c'est aussi pourquoi
+ * les lectures groupées partent des identifiants de partie plutôt que du joueur.
+ */
 export async function lireLesPartiesDUnJoueur(
   base: Lecture,
   joueurId: number,

@@ -4,8 +4,8 @@ import { LISTE } from "@/components/champs";
 import { Ecran } from "@/components/ecran";
 import type { EntreeCatalogue } from "@/lib/jeux/catalogue";
 import { adresseDeFicheDeJoueur } from "@/lib/palmares/adresse";
+import { parties, pourcentage } from "@/lib/palmares/mots";
 import type { JoueurClasse, JoueurHorsClassement, VueDePalmares } from "@/lib/palmares/taux";
-import { pourcentage } from "@/lib/palmares/taux";
 import type { JoueurConnu } from "@/lib/roster/noms";
 
 /**
@@ -53,7 +53,11 @@ export function Palmares({
           )}
 
           {vue.horsClassement.length === 0 ? null : (
-            <HorsClassement lignes={vue.horsClassement} plancher={vue.plancher} />
+            <HorsClassement
+              lignes={vue.horsClassement}
+              plancher={vue.plancher}
+              personneNEstClasse={vue.classes.length === 0}
+            />
           )}
         </>
       )}
@@ -125,20 +129,33 @@ function LigneClassee({ ligne }: { ligne: JoueurClasse }): ReactElement {
  * Le plancher vient de la vue, jamais recopié : deux copies divergeraient le jour
  * où l'une est corrigée seule, et la phrase affichée serait alors fausse sans que
  * rien ne proteste.
+ *
+ * **Quand personne n'est classé, le titre le dit.** Un palmarès dont tout le
+ * monde est sous le plancher n'est pas un état vide, c'est un palmarès honnête —
+ * mais coiffer la seule liste de la page d'un « Hors classement » laisserait
+ * croire qu'un classement existe au-dessus et n'a pas chargé. La phrase bascule
+ * avec lui : « il faut cinq parties » se lit vers l'avant, là où « moins de cinq
+ * parties » trie ceux qui restent en arrière.
  */
 function HorsClassement({
   lignes,
   plancher,
+  personneNEstClasse,
 }: {
   lignes: readonly JoueurHorsClassement[];
   plancher: number;
+  personneNEstClasse: boolean;
 }): ReactElement {
   return (
     <section className="flex flex-col gap-3">
       <div className="flex flex-col gap-1">
-        <h2 className="font-semibold text-base tracking-tight">Hors classement</h2>
+        <h2 className="font-semibold text-base tracking-tight">
+          {personneNEstClasse ? "Personne n’est encore classé" : "Hors classement"}
+        </h2>
         <p className="text-muted-foreground text-sm">
-          {`Moins de ${parties(plancher)} : le taux ne voudrait encore rien dire.`}
+          {personneNEstClasse
+            ? `Il faut ${parties(plancher)} pour qu’un taux de victoires veuille dire quelque chose.`
+            : `Moins de ${parties(plancher)} : le taux ne voudrait encore rien dire.`}
         </p>
       </div>
       <ul className={LISTE}>
@@ -174,14 +191,4 @@ function LigneHorsClassement({
       </a>
     </li>
   );
-}
-
-/**
- * Un nombre de parties, au singulier près.
- *
- * « 1 parties » ferait douter du chiffre plus que de la grammaire, et zéro est le
- * cas ordinaire d'un roster où quelqu'un vient d'arriver.
- */
-function parties(combien: number): string {
-  return combien > 1 ? `${combien} parties` : `${combien} partie`;
 }

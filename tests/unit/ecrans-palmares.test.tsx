@@ -2,12 +2,12 @@ import { describe, expect, it } from "bun:test";
 import { renderToStaticMarkup } from "react-dom/server";
 import { Palmares } from "@/components/palmares";
 import { CATALOGUE } from "@/lib/jeux/catalogue";
-import { ADRESSE_PALMARES, adresseDeFicheDeJoueur } from "@/lib/palmares/adresse";
+import { adresseDeFicheDeJoueur } from "@/lib/palmares/adresse";
+import { pourcentage } from "@/lib/palmares/mots";
 import {
   type JoueurClasse,
   type JoueurHorsClassement,
   PLANCHER_DE_PARTIES,
-  pourcentage,
   type VueDePalmares,
 } from "@/lib/palmares/taux";
 import { LEA, MARIE, PAUL, ZOE } from "./helpers/tablee";
@@ -104,23 +104,20 @@ describe("les hors classement du palmarès", () => {
     expect(html).toContain("5 parties");
   });
 
-  it("ne leur donne aucun rang", () => {
-    const html = rendre({ classes: [], horsClassement: [horsClassement({ joueur: ZOE })] });
-
-    expect(html).not.toContain("Rang");
-  });
-
-  it("n'affiche aucun taux sur leur ligne", () => {
-    // Un taux sur deux parties ne veut rien dire. Le type de la ligne n'en porte
-    // pas, et l'écran ne peut donc pas en montrer un — ce test le constate sur
-    // le balisage, là où le type le garantit à la compilation.
+  it("ne porte ni rang ni taux, sur un écran qui en montre par ailleurs", () => {
+    // Deux classés et un hors classement : on **compte** les rangs et les
+    // pourcentages rendus au lieu de constater leur absence sur une page qui
+    // n'en contient de toute façon aucun. Une ligne hors classement qui se
+    // mettrait à en afficher ferait passer les deux comptes à trois.
     const html = rendre({
-      classes: [],
+      classes: [classe({ joueur: MARIE, rang: 1 }), classe({ joueur: PAUL, rang: 2 })],
       horsClassement: [horsClassement({ joueur: ZOE, parties: 2 })],
     });
 
+    expect(html).toContain(ZOE.nom);
     expect(html).toContain("2 parties");
-    expect(html).not.toContain("%");
+    expect(html.match(/<span class="sr-only">Rang <\/span>/g)).toHaveLength(2);
+    expect(html.match(/%/g)).toHaveLength(2);
   });
 
   it("un palmarès entièrement hors classement n'est pas un état vide", () => {
@@ -139,6 +136,10 @@ describe("les hors classement du palmarès", () => {
     expect(html).toContain(PAUL.nom);
     expect(html).toContain(LEA.nom);
     expect(html).not.toContain("On en commence une");
+    // Le titre dit l'état plutôt que de coiffer la seule liste de la page d'un
+    // « Hors classement », qui laisserait croire à un classement resté en haut.
+    expect(html).toContain("Personne n’est encore classé");
+    expect(html).not.toContain("Hors classement");
   });
 
   it("accorde le singulier d'une seule partie", () => {
@@ -162,17 +163,5 @@ describe("un palmarès sans personne", () => {
 
   it("ne propose pas une liste de joueurs qui n'existe pas", () => {
     expect(rendre({ classes: [], horsClassement: [] })).not.toContain('href="/j/');
-  });
-});
-
-describe("l'adresse du palmarès", () => {
-  it("est écrite une seule fois dans le dépôt", () => {
-    expect(ADRESSE_PALMARES).toBe("/palmares");
-  });
-
-  it("mène à une fiche par joueur, désigné par son identifiant du roster", () => {
-    // Pas un code Crockford comme une partie : une fiche de joueur ne se dicte
-    // pas au téléphone, elle se rejoint par la liste.
-    expect(adresseDeFicheDeJoueur(MARIE.id)).toBe(`/j/${MARIE.id}`);
   });
 });

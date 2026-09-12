@@ -117,7 +117,7 @@ export function compterLesParties(
   for (const partie of parties) {
     const compteur = compteurs.get(partie.jeuId);
 
-    if (compteur === undefined || tauxAbsent(partie, joueurId)) {
+    if (compteur === undefined || absentDuClassement(partie, joueurId)) {
       continue;
     }
 
@@ -127,8 +127,15 @@ export function compterLesParties(
   return [...compteurs.values()];
 }
 
-/** Ce joueur est-il absent du classement de cette partie ? */
-function tauxAbsent(partie: PartieClassee, joueurId: JoueurId): boolean {
+/**
+ * Ce joueur est-il absent du classement de cette partie ?
+ *
+ * La seule porte par laquelle une partie cesse d'être la sienne : il l'a quittée,
+ * sa tablée relue ne le porte plus, et son identifiant n'apparaît dans aucun
+ * groupe de rang. La règle est tenue **ici et nulle part ailleurs** — la clause
+ * `retire_le IS NULL` de la requête ne fait que rétrécir la lecture.
+ */
+function absentDuClassement(partie: PartieClassee, joueurId: JoueurId): boolean {
   return !partie.classement.some((groupe) => groupe.includes(joueurId));
 }
 
@@ -140,20 +147,36 @@ function tauxAbsent(partie: PartieClassee, joueurId: JoueurId): boolean {
  * raison de bouger ensemble.
  */
 export function grouperParFamille(compteurs: readonly Compteur[]): GroupeDeFamille[] {
-  const familles = new Map<string, Compteur[]>();
+  const familles = new Map<
+    string,
+    Omit<GroupeDeFamille, "sousTotal"> & { compteurs: Compteur[] }
+  >();
 
   for (const compteur of compteurs) {
-    const groupe = familles.get(compteur.jeu.famille) ?? [];
+    const groupe = familles.get(compteur.jeu.famille);
 
-    groupe.push(compteur);
-    familles.set(compteur.jeu.famille, groupe);
+    if (groupe === undefined) {
+      // Le nom se pose **à la création du groupe**, donc sur la première entrée
+      // rencontrée — le jeu de base, dont la variante est tirée par spread. Le
+      // relire après coup sur `groupe[0]` obligerait à traiter un groupe vide,
+      // que ce parcours ne sait pas produire : un repli inatteignable est une
+      // branche que rien ne teste et que personne ne peut corriger.
+      familles.set(compteur.jeu.famille, {
+        famille: compteur.jeu.famille,
+        nom: compteur.jeu.nom,
+        compteurs: [compteur],
+      });
+      continue;
+    }
+
+    groupe.compteurs.push(compteur);
   }
 
-  return [...familles.entries()].map(([famille, groupe]) => ({
-    famille,
-    nom: groupe[0]?.jeu.nom ?? famille,
-    compteurs: groupe,
-    sousTotal: sousTotaliser(groupe),
+  return [...familles.values()].map((groupe) => ({
+    famille: groupe.famille,
+    nom: groupe.nom,
+    compteurs: groupe.compteurs,
+    sousTotal: sousTotaliser(groupe.compteurs),
   }));
 }
 
