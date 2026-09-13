@@ -1,5 +1,19 @@
 # Changelog
 
+## [0.13.0](https://github.com/Bryan21B/scoring-sheets/compare/v0.12.0...v0.13.0) (2026-09-13)
+
+### Fonctionnalités
+
+* **palmares:** Compter par entrée, grouper par famille, ne rien fusionner ([68e82e9](https://github.com/Bryan21B/scoring-sheets/commit/68e82e99639348604e12d99a51612e2cfefdafc3)), closes [#41](https://github.com/Bryan21B/scoring-sheets/issues/41)
+* **palmares:** Dresser les deux écrans, et la porte qui y mène ([86ff32f](https://github.com/Bryan21B/scoring-sheets/commit/86ff32f5773d94f9f2c6ad5bb65f932b1aafcf48)), closes [#41](https://github.com/Bryan21B/scoring-sheets/issues/41)
+* **palmares:** Lire le taux depuis les parties terminées, vraiment jouées ([abd92c6](https://github.com/Bryan21B/scoring-sheets/commit/abd92c6560a49d40e2460120072c9ea2eb2d1728)), closes [#41](https://github.com/Bryan21B/scoring-sheets/issues/41)
+* **palmares:** Poser la formule du taux normalisé, pure et testée seule ([c8eccbb](https://github.com/Bryan21B/scoring-sheets/commit/c8eccbba05b3517864c65011b46fab520b73744a)), closes [#41](https://github.com/Bryan21B/scoring-sheets/issues/41)
+
+### Refactoring
+
+* **palmares:** Répondre à la revue, et dire vrai là où la JSDoc promettait trop ([07c7081](https://github.com/Bryan21B/scoring-sheets/commit/07c70813fb422c7a9ae4c0fa430bc2348e18dae7)), closes [#41](https://github.com/Bryan21B/scoring-sheets/issues/41)
+* **partie:** Sortir la lecture groupée de l'historique, que le palmarès relit ([877e256](https://github.com/Bryan21B/scoring-sheets/commit/877e25672c29cccf32de4e1a115bdc4a0f2c3524)), closes [#41](https://github.com/Bryan21B/scoring-sheets/issues/41)
+
 ## [0.12.0](https://github.com/Bryan21B/scoring-sheets/compare/v0.11.0...v0.12.0) (2026-09-11)
 
 ### Fonctionnalités
