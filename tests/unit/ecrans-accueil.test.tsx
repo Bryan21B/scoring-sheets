@@ -8,7 +8,7 @@ import { evaluer, type Manche } from "@/lib/jeux/moteur";
 import { resoudreRegles } from "@/lib/jeux/resolution";
 import type { LigneDeGrille, VueDeGrille } from "@/lib/manche/lecture";
 import type { VueDePartie } from "@/lib/partie/lecture";
-import { casesDeLaTablee, LEA, MARIE, PAUL, TABLEE } from "./helpers/tablee";
+import { caseDe, casesDeLaTablee, LEA, MARIE, PAUL, TABLEE } from "./helpers/tablee";
 
 const SIX_QUI_PREND = trouverEntree("6-qui-prend");
 const REGLES = resoudreRegles(SIX_QUI_PREND, { nombreDeJoueurs: 3 });
@@ -115,11 +115,7 @@ describe("la grille et les joueurs qu'elle range", () => {
     const desordre: LigneDeGrille = {
       numero: 1,
       close: false,
-      cases: [
-        { joueur: LEA, valeur: 3, touchee: true },
-        { joueur: MARIE, valeur: 8, touchee: true },
-        { joueur: PAUL, valeur: 15, touchee: true },
-      ],
+      cases: [caseDe(LEA, 3), caseDe(MARIE, 8), caseDe(PAUL, 15)],
     };
     const html = grille(desordre);
     const cellules = [...html.matchAll(/<td[^>]*>([^<]*)<\/td>/g)].map(

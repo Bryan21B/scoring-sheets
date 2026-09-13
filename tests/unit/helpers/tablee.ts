@@ -36,7 +36,18 @@ export function caseDe(
   valeur: number | null,
   touchee = valeur !== null,
 ): CaseDeManche {
-  return { joueur, valeur, touchee };
+  return { joueur, valeur, touchee, retire: false };
+}
+
+/**
+ * La case d'un joueur **qui s'en est allé** : sa valeur reste, elle compte
+ * encore dans son total, et la manche ne l'attend plus.
+ *
+ * Elle n'existe que là où il y a une valeur à garder — c'est ce qui laisse les
+ * manches ouvertes après son départ se clore sans lui.
+ */
+export function caseDUnParti(joueur: JoueurConnu, valeur: number): CaseDeManche {
+  return { joueur, valeur, touchee: true, retire: true };
 }
 
 /**

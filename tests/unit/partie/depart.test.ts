@@ -4,6 +4,11 @@ import type { Base } from "@/db/base";
 import { journal, participant } from "@/db/schema";
 import { creerIdAppareil, type IdAppareil } from "@/lib/appareil/cookie";
 import { lierLAppareil } from "@/lib/appareil/lien";
+import { trouverEntree } from "@/lib/jeux/catalogue";
+import { estComplete } from "@/lib/jeux/moteur";
+import { resoudreRegles } from "@/lib/jeux/resolution";
+import { cloturerLaManche } from "@/lib/manche/cloture";
+import { lireLaGrille, lireLaManche, mancheDuMoteur } from "@/lib/manche/lecture";
 import { ouvrirLaMancheSuivante } from "@/lib/manche/ouverture";
 import { ecrireLaCase } from "@/lib/manche/saisie";
 import { abandonnerLaPartie } from "@/lib/partie/cycle";
@@ -19,6 +24,9 @@ import {
 let baseDeTest: BaseDeTest;
 let base: Base;
 let partie: PartieDeTest;
+
+/** Les règles figées à l'ouverture : 6 qui prend à trois, où le plus bas gagne. */
+const REGLES = resoudreRegles(trouverEntree("6-qui-prend"), { nombreDeJoueurs: 3 });
 
 /** Le téléphone que Paul sort de sa poche, quand le test en a besoin d'un. */
 let telephoneDePaul: IdAppareil;
@@ -212,5 +220,74 @@ describe("ce que le départ écrit au journal", () => {
     await paulSEnVa();
 
     expect(await lignesDuJournal()).toHaveLength(avant);
+  });
+});
+
+describe("ce que le départ de Paul laisse derrière lui", () => {
+  /**
+   * La soirée de l'issue, en petit : Paul joue la manche 1, rentre chez lui,
+   * et la manche 2 se joue sans lui.
+   */
+  async function laSoireeDeLIssue(): Promise<void> {
+    const premiere = await uneMancheJouee();
+
+    await cloturerLaManche(base, { mancheId: premiere, parJoueurId: marie() });
+    await paulSEnVa();
+
+    const deuxieme = await ouvrirUneManche();
+
+    await poser(deuxieme, marie(), 4);
+    await poser(deuxieme, lea(), 7);
+  }
+
+  it("garde ses valeurs dans la grille : le journal les a vues, l'histoire est vraie", async () => {
+    await laSoireeDeLIssue();
+
+    const grille = await lireLaGrille(base, partie.partieId, REGLES);
+    const manche1 = grille.manches[0]?.cases.find((une) => une.joueur.id === paul());
+
+    expect(manche1?.valeur).toBe(3);
+    expect(manche1?.joueur.nom).toBe("Paul");
+  });
+
+  it("garde son total : ses trois têtes de bœuf restent comptées", async () => {
+    await laSoireeDeLIssue();
+
+    const grille = await lireLaGrille(base, partie.partieId, REGLES);
+
+    expect(grille.etat.totaux.get(paul())).toBe(3);
+  });
+
+  it("ne le range pas au classement, sans quoi partir tôt ferait gagner", async () => {
+    // À 6 qui prend, le plus bas l'emporte : Paul et ses 3 têtes battraient
+    // Marie à 12 et Léa à 12 en étant simplement rentré chez lui.
+    await laSoireeDeLIssue();
+
+    const grille = await lireLaGrille(base, partie.partieId, REGLES);
+
+    expect(grille.etat.classement.flat()).not.toContain(paul());
+    expect(grille.etat.classement.flat()).toEqual([marie(), lea()]);
+  });
+
+  it("laisse la manche ouverte après son départ être complète sans lui", async () => {
+    await laSoireeDeLIssue();
+
+    const deuxieme = await lireLaManche(base, partie.partieId, 2);
+
+    expect(deuxieme?.cases.map((une) => une.joueur.nom)).toEqual(["Marie", "Léa"]);
+    expect(estComplete(REGLES, mancheDuMoteur(deuxieme?.cases ?? [], false))).toBe(true);
+  });
+
+  it("n'attend plus rien de lui dans la manche qu'il a pourtant marquée", async () => {
+    // La manche 1 porte sa valeur et ne le compte plus parmi les attendus :
+    // c'est cette paire-là qui fait tenir « ses points restent » et « il ne
+    // place pas » ensemble.
+    await laSoireeDeLIssue();
+
+    const grille = await lireLaGrille(base, partie.partieId, REGLES);
+    const manche1 = mancheDuMoteur(grille.manches[0]?.cases ?? [], true);
+
+    expect(manche1.participants).toEqual([marie(), lea()]);
+    expect(manche1.cases).toContainEqual({ joueurId: paul(), valeur: 3 });
   });
 });

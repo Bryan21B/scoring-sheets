@@ -1,4 +1,4 @@
-import { and, asc, eq, isNull } from "drizzle-orm";
+import { and, asc, eq } from "drizzle-orm";
 import type { Lecture } from "@/db/base";
 import { joueur, manche, participant, saisie } from "@/db/schema";
 import type { Etat, Manche } from "@/lib/jeux/moteur";
@@ -27,15 +27,34 @@ export type CaseDeManche = {
    * rendrait toute manche d'Uno incomplète pour toujours.
    */
   touchee: boolean;
+  /**
+   * Cette case est-elle le **vestige** de quelqu'un qui s'en est allé ?
+   *
+   * Vraie pour la case d'un participant **retiré** : sa valeur reste, elle
+   * compte toujours dans son total, et la grille la montre — le journal l'a
+   * vue, l'histoire est vraie et ne se réécrit pas. Ce qu'elle n'est plus,
+   * c'est une case **attendue** : la complétude ne la réclame pas, et son
+   * joueur n'est plus au classement.
+   *
+   * Un vestige n'existe que là où il y a une valeur à garder. Une manche
+   * ouverte après le départ n'en porte aucun, et c'est ce qui la laisse se
+   * clore sans lui.
+   */
+  retire: boolean;
 };
 
 /**
  * Une manche telle que la passe avant et le récapitulatif la montrent.
  *
- * Elle porte **une case par participant**, la vide comprise : c'est ce qui
- * laisse la passe avant démarrer sur la première case manquante et le
+ * Elle porte **une case par participant attendu**, la vide comprise : c'est ce
+ * qui laisse la passe avant démarrer sur la première case manquante et le
  * récapitulatif nommer ce qui reste à taper. La complétude ne se lit pas ici,
  * elle se dérive du mode par le moteur.
+ *
+ * Les **vestiges n'y sont pas**, à la différence de la grille : les écrans de
+ * saisie demandent ce qui manque, et personne n'attend plus rien de quelqu'un
+ * qui est rentré chez lui. Sa valeur se lit sur la feuille de score, qui est
+ * faite pour ça.
  */
 export type VueDeManche = {
   id: number;
@@ -44,14 +63,19 @@ export type VueDeManche = {
 };
 
 /**
- * Les cases d'une manche : un par participant encore de la partie, dans
- * l'ordre de la tablée.
+ * Les cases d'une manche : une par participant de la tablée, dans l'ordre où
+ * l'on s'est assis — plus les **vestiges** de ceux qui s'en sont allés en
+ * laissant une valeur derrière eux.
  *
  * Une jointure gauche depuis `participant`, et non depuis `saisie` : une case
  * n'existe en base qu'à partir du moment où elle est **touchée**, et lire les
  * saisies ne montrerait que ce qui a déjà été tapé — exactement l'inverse de ce
- * qu'on vient chercher. Un participant retiré sort de la liste, ses valeurs
- * déjà saisies restant en base intactes.
+ * qu'on vient chercher.
+ *
+ * Un participant **retiré** n'est gardé que s'il a touché cette manche-là.
+ * C'est cette condition, et rien d'autre, qui fait tenir les deux moitiés du
+ * départ : la manche qu'il a jouée avant de partir garde sa valeur, et celles
+ * ouvertes après lui n'ont aucune case à son nom — donc rien à attendre de lui.
  */
 async function lireLesCases(
   base: Lecture,
@@ -59,31 +83,59 @@ async function lireLesCases(
   mancheId: number,
 ): Promise<CaseDeManche[]> {
   const lignes = await base
-    .select({ id: joueur.id, nom: joueur.nom, valeur: saisie.valeur, caseId: saisie.id })
+    .select({
+      id: joueur.id,
+      nom: joueur.nom,
+      valeur: saisie.valeur,
+      caseId: saisie.id,
+      retireLe: participant.retireLe,
+    })
     .from(participant)
     .innerJoin(joueur, eq(joueur.id, participant.joueurId))
     .leftJoin(saisie, and(eq(saisie.mancheId, mancheId), eq(saisie.joueurId, participant.joueurId)))
-    .where(and(eq(participant.partieId, partieId), isNull(participant.retireLe)))
+    .where(eq(participant.partieId, partieId))
     .orderBy(asc(participant.id));
 
   // L'identifiant de la ligne de saisie ne sort que pour être jeté : il dit
   // que la case existe, ce que `valeur` ne peut pas dire puisqu'une case
   // touchée mais vide porte `NULL` comme une case absente.
-  return lignes.map(({ id, nom, valeur, caseId }) => ({
-    joueur: { id, nom },
-    valeur,
-    touchee: caseId !== null,
-  }));
+  return lignes
+    .filter(({ retireLe, caseId }) => retireLe === null || caseId !== null)
+    .map(({ id, nom, valeur, caseId, retireLe }) => ({
+      joueur: { id, nom },
+      valeur,
+      touchee: caseId !== null,
+      retire: retireLe !== null,
+    }));
+}
+
+/**
+ * Les cases que la manche **attend** : les vestiges n'en sont pas.
+ *
+ * Nommée une fois plutôt que recopiée aux deux endroits qui la posent — la vue
+ * des écrans et l'effectif que le moteur lit — parce que c'est la même question
+ * et qu'une seconde copie laisserait un écran proposer de taper la valeur de
+ * quelqu'un que le moteur n'attend plus.
+ */
+function casesAttendues(cases: readonly CaseDeManche[]): CaseDeManche[] {
+  return cases.filter(({ retire }) => !retire);
 }
 
 /**
  * Les mêmes cases, relues comme **le moteur** les lit.
  *
  * `participants` sort des cases elles-mêmes, et ce n'est pas un raccourci :
- * {@link lireLesCases} en produit exactement une par participant encore de la
- * partie, la vide comprise, si bien que les deux listes sont la même. La
- * recopier depuis une seconde requête laisserait deux lectures de l'effectif
- * diverger, ce que le moteur ne pourrait pas rattraper.
+ * {@link lireLesCases} en produit exactement une par participant de la tablée,
+ * la vide comprise, si bien que les deux listes sont la même. La recopier
+ * depuis une seconde requête laisserait deux lectures de l'effectif diverger,
+ * ce que le moteur ne pourrait pas rattraper.
+ *
+ * **Les vestiges n'y entrent pas.** Un participant retiré garde sa case dans la
+ * manche qu'il a jouée, mais il n'y est plus *attendu* : l'y laisser le
+ * remettrait dans l'effectif courant que le moteur lit par intersection, donc
+ * au classement — et partir tôt ferait gagner à 6 qui prend, où le plus bas
+ * l'emporte. Sa valeur, elle, reste dans `cases` et continue de compter dans
+ * son total : les deux moitiés tiennent ensemble ou pas du tout.
  *
  * Les **cases**, elles, ne sont que celles qui existent. Le moteur lit `null`
  * comme « touchée mais vide » — l'état qu'Uno traverse entre la désignation et
@@ -98,7 +150,7 @@ async function lireLesCases(
 export function mancheDuMoteur(cases: readonly CaseDeManche[], close: boolean): Manche {
   return {
     close,
-    participants: cases.map(({ joueur }) => joueur.id),
+    participants: casesAttendues(cases).map(({ joueur }) => joueur.id),
     cases: cases
       .filter(({ touchee }) => touchee)
       .map(({ joueur, valeur }) => ({ joueurId: joueur.id, valeur })),
@@ -132,7 +184,11 @@ export async function lireLaManche(
     return null;
   }
 
-  return { id: ligne.id, numero, cases: await lireLesCases(base, partieId, ligne.id) };
+  return {
+    id: ligne.id,
+    numero,
+    cases: casesAttendues(await lireLesCases(base, partieId, ligne.id)),
+  };
 }
 
 /**
