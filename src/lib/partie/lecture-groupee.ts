@@ -173,6 +173,13 @@ export function lignesDeGrille(
       joueur,
       valeur: valeurs.get(une.id)?.get(joueur.id) ?? null,
       touchee: valeurs.get(une.id)?.has(joueur.id) ?? false,
+      // Jamais un vestige : la tablée lue ici ne porte que ceux qui sont restés,
+      // le retrait étant filtré à la source. Le vainqueur ne s'en trouve pas
+      // changé — le moteur cumule joueur par joueur, si bien que les points d'un
+      // parti n'entrent dans le total de personne d'autre, et il n'était de
+      // toute façon pas au classement. La fiche, elle, relit la partie par
+      // `lireLaGrille` et montre bien sa colonne.
+      retire: false,
     })),
   }));
 }
