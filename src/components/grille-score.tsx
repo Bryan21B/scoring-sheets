@@ -2,6 +2,7 @@ import type { ReactElement } from "react";
 import type { JoueurId } from "@/lib/jeux/moteur";
 import type { LigneDeGrille, VueDeGrille } from "@/lib/manche/lecture";
 import type { VueDePartie } from "@/lib/partie/lecture";
+import type { JoueurConnu } from "@/lib/roster/noms";
 
 /** Ce qu'une case vide montre : un trou, jamais un zéro — voir {@link GrilleDeScore}. */
 const TROU = "—";
@@ -49,7 +50,8 @@ export function GrilleDeScore({
     return null;
   }
 
-  const joueurs = partie.participants;
+  const partis = lesPartis(grille);
+  const joueurs = [...partie.participants, ...partis];
   const { manches } = grille;
   const totaux = grille.etat.totaux;
   const unite = partie.jeu.unite;
@@ -112,8 +114,57 @@ export function GrilleDeScore({
       </div>
 
       <p className="text-muted-foreground text-sm">{`Totaux en ${unite.plusieurs}.`}</p>
+
+      {partis.length === 0 ? null : (
+        <p className="text-muted-foreground text-sm">{phraseDesPartis(partis)}</p>
+      )}
     </section>
   );
+}
+
+/**
+ * Ceux qui sont **rentrés chez eux** en laissant des points derrière eux.
+ *
+ * Ils viennent de la grille et non de la tablée, et c'est la seule source
+ * possible : `partie.participants` ne porte que ceux qui jouent encore, si bien
+ * qu'une colonne de plus demandée à la page serait une deuxième liste de
+ * joueurs à garder d'accord avec celle-ci.
+ *
+ * Ils sont rangés **après** la tablée, dans l'ordre où la feuille les
+ * rencontre, comme le moteur range ses totaux : la place qu'ils occupaient
+ * autour de la table n'existe plus nulle part, et la rendre par une colonne au
+ * milieu ferait deviner une information que rien ne porte.
+ */
+function lesPartis(grille: VueDeGrille): JoueurConnu[] {
+  const partis = new Map<JoueurId, JoueurConnu>();
+
+  for (const manche of grille.manches) {
+    for (const une of manche.cases) {
+      if (une.retire && !partis.has(une.joueur.id)) {
+        partis.set(une.joueur.id, une.joueur);
+      }
+    }
+  }
+
+  return [...partis.values()];
+}
+
+/**
+ * Ce que la colonne d'un parti veut dire, dit sous la grille.
+ *
+ * Sans elle, une colonne qui ne bouge plus se lit comme un joueur qui ne
+ * marque rien — ce qui est, à 6 qui prend, la meilleure position de la table.
+ *
+ * Tournée sans possessif ni pronom : « les points déjà marqués » vaut pour un
+ * parti comme pour trois, et évite d'accorder en genre un nom que le roster ne
+ * qualifie pas.
+ */
+function phraseDesPartis(partis: readonly JoueurConnu[]): string {
+  const noms = partis.map(({ nom }) => nom);
+  const sujet = noms.length === 1 ? noms[0] : `${noms.slice(0, -1).join(", ")} et ${noms.at(-1)}`;
+  const verbe = noms.length === 1 ? "n’est plus" : "ne sont plus";
+
+  return `${sujet} ${verbe} de la partie : les points déjà marqués restent comptés, sans figurer au classement.`;
 }
 
 /** Ce que ce joueur a marqué dans cette manche, ou le trou de la case vide. */

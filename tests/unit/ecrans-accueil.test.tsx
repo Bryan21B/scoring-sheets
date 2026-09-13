@@ -6,9 +6,9 @@ import { MancheSuivante } from "@/components/manche-suivante";
 import { CATALOGUE, trouverEntree } from "@/lib/jeux/catalogue";
 import { evaluer, type Manche } from "@/lib/jeux/moteur";
 import { resoudreRegles } from "@/lib/jeux/resolution";
-import type { LigneDeGrille, VueDeGrille } from "@/lib/manche/lecture";
+import { etatDesLignes, type LigneDeGrille, type VueDeGrille } from "@/lib/manche/lecture";
 import type { VueDePartie } from "@/lib/partie/lecture";
-import { caseDe, casesDeLaTablee, LEA, MARIE, PAUL, TABLEE } from "./helpers/tablee";
+import { caseDe, caseDUnParti, casesDeLaTablee, LEA, MARIE, PAUL, TABLEE } from "./helpers/tablee";
 
 const SIX_QUI_PREND = trouverEntree("6-qui-prend");
 const REGLES = resoudreRegles(SIX_QUI_PREND, { nombreDeJoueurs: 3 });
@@ -123,6 +123,74 @@ describe("la grille et les joueurs qu'elle range", () => {
     );
 
     expect(cellules.slice(0, 3)).toEqual(["8", "15", "3"]);
+  });
+});
+
+describe("la grille et celui qui est rentré chez lui", () => {
+  /** La partie une fois Paul parti : la tablée continue à deux. */
+  const SansPaul: VueDePartie = { ...PARTIE, participants: [MARIE, LEA] };
+
+  /**
+   * La feuille telle que la lecture la rend après le départ : Paul a marqué les
+   * manches 1 et 2, la manche 3 s'est jouée sans lui.
+   *
+   * L'état passe par `etatDesLignes`, la vraie traduction vers le moteur, et
+   * non par des manches fabriquées ici : des totaux écrits à la main ne
+   * prouveraient que l'arithmétique du test.
+   */
+  function feuilleSansPaul(): VueDeGrille {
+    const manches: LigneDeGrille[] = [
+      { numero: 1, close: true, cases: [caseDe(MARIE, 8), caseDUnParti(PAUL, 3), caseDe(LEA, 5)] },
+      { numero: 2, close: true, cases: [caseDe(MARIE, 4), caseDUnParti(PAUL, 9), caseDe(LEA, 7)] },
+      { numero: 3, close: true, cases: [caseDe(MARIE, 6), caseDe(LEA, 2)] },
+    ];
+
+    return { manches, etat: etatDesLignes(REGLES, manches) };
+  }
+
+  function grilleSansPaul(): string {
+    return renderToStaticMarkup(<GrilleDeScore partie={SansPaul} grille={feuilleSansPaul()} />);
+  }
+
+  it("lui garde sa colonne : la feuille de score est l'endroit où ses points se lisent", () => {
+    const entetes = [...grilleSansPaul().matchAll(/<th[^>]*scope="col"[^>]*>([^<]*)<\/th>/g)].map(
+      (trouvee) => trouvee[1] ?? "",
+    );
+
+    expect(entetes).toEqual(["Manche", "Marie", "Léa", "Paul"]);
+  });
+
+  it("garde les valeurs qu'il avait saisies avant de partir", () => {
+    const html = grilleSansPaul();
+
+    expect(html).toContain(">3</td>");
+    expect(html).toContain(">9</td>");
+  });
+
+  it("garde son total, que le moteur cumule comme celui des autres", () => {
+    // 3 + 9 : s'il tombait à zéro, ou disparaissait avec ses valeurs, la
+    // feuille mentirait sur une soirée que le journal a vue.
+    expect(grilleSansPaul()).toContain(">12</td>");
+  });
+
+  it("laisse un trou sous son nom dans la manche jouée après son départ", () => {
+    const lignes = [...grilleSansPaul().matchAll(/<tr[^>]*>(.*?)<\/tr>/gs)].map(
+      (trouvee) => trouvee[1] ?? "",
+    );
+    const manche3 = lignes.find((une) => une.includes(">3</th>")) ?? "";
+    const cellules = [...manche3.matchAll(/<td[^>]*>([^<]*)<\/td>/g)].map(
+      (trouvee) => trouvee[1] ?? "",
+    );
+
+    expect(cellules).toEqual(["6", "2", "—"]);
+  });
+
+  it("dit ce que sa colonne veut dire, plutôt que de laisser croire qu'il joue encore", () => {
+    expect(grilleSansPaul()).toContain("Paul n’est plus de la partie");
+  });
+
+  it("ne dit rien de tel quand personne n'est parti", () => {
+    expect(grille(ligne(1, 8, 15, 0))).not.toContain("n’est plus de la partie");
   });
 });
 
