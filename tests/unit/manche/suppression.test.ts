@@ -11,6 +11,7 @@ import { ecrireLaCase } from "@/lib/manche/saisie";
 import { RefusDeSuppression, supprimerLaManche } from "@/lib/manche/suppression";
 import { abandonnerLaPartie } from "@/lib/partie/cycle";
 import { PartieScellee } from "@/lib/partie/fin";
+import { estGelee } from "@/lib/partie/salle-attente";
 import { type BaseDeTest, creerBaseDeTest } from "../helpers/base-de-test";
 import {
   joueurDeLaPartie,
@@ -226,6 +227,44 @@ describe("ce qui refuse la suppression", () => {
     ).rejects.toThrow(RefusDeSuppression);
 
     expect(await numerosDesManches()).toEqual([1]);
+  });
+});
+
+describe("le gel que la suppression défait", () => {
+  /**
+   * Le détour prévu quand on a oublié quelqu'un : supprimer la manche 1 rouvre
+   * la liste des participants.
+   *
+   * Le gel **se déduit** de l'existence d'une manche, il ne se stocke pas — et
+   * c'est ce test qui le paie. Une colonne d'état resterait à « gelée » après la
+   * suppression, et le détour ne rouvrirait plus rien.
+   *
+   * Il existe déjà un test voisin qui efface la ligne `manche` à la main. Celui-ci
+   * passe par le **vrai** chemin de suppression, le seul que la production
+   * emprunte, et c'est la seule façon de savoir que le dégel survit à tout ce que
+   * ce chemin fait en plus : la cascade sur les cases et la ligne de journal.
+   */
+  it("rouvre la tablée quand la dernière manche s'en va", async () => {
+    const premiere = await ouvrirLaMancheSuivante(base, partie.partieId);
+    await ecrire(premiere.id, marie(), 12);
+
+    expect(await estGelee(base, partie.partieId)).toBe(true);
+
+    await supprimerLaManche(base, partie.partieId, { numero: 1, agissant: agissant() });
+
+    expect(await estGelee(base, partie.partieId)).toBe(false);
+  });
+
+  it("laisse la tablée gelée tant qu'il reste une manche", async () => {
+    // La borne de l'autre côté : supprimer *une* manche sur deux ne dégèle rien,
+    // sinon le gel se déferait au premier repentir sur une soirée bien avancée.
+    await ouvrirLaMancheSuivante(base, partie.partieId);
+    const seconde = await ouvrirLaMancheSuivante(base, partie.partieId);
+    await ecrire(seconde.id, marie(), 12);
+
+    await supprimerLaManche(base, partie.partieId, { numero: 2, agissant: agissant() });
+
+    expect(await estGelee(base, partie.partieId)).toBe(true);
   });
 });
 
