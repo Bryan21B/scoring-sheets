@@ -32,17 +32,23 @@ const OUVERTURE = 90;
  * viendrait retirer une seconde gerbe trois secondes plus tard.
  */
 export function ConfettisDeFin({ fete }: { fete: Fete }): null {
-  const pieces = fete.statut === "tombe" ? fete.pieces : 0;
+  // `null` et non `0` : « aucune fête » et « une salve vide » ne sont pas la
+  // même chose, et c'est exactement pour ça que {@link Fete} a deux branches
+  // plutôt qu'un nombre. Un zéro rendrait l'absence indistinguable d'une gerbe
+  // qu'on aurait vidée, et laisserait monter le canevas d'un lien rouvert trois
+  // jours plus tard. L'effet n'en dépend que par ce scalaire, que React sait
+  // comparer d'un rendu à l'autre — un objet y relancerait la salve à chaque fois.
+  const salve = fete.statut === "tombe" ? fete.pieces : null;
 
   useEffect(() => {
-    if (pieces === 0) {
+    if (salve === null) {
       return;
     }
 
     // Fire-and-forget : la promesse se résout à la fin de l'animation, et
     // l'attendre ne servirait qu'à retenir un effet qui n'a rien à ranger.
-    void confetti({ particleCount: pieces, spread: OUVERTURE, origin: DEPART });
-  }, [pieces]);
+    void confetti({ particleCount: salve, spread: OUVERTURE, origin: DEPART });
+  }, [salve]);
 
   return null;
 }
