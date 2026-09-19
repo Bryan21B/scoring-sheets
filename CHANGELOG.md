@@ -1,5 +1,21 @@
 # Changelog
 
+## [0.14.0](https://github.com/Bryan21B/scoring-sheets/compare/v0.13.0...v0.14.0) (2026-09-19)
+
+### Fonctionnalités
+
+* **accueil:** Garder la colonne du parti dans la feuille de score ([ef197e9](https://github.com/Bryan21B/scoring-sheets/commit/ef197e9a5fe89fee50113c10c474772cb9942562)), closes [#37](https://github.com/Bryan21B/scoring-sheets/issues/37)
+* **manche:** Garder les valeurs du parti, sans le garder au classement ([9b47547](https://github.com/Bryan21B/scoring-sheets/commit/9b47547e1ba75c330b53bd0e29e12919ca3ed8dc)), closes [#37](https://github.com/Bryan21B/scoring-sheets/issues/37)
+* **manche:** Refuser la suppression à une partie scellée, et à qui n'est pas de la tablée ([0645f86](https://github.com/Bryan21B/scoring-sheets/commit/0645f869be4dc6a8f7c52d194f61b3d86f7bff4d)), closes [#36](https://github.com/Bryan21B/scoring-sheets/issues/36)
+* **manche:** Supprimer une manche, et dire au journal ce qu'elle emportait ([ad9ddf5](https://github.com/Bryan21B/scoring-sheets/commit/ad9ddf57058444e4bb4fd4b2eff7113fc23b4a3a)), closes [#36](https://github.com/Bryan21B/scoring-sheets/issues/36)
+* **partie:** Decide the confetti at a seam, not in an effect ([8e54e10](https://github.com/Bryan21B/scoring-sheets/commit/8e54e103f9e2d797575c4f1018e98db8b69ebd0c)), closes [#39](https://github.com/Bryan21B/scoring-sheets/issues/39)
+* **partie:** Dresser les marches d'un classement, et le podium qu'elles portent ([2d72a02](https://github.com/Bryan21B/scoring-sheets/commit/2d72a02449a3de8dd2e57d25ac4a7710c9300de8)), closes [#39](https://github.com/Bryan21B/scoring-sheets/issues/39)
+* **partie:** Laisser un participant s'en aller une fois la partie gelée ([2266deb](https://github.com/Bryan21B/scoring-sheets/commit/2266deb9c48d5d0ade3a372c106c3f88eda749a5)), closes [#37](https://github.com/Bryan21B/scoring-sheets/issues/37)
+
+### Corrections
+
+* **historique:** Dire des cases de la lecture groupée qu'aucune n'est un vestige ([01b10b8](https://github.com/Bryan21B/scoring-sheets/commit/01b10b82808f2bf7b591f209bdb1cae84e7b8bd3)), closes [#37](https://github.com/Bryan21B/scoring-sheets/issues/37)
+
 ## [0.13.0](https://github.com/Bryan21B/scoring-sheets/compare/v0.12.0...v0.13.0) (2026-09-13)
 
 ### Fonctionnalités
