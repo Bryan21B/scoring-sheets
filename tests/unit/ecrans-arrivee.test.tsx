@@ -31,6 +31,7 @@ function rendre(arrivee: Arrivee, gelee = false): string {
       rejoindre="/p/rejoindre"
       ajouter="/p/ajouter"
       retirer="/p/retirer"
+      partir="/p/partir"
     />,
   );
 }
@@ -118,6 +119,23 @@ describe("la salle d'attente, une fois la partie commencée", () => {
       'action="/p/retirer"',
     );
   });
+
+  it("offre au participant de s'en aller, ce que la salle d'attente ne fait plus", () => {
+    // Le geste du gel : Paul rentre chez lui à la manche 4 sur 10. Sa place
+    // reste, ses valeurs restent, et le journal le consigne — rien à voir avec
+    // le retrait qui corrige une liste où personne n'a encore marqué.
+    const html = rendre({ statut: "participant", joueur: MARIE }, true);
+
+    expect(html).toContain('action="/p/partir"');
+    expect(html).toContain("Je quitte la table");
+    expect(html).toContain(`value="${MARIE.id}"`);
+  });
+
+  it("ne l'offre pas au spectateur, qui a le code sans être de la tablée", () => {
+    // La ligne que le code seul ne franchit pas. L'assertion tient parce que
+    // la participante, elle, le voit : le test juste au-dessus le montre.
+    expect(rendre({ statut: "propose", joueur: ZOE }, true)).not.toContain('action="/p/partir"');
+  });
 });
 
 describe("la salle d'attente, quand on en est", () => {
@@ -128,6 +146,13 @@ describe("la salle d'attente, quand on en est", () => {
 
     expect(html).toContain('action="/p/retirer"');
     expect(html).toContain("Je m’en vais");
+  });
+
+  it("n'offre que le retrait, et jamais le départ : les deux gestes ne coexistent pas", () => {
+    // Avant le gel il n'y a rien à garder — pas de valeur saisie, pas de ligne
+    // de journal — donc le geste est le retrait, et lui seul. Le test juste
+    // au-dessus atteste que le retrait, lui, est bien là.
+    expect(rendre(marieEstLa)).not.toContain('action="/p/partir"');
   });
 
   it("laisse ajouter quelqu'un qui n'a pas de téléphone", () => {
@@ -185,6 +210,7 @@ describe("la tablée", () => {
         rejoindre="/p/rejoindre"
         ajouter="/p/ajouter"
         retirer="/p/retirer"
+        partir="/p/partir"
       />,
     );
 

@@ -30,6 +30,7 @@ export function SalleDAttente({
   rejoindre,
   ajouter,
   retirer,
+  partir,
 }: {
   partie: VueDePartie;
   salle: EtatDeSalle;
@@ -37,6 +38,12 @@ export function SalleDAttente({
   rejoindre: Action;
   ajouter: Action;
   retirer: Action;
+  /**
+   * Le **départ** d'une partie commencée, à ne pas confondre avec `retirer`.
+   *
+   * Voir {@link sortieDeLaTablee}, qui décide lequel des deux la tablée offre.
+   */
+  partir: Action;
 }): ReactElement {
   const dedans = estDeLaPartie(salle);
 
@@ -45,7 +52,7 @@ export function SalleDAttente({
       <Tablee
         partie={partie}
         moi={salle.arrivee.statut === "inconnu" ? undefined : salle.arrivee.joueur}
-        retirer={dedans && !salle.gelee ? retirer : undefined}
+        sortie={sortieDeLaTablee(salle, { retirer, partir })}
       />
 
       {dedans && !salle.gelee ? (
@@ -60,20 +67,66 @@ export function SalleDAttente({
 }
 
 /**
+ * Le geste de sortie que chaque ligne de la tablée porte, et les mots qui le
+ * disent.
+ *
+ * Un seul objet plutôt que deux actions côte à côte : **les deux gestes ne
+ * coexistent jamais**, et les passer séparément laisserait un écran offrir les
+ * deux à la fois sans que rien ne s'en aperçoive.
+ */
+type SortieDeTablee = {
+  action: Action;
+  /** Le mot sur ma propre ligne. */
+  mien: string;
+  /** Le mot sur la ligne de quelqu'un d'autre — jamais accordé, on ne sait pas. */
+  autre: string;
+};
+
+/**
+ * Lequel des deux gestes la tablée offre, et sous quels mots.
+ *
+ * **C'est le gel qui les sépare**, et il n'en laisse jamais deux. Avant la
+ * première manche, on *corrige la liste* : `retirer` efface une place où rien
+ * n'a encore été marqué. Après, on *s'en va* : `partir` garde la place et les
+ * valeurs déjà saisies, et écrit sa ligne de journal. Ce sont deux gestes du
+ * domaine — `salle-attente.ts` d'un côté, `depart.ts` de l'autre — et donc deux
+ * verbes : un mot unique ferait croire qu'on efface Paul de la soirée alors
+ * qu'il rentre simplement chez lui.
+ *
+ * **Rien pour le spectateur**, des deux côtés du gel : le code donne la
+ * lecture, l'écriture demande d'être de la tablée.
+ */
+function sortieDeLaTablee(
+  salle: EtatDeSalle,
+  gestes: { retirer: Action; partir: Action },
+): SortieDeTablee | undefined {
+  if (!estDeLaPartie(salle)) {
+    return undefined;
+  }
+
+  return salle.gelee
+    ? { action: gestes.partir, mien: "Je quitte la table", autre: "Quitte la table" }
+    : { action: gestes.retirer, mien: "Je m’en vais", autre: "Retirer" };
+}
+
+/**
  * Qui est autour de la table, et le geste pour en sortir.
  *
- * Le retrait est offert **à tout participant, sur n'importe quelle ligne** :
+ * La sortie est offerte **à tout participant, sur n'importe quelle ligne** :
  * celui qui a été ajouté sans téléphone n'a personne d'autre pour le faire, et
  * il n'existe aucun rôle de créateur dans ce design.
+ *
+ * Laquelle des deux sorties, c'est {@link sortieDeLaTablee} qui l'a tranché :
+ * la liste, elle, se dessine pareil dans les deux cas.
  */
 function Tablee({
   partie,
   moi,
-  retirer,
+  sortie,
 }: {
   partie: VueDePartie;
   moi: JoueurConnu | undefined;
-  retirer: Action | undefined;
+  sortie: SortieDeTablee | undefined;
 }): ReactElement {
   return (
     <div className="flex flex-col gap-2">
@@ -84,12 +137,12 @@ function Tablee({
         {partie.participants.map((joueur) => (
           <li key={joueur.id} className="flex items-center justify-between gap-3 px-4 py-3">
             <span className="text-base">{joueur.nom}</span>
-            {retirer === undefined ? null : (
-              <form action={retirer} method="post">
+            {sortie === undefined ? null : (
+              <form action={sortie.action} method="post">
                 <input type="hidden" name="code" value={partie.code} />
                 <input type="hidden" name="joueurId" value={joueur.id} />
                 <Button type="submit" size="sm" variant="ghost">
-                  {joueur.id === moi?.id ? "Je m’en vais" : "Retirer"}
+                  {joueur.id === moi?.id ? sortie.mien : sortie.autre}
                 </Button>
               </form>
             )}

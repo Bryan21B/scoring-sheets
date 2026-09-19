@@ -13,7 +13,7 @@ import { type EtatDeSalle, estDeLaPartie } from "@/lib/partie/salle-attente";
 import type { JoueurConnu } from "@/lib/roster/noms";
 
 /**
- * Les quatre gestes de la page, câblés par elle.
+ * Les cinq gestes de la page, câblés par elle.
  *
  * Ensemble et non un par un : ils visent tous la même partie, et les séparer
  * laisserait un appelant marier le « rejoindre » d'une partie au « retirer »
@@ -23,7 +23,17 @@ export type GestesDePartie = {
   ouvrirLaMancheSuivante: Action;
   rejoindre: Action;
   ajouter: Action;
+  /** Corriger la liste avant le gel. Voir `src/lib/partie/salle-attente.ts`. */
   retirer: Action;
+  /**
+   * S'en aller d'une partie commencée. Voir `src/lib/partie/depart.ts`.
+   *
+   * Distinct de {@link GestesDePartie.retirer} et non une version tardive de
+   * lui : l'un efface une place où rien n'a été marqué, l'autre garde la place,
+   * garde les valeurs et consigne le départ au journal. C'est le gel qui décide
+   * lequel s'offre, et la décision vit dans `SalleDAttente`.
+   */
+  partir: Action;
 };
 
 /**
@@ -38,7 +48,8 @@ export type GestesDePartie = {
  *
  * Ce qu'on retire du doigt du spectateur : « Saisir la manche suivante », qui
  * ouvrirait une manche dans une partie où il n'a pas de colonne, et
- * **gèlerait la liste** — s'enfermant lui-même dehors.
+ * **gèlerait la liste** — s'enfermant lui-même dehors ; et le **départ**, qui
+ * ferait rentrer Paul chez lui d'un doigt de passant.
  *
  * **La portée est celle d'un écran, pas d'une garde.** Ce composant ne rend pas
  * le formulaire ; `ouvrirLaMancheSuivanteAction` reste ouverte à qui la poste
@@ -51,6 +62,12 @@ export type GestesDePartie = {
  * La salle d'attente reste montrée à tout le monde : c'est elle qui porte la
  * seule écriture que le code seul autorise — **réclamer sa place**, permis
  * même partie gelée puisqu'il n'ajoute personne.
+ *
+ * C'est elle aussi qui porte le **départ en cours de partie**, sur la ligne de
+ * chaque joueur : il n'y a qu'une tablée à l'écran, et une seconde liste de
+ * noms en dessous montrerait tout le monde deux fois pour un geste qui vise
+ * exactement les mêmes lignes. Le gel décide lequel des deux verbes s'y offre —
+ * voir `SalleDAttente` — et le spectateur n'en voit aucun.
  *
  * Séparé de la page comme `Accueil` l'est de la sienne, et pour la même raison
  * : le sondage est un composant client, passé en `ReactNode`, et tout le reste
@@ -117,6 +134,7 @@ export function EcranDePartie({
         rejoindre={gestes.rejoindre}
         ajouter={gestes.ajouter}
         retirer={gestes.retirer}
+        partir={gestes.partir}
       />
 
       <TiroirDuJournal code={partie.code} tiroir={tiroir} gestes={gestesDuTiroir} />

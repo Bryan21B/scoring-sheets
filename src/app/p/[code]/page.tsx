@@ -3,6 +3,7 @@ import type { ReactElement } from "react";
 import {
   abandonnerLaPartieAction,
   ouvrirLaMancheSuivanteAction,
+  partirDeLaPartieAction,
   reprendreLaPartieAction,
   supprimerLaPartieAction,
 } from "@/app/p/[code]/actions";
@@ -154,6 +155,10 @@ export default async function PageDePartie(props: PageProps<"/p/[code]">): Promi
         rejoindre: rejoindreAction,
         ajouter: ajouterParticipantAction,
         retirer: retirerParticipantAction,
+        // Liée au code, à la différence des trois gestes de la salle
+        // d'attente : elle vit dans les actions de cette page, où le code vient
+        // de l'adresse et jamais d'un champ caché.
+        partir: partirDeLaPartieAction.bind(null, partie.code),
       }}
       erreur={erreur.success ? erreur.data : undefined}
       sondage={<SondageDePartie code={partie.code} version={partie.version} />}

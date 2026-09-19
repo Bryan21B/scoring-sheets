@@ -19,6 +19,7 @@ import {
   reprendreLaPartie,
   supprimerLaPartie,
 } from "@/lib/partie/cycle";
+import { RefusDeDepart, retirerDeLaPartie } from "@/lib/partie/depart";
 import { PartieScellee, RepriseImpossible } from "@/lib/partie/fin";
 import type { VueDePartie } from "@/lib/partie/lecture";
 import { lirePartieParCode } from "@/lib/partie/lecture";
@@ -241,7 +242,7 @@ async function agirSurLeCycle(
     await geste(partie.id, { joueurId, appareilId: idAppareil ?? null });
     destination = apres(partie.code);
   } catch (erreur) {
-    destination = avecRefus(partie.code, refusDuCycle(erreur));
+    destination = avecRefus(partie.code, refusMontrable(erreur));
   }
 
   redirect(destination);
@@ -259,20 +260,72 @@ function avecRefus(code: string, message: string): string {
 }
 
 /**
- * Ce qui s'affiche quand un geste du cycle de vie est refusé.
+ * Ce qui s'affiche quand un geste de cette page est refusé.
  *
- * Les trois classes qui se montrent, et rien d'autre : `RefusDeCycle` pour le
+ * Les quatre classes qui se montrent, et rien d'autre : `RefusDeCycle` pour le
  * spectateur et le journal non vide, `PartieScellee` et `RepriseImpossible`
- * pour les deux sens de la fin. Tout le reste est interne — un rapport de champs
- * Zod, une contrainte SQLite — et l'afficher n'aiderait personne tout en
+ * pour les deux sens de la fin, `RefusDeDepart` pour qui fait sortir quelqu'un
+ * d'une table dont il n'est pas. Tout le reste est interne — un rapport de
+ * champs Zod, une contrainte SQLite — et l'afficher n'aiderait personne tout en
  * racontant la base.
+ *
+ * Une seule fonction pour le cycle de vie **et** le départ, alors que ce ne
+ * sont pas les mêmes gestes : ce qui se partage ici est la phrase de repli, et
+ * en écrire une deuxième copie dans le même fichier la ferait diverger le jour
+ * où l'une est reformulée.
  */
-function refusDuCycle(erreur: unknown): string {
+function refusMontrable(erreur: unknown): string {
   return erreur instanceof RefusDeCycle ||
     erreur instanceof PartieScellee ||
-    erreur instanceof RepriseImpossible
+    erreur instanceof RepriseImpossible ||
+    erreur instanceof RefusDeDepart
     ? erreur.message
     : "Le geste n’a pas abouti. Recharge la partie et recommence.";
+}
+
+/**
+ * Fait sortir un participant d'une partie **commencée** : Paul rentre chez lui
+ * à la manche 4 sur 10.
+ *
+ * À ne pas confondre avec `retirerParticipantAction`, qui corrige la liste en
+ * salle d'attente et que le gel ferme. Ici la place reste, les valeurs déjà
+ * saisies restent, et le journal consigne le départ — voir
+ * `src/lib/partie/depart.ts`, qui tient les trois règles.
+ *
+ * Le **joueur qui s'en va** vient du formulaire, et c'est voulu : n'importe
+ * quel participant fait sortir n'importe lequel, y compris celui qui n'a pas de
+ * téléphone pour partir lui-même. Ce qui ne vient jamais du formulaire, c'est
+ * l'appareil **agissant** : il se lit du cookie, et le domaine en déduit seul le
+ * joueur que la ligne de journal fige.
+ *
+ * Un appareil sans cookie reçoit la phrase du spectateur plutôt qu'un rapport
+ * Zod : ne pas être reconnu et ne pas être de la tablée sont la même situation
+ * vue de la partie.
+ *
+ * `redirect` est appelé **hors** du `try` : il fonctionne en levant, et
+ * l'attraper transformerait chaque navigation réussie en erreur.
+ */
+export async function partirDeLaPartieAction(code: string, formulaire: FormData): Promise<void> {
+  const partie = await exigerLaPartie(code);
+  const bocal = await cookies();
+  const idAppareil = bocal.get(NOM_COOKIE_APPAREIL)?.value;
+  let destination: string;
+
+  if (idAppareil === undefined) {
+    return redirect(avecRefus(partie.code, PAS_DE_LA_PARTIE));
+  }
+
+  try {
+    await retirerDeLaPartie(db, partie.id, {
+      idAppareil,
+      joueurId: formulaire.get("joueurId"),
+    });
+    destination = adresseDePartie(partie.code);
+  } catch (erreur) {
+    destination = avecRefus(partie.code, refusMontrable(erreur));
+  }
+
+  redirect(destination);
 }
 
 /**

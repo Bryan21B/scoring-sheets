@@ -8,7 +8,7 @@ import type { LigneDeGrille, VueDeGrille } from "@/lib/manche/lecture";
 import type { VueDePartie } from "@/lib/partie/lecture";
 import type { EtatDeSalle } from "@/lib/partie/salle-attente";
 import { AUCUNE_SORTIE } from "./helpers/sorties";
-import { casesDeLaTablee, MARIE, TABLEE, ZOE } from "./helpers/tablee";
+import { casesDeLaTablee, MARIE, PAUL, TABLEE, ZOE } from "./helpers/tablee";
 
 const SIX_QUI_PREND = trouverEntree("6-qui-prend");
 const REGLES = resoudreRegles(SIX_QUI_PREND, { nombreDeJoueurs: 3 });
@@ -31,6 +31,7 @@ const GESTES: GestesDePartie = {
   rejoindre: "/p/rejoindre",
   ajouter: "/p/ajouter",
   retirer: "/p/retirer",
+  partir: "/p/partir",
 };
 
 /** Une ligne de grille pour la tablée de trois, valeurs manquantes vides. */
@@ -100,6 +101,18 @@ describe("l'écran d'une partie, pour qui en est", () => {
     expect(html).toContain("estampille");
   });
 
+  it("offre le départ en cours de partie, sur la ligne de chaque joueur", () => {
+    // Le geste existait dans le domaine sans que personne puisse l'exécuter :
+    // c'est ici qu'il se pose enfin sous un doigt. Paul rentre chez lui à la
+    // manche 4 sur 10, et n'importe quel participant le fait sortir — y
+    // compris celui qui n'a pas de téléphone pour partir lui-même.
+    const html = rendre(PARTICIPANTE);
+
+    expect(html).toContain('action="/p/partir"');
+    expect(html).toContain("Je quitte la table");
+    expect(html).toContain(`value="${PAUL.id}"`);
+  });
+
   it("montre au-dessus du reste le refus rapporté par l'adresse", () => {
     const html = rendre(PARTICIPANTE, "La partie a commencé.");
 
@@ -114,14 +127,16 @@ describe("l'écran d'une partie, pour qui en est", () => {
 });
 
 describe("l'écran d'une partie, pour qui a le code sans y jouer", () => {
-  it("ne lui offre aucune écriture : ni manche suivante, ni ajout, ni retrait", () => {
+  it("ne lui offre aucune écriture : ni manche suivante, ni ajout, ni retrait, ni départ", () => {
     // Le code donne la lecture, pas l'écriture. Sans ça, la spectatrice
-    // ouvrirait une manche dans une partie où elle n'a pas de colonne.
+    // ouvrirait une manche dans une partie où elle n'a pas de colonne — ou
+    // ferait rentrer Paul chez lui d'un doigt, alors qu'elle passait par là.
     const html = rendre(SPECTATRICE);
 
     expect(html).not.toContain('action="/p/manche-suivante"');
     expect(html).not.toContain('action="/p/ajouter"');
     expect(html).not.toContain('action="/p/retirer"');
+    expect(html).not.toContain('action="/p/partir"');
   });
 
   it("lui dit pourquoi, plutôt que de la laisser devant un écran inerte", () => {
