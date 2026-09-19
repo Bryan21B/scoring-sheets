@@ -7,12 +7,15 @@ import { type Marche, marchesDuPodium, podiumSeDresse } from "@/lib/partie/podiu
 /**
  * Ce qu'une marche inoccupée montre : un trou, comme la case vide de la grille.
  *
+ * Exportée pour que le test cherche **ce caractère-là** et non une copie qui
+ * dériverait le jour où l'un des deux est corrigé seul.
+ *
  * Elle est **dessinée et non escamotée** — c'est ce qui rend visible le rang
  * qu'une égalité a fait sauter. Un podium qui tasserait ses marches vers le
  * haut montrerait deux vainqueurs suivis d'un deuxième, exactement le podium
  * faux que les groupes de rang existent pour interdire.
  */
-const PLACE_VACANTE = "—";
+export const PLACE_VACANTE = "—";
 
 /**
  * L'ordre **visuel** des trois places : le premier au milieu, sur la marche

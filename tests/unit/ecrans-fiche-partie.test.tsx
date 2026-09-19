@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import type { Action } from "@/components/champs";
 import { FicheDePartie } from "@/components/fiche-partie";
+import { PLACE_VACANTE } from "@/components/podium-de-fin";
 import type { GestesDuTiroir } from "@/components/tiroir-journal";
 import { trouverEntree } from "@/lib/jeux/catalogue";
 import { evaluer, type Manche } from "@/lib/jeux/moteur";
@@ -111,9 +112,6 @@ function auDessusDeLaGrille(html: string): string {
 function lesMarches(html: string): string {
   return html.slice(html.indexOf('aria-label="Podium"'), html.indexOf('aria-label="Classement"'));
 }
-
-/** Ce qu'une marche inoccupée montre — voir `marchesDuPodium`. */
-const PLACE_VACANTE = "—";
 
 /** La tablée de deux, celle où le podium ne se dresse pas. */
 const DUO: readonly JoueurConnu[] = [MARIE, PAUL];

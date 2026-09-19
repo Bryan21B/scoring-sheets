@@ -4,7 +4,7 @@ import type { Base, Ecriture, Lecture } from "@/db/base";
 import { appareil, joueur, manche, participant } from "@/db/schema";
 import { idAppareilSchema } from "@/lib/appareil/cookie";
 import { lierLAppareil } from "@/lib/appareil/lien";
-import { consignerUnMouvementDeParticipant } from "@/lib/journal/ligne";
+import { consignerUnMouvementDeParticipant, type LigneDeParticipant } from "@/lib/journal/ligne";
 import { journalEstVide } from "@/lib/partie/cycle";
 import { exigerUnePartieOuverte } from "@/lib/partie/fin";
 import { identiteSchema } from "@/lib/partie/identite";
@@ -220,16 +220,12 @@ export async function estParticipant(
  *
  * `journalEstVide` vient de `cycle.ts`, qui la pose déjà pour la suppression de
  * partie : deux lectures de la même question divergeraient le jour où l'une est
- * corrigée seule.
+ * corrigée seule. La ligne, elle, est une {@link LigneDeParticipant} — celle du
+ * module qui l'écrit, jamais une forme recopiée ici.
  */
 async function consignerSiLHistoireACommence(
   tx: Ecriture,
-  ligne: {
-    partieId: number;
-    geste: "participantAjoute" | "participantRetire";
-    joueurConcerneId: number;
-    agissant: { joueurId: number; appareilId: string };
-  },
+  ligne: LigneDeParticipant,
 ): Promise<void> {
   if (await journalEstVide(tx, ligne.partieId)) {
     return;
