@@ -1,5 +1,21 @@
 # Changelog
 
+## [0.15.0](https://github.com/Bryan21B/scoring-sheets/compare/v0.14.0...v0.15.0) (2026-09-19)
+
+### Fonctionnalités
+
+* Donner à une partie terminée son podium, ses confettis et sa suite ([6db6441](https://github.com/Bryan21B/scoring-sheets/commit/6db64415525c7c8bfc48dd9360af4966a9cf0d29)), closes [#39](https://github.com/Bryan21B/scoring-sheets/issues/39)
+* Journaliser les mouvements de tablée dès que le journal a une histoire ([59c790c](https://github.com/Bryan21B/scoring-sheets/commit/59c790c8e1366e8652cd8972f3e2a353b668a1a7)), closes [#36](https://github.com/Bryan21B/scoring-sheets/issues/36)
+* Laisser un joueur quitter une partie commencée ([05d1734](https://github.com/Bryan21B/scoring-sheets/commit/05d17341bd5ad1052e930a02883fc8ee53d20a5d)), closes [#37](https://github.com/Bryan21B/scoring-sheets/issues/37)
+
+### Corrections
+
+* Distinguer l'absence de fête d'une salve vide ([fa35251](https://github.com/Bryan21B/scoring-sheets/commit/fa352510b4d482608021e27c1d38cbc32a3f3810)), closes [#39](https://github.com/Bryan21B/scoring-sheets/issues/39)
+
+### Refactoring
+
+* Reprendre les types propriétaires au lieu d'en recopier la forme ([66568b9](https://github.com/Bryan21B/scoring-sheets/commit/66568b9a346eb4bdf2bd0347b9b76a167d5880c6)), closes [#36](https://github.com/Bryan21B/scoring-sheets/issues/36) [#39](https://github.com/Bryan21B/scoring-sheets/issues/39)
+
 ## [0.14.0](https://github.com/Bryan21B/scoring-sheets/compare/v0.13.0...v0.14.0) (2026-09-19)
 
 ### Fonctionnalités
