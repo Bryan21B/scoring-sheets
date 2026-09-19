@@ -4,6 +4,8 @@ import type { Base, Ecriture, Lecture } from "@/db/base";
 import { appareil, joueur, manche, participant } from "@/db/schema";
 import { idAppareilSchema } from "@/lib/appareil/cookie";
 import { lierLAppareil } from "@/lib/appareil/lien";
+import { consignerUnMouvementDeParticipant } from "@/lib/journal/ligne";
+import { journalEstVide } from "@/lib/partie/cycle";
 import { exigerUnePartieOuverte } from "@/lib/partie/fin";
 import { identiteSchema } from "@/lib/partie/identite";
 import { assurerLeJoueur, resoudreIdentite } from "@/lib/roster/choix";
@@ -202,6 +204,41 @@ export async function estParticipant(
 }
 
 /**
+ * Consigne un mouvement de tablée **si le journal a déjà une histoire**.
+ *
+ * La règle de la spec, tenue à un seul endroit : « journal non vide, on
+ * journalise ». Tant qu'il est vide, bouger la liste *est* la salle d'attente —
+ * rien n'a été marqué, il n'y a aucune conséquence à tracer, et la partie se
+ * supprime encore. Une fois qu'il porte une ligne, la même liste qui bouge
+ * devient une correction de l'histoire, et le taire ferait apparaître Paul dans
+ * la manche 2 sans que rien ne dise quand il est arrivé.
+ *
+ * La condition se lit **dans le journal lui-même** plutôt que dans un état « la
+ * partie a commencé » : supprimer la manche 1 dégèle la liste sans vider le
+ * journal, et c'est exactement le cas que cette fonction existe pour couvrir.
+ * Voir `docs/specs/2026-09-09-journal.md`.
+ *
+ * `journalEstVide` vient de `cycle.ts`, qui la pose déjà pour la suppression de
+ * partie : deux lectures de la même question divergeraient le jour où l'une est
+ * corrigée seule.
+ */
+async function consignerSiLHistoireACommence(
+  tx: Ecriture,
+  ligne: {
+    partieId: number;
+    geste: "participantAjoute" | "participantRetire";
+    joueurConcerneId: number;
+    agissant: { joueurId: number; appareilId: string };
+  },
+): Promise<void> {
+  if (await journalEstVide(tx, ligne.partieId)) {
+    return;
+  }
+
+  await consignerUnMouvementDeParticipant(tx, ligne);
+}
+
+/**
  * Inscrit un joueur, ou rend sa place à celui qui s'était retiré.
  *
  * `onConflictDoUpdate` et non une insertion sèche : l'unicité `(partie,
@@ -231,10 +268,19 @@ async function inscrire(tx: Ecriture, partieId: number, joueurId: number): Promi
  * le gel — et seulement ensuite la moindre écriture. Un nom neuf tapé sur une
  * partie commencée ne laisse donc pas un joueur orphelin au roster.
  *
- * **Rien n'est journalisé.** La règle est « journal non vide, on journalise » ;
- * en salle d'attente il l'est par construction, puisque rejoindre exige
- * qu'aucune manche n'existe. Le cas qui reste — bouger la liste après avoir
- * supprimé la manche 1 — appartient au dégel, pas ici.
+ * **L'arrivée se journalise dès que le journal est non vide**, et pas avant.
+ * Le cas n'est pas théorique : supprimer la manche 1 **dégèle** la liste sans
+ * vider le journal, si bien qu'une manche 1 ressaisie à six joueurs au lieu de
+ * cinq doit porter une ligne disant que Paul est arrivé. Voir
+ * {@link consignerSiLHistoireACommence}, qui tient la condition.
+ *
+ * **Réclamer n'écrit rien** : l'appareil se lie à une place déjà là, la tablée
+ * ne bouge pas, et « Paul est arrivé » serait faux. Seul *rejoindre* ajoute
+ * quelqu'un, donc seul lui laisse une trace.
+ *
+ * Celui qui arrive est **sa propre main** : personne d'autre n'a appuyé, et
+ * c'est la seule des trois écritures de ce module où l'agissant et le concerné
+ * sont le même joueur.
  *
  * @throws {@link PartieScellee} si la partie porte une fin — scellée, elle ne
  * bouge plus, et le dire vaut mieux que de parler d'une manche 1 à supprimer qui
@@ -277,6 +323,13 @@ export async function rejoindrePartie(
 
     await inscrire(tx, partieId, joueurId);
 
+    await consignerSiLHistoireACommence(tx, {
+      partieId,
+      geste: "participantAjoute",
+      joueurConcerneId: joueurId,
+      agissant: { joueurId, appareilId: donnees.idAppareil },
+    });
+
     return { statut: "rejoint", joueurId };
   });
 }
@@ -304,15 +357,19 @@ export const PAS_DE_LA_PARTIE = "Tu regardes cette partie, tu n’y joues pas.";
  * déclaration et non une preuve — entre amis, ce qu'on arrête ici est un
  * spectateur qui touche à la liste, pas une fraude.
  *
+ * Rend le joueur agissant, que la ligne de journal **fige** : le relire plus
+ * tard depuis l'appareil réécrirait l'histoire de ce téléphone à chaque fois
+ * qu'il se repointe.
+ *
  * @throws {@link RefusDArrivee} si l'appareil n'est de la partie.
  */
 async function exigerUneMainDeLaPartie(
   tx: Ecriture,
   partieId: number,
   idAppareil: string,
-): Promise<void> {
+): Promise<number> {
   const [place] = await tx
-    .select({ id: participant.id })
+    .select({ joueurId: participant.joueurId })
     .from(participant)
     .innerJoin(appareil, eq(appareil.joueurId, participant.joueurId))
     .where(
@@ -327,6 +384,8 @@ async function exigerUneMainDeLaPartie(
   if (place === undefined) {
     throw new RefusDArrivee(PAS_DE_LA_PARTIE);
   }
+
+  return place.joueurId;
 }
 
 /**
@@ -341,6 +400,11 @@ async function exigerUneMainDeLaPartie(
  * Il n'y a **pas de rôle de créateur** : n'importe quel participant ajoute,
  * comme n'importe lequel saisit n'importe quelle case. Inventer un rôle ici en
  * créerait un pour une seule fonctionnalité.
+ *
+ * **L'ajout se consigne dès que le journal est non vide**, l'agissant étant
+ * celui qui tient le téléphone et le concerné celui qu'on assoit — voir
+ * {@link consignerSiLHistoireACommence}. « Déjà là » n'écrit rien : la liste
+ * n'a pas bougé.
  *
  * @throws {@link PartieScellee} si la partie porte une fin.
  * @throws {@link RefusDArrivee} si la partie est gelée, ou si l'appareil n'est
@@ -361,9 +425,12 @@ export async function ajouterParticipant(
   const maintenant = new Date();
 
   return base.transaction(async (tx) => {
-    await exigerUneMainDeLaPartie(tx, partieId, donnees.idAppareil);
+    const agissantId = await exigerUneMainDeLaPartie(tx, partieId, donnees.idAppareil);
+
     await exigerUnePartieOuverte(tx, partieId);
 
+    // « Déjà là » ne bouge pas la liste, donc n'écrit pas de ligne : la tablée
+    // est celle qu'on voulait, et annoncer une arrivée serait faux.
     if (choix.statut === "connu" && (await estParticipant(tx, partieId, choix.joueurId))) {
       return { statut: "dejaLa", joueurId: choix.joueurId };
     }
@@ -375,6 +442,13 @@ export async function ajouterParticipant(
     const joueurId = await assurerLeJoueur(tx, choix, maintenant);
 
     await inscrire(tx, partieId, joueurId);
+
+    await consignerSiLHistoireACommence(tx, {
+      partieId,
+      geste: "participantAjoute",
+      joueurConcerneId: joueurId,
+      agissant: { joueurId: agissantId, appareilId: donnees.idAppareil },
+    });
 
     return { statut: "ajoute", joueurId };
   });
@@ -407,8 +481,13 @@ export const retraitSchema = z.strictObject({
  * pas de téléphone pour le faire lui-même — c'est le pendant de l'ajout, et
  * sans lui le mode « un seul téléphone » n'aurait pas de marche arrière.
  *
- * Retirer quelqu'un qui n'est déjà plus là ne fait rien : la liste est celle
- * qu'on voulait, il n'y a rien à annoncer.
+ * Retirer quelqu'un qui n'est déjà plus là ne fait rien, ligne de journal
+ * comprise : la liste est celle qu'on voulait, il n'y a rien à annoncer.
+ *
+ * **Le geste se consigne dès que le journal est non vide.** Ce n'est pas une
+ * contradiction avec « ici il n'y a aucune valeur saisie » : supprimer la
+ * manche 1 dégèle la liste sans vider le journal, et c'est précisément là que
+ * la trace compte. Voir {@link consignerSiLHistoireACommence}.
  *
  * @throws {@link PartieScellee} si la partie porte une fin.
  * @throws {@link RefusDArrivee} si la partie est gelée, ou si l'appareil n'est
@@ -423,14 +502,15 @@ export async function retirerParticipant(
   const maintenant = new Date();
 
   await base.transaction(async (tx) => {
-    await exigerUneMainDeLaPartie(tx, partieId, donnees.idAppareil);
+    const agissantId = await exigerUneMainDeLaPartie(tx, partieId, donnees.idAppareil);
+
     await exigerUnePartieOuverte(tx, partieId);
 
     if (await estGelee(tx, partieId)) {
       throw new RefusDArrivee(PARTIE_COMMENCEE);
     }
 
-    await tx
+    const bouges = await tx
       .update(participant)
       .set({ retireLe: maintenant })
       .where(
@@ -439,6 +519,22 @@ export async function retirerParticipant(
           eq(participant.joueurId, donnees.joueurId),
           isNull(participant.retireLe),
         ),
-      );
+      )
+      .returning({ id: participant.id });
+
+    // Personne n'a bougé : il était déjà parti, la liste est celle qu'on
+    // voulait, et une seconde ligne raconterait deux retraits pour un seul.
+    // C'est le zéro ligne touchée qui le dit, et non une relecture préalable —
+    // deux téléphones qui appuient ensemble ont tous les deux vu Paul à table.
+    if (bouges.length === 0) {
+      return;
+    }
+
+    await consignerSiLHistoireACommence(tx, {
+      partieId,
+      geste: "participantRetire",
+      joueurConcerneId: donnees.joueurId,
+      agissant: { joueurId: agissantId, appareilId: donnees.idAppareil },
+    });
   });
 }

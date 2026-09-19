@@ -1,8 +1,11 @@
 import { afterEach, beforeEach, describe, expect, it } from "bun:test";
 import { eq } from "drizzle-orm";
 import type { Base } from "@/db/base";
-import { appareil, joueur, manche } from "@/db/schema";
+import { appareil, joueur, journal, manche } from "@/db/schema";
 import { creerIdAppareil } from "@/lib/appareil/cookie";
+import { ouvrirLaMancheSuivante } from "@/lib/manche/ouverture";
+import { ecrireLaCase } from "@/lib/manche/saisie";
+import { supprimerLaManche } from "@/lib/manche/suppression";
 import { creerPartie } from "@/lib/partie/creation";
 import { lirePartieParCode } from "@/lib/partie/lecture";
 import {
@@ -13,6 +16,11 @@ import {
   retirerParticipant,
 } from "@/lib/partie/salle-attente";
 import { type BaseDeTest, creerBaseDeTest } from "../helpers/base-de-test";
+import {
+  joueurDeLaPartie,
+  ouvrirUnePartieDeTest,
+  type PartieDeTest,
+} from "../helpers/partie-de-test";
 
 let baseDeTest: BaseDeTest;
 let base: Base;
@@ -577,5 +585,170 @@ describe("une page ne pose pas de cookie : elle lit celui qui est là", () => {
     expect((await lireSalleDAttente(base, partie.partieId, undefined)).arrivee).toEqual({
       statut: "inconnu",
     });
+  });
+});
+
+describe("ce que la salle d'attente consigne une fois le journal non vide", () => {
+  /** Les gestes du journal de cette partie, dans l'ordre où ils sont tombés. */
+  async function gestesDuJournal(partieId: number): Promise<string[]> {
+    const lignes = await base
+      .select({ geste: journal.geste })
+      .from(journal)
+      .where(eq(journal.partieId, partieId))
+      .orderBy(journal.id);
+
+    return lignes.map((ligne) => ligne.geste);
+  }
+
+  /** La ligne la plus récente, telle que le tiroir la montrerait. */
+  async function derniereLigne(partieId: number) {
+    const lignes = await base
+      .select({
+        geste: journal.geste,
+        agissant: journal.joueurAgissantId,
+        concerne: journal.joueurConcerneId,
+        appareilId: journal.appareilId,
+        mancheNumero: journal.mancheNumero,
+        detail: journal.detail,
+      })
+      .from(journal)
+      .where(eq(journal.partieId, partieId))
+      .orderBy(journal.id);
+
+    return lignes.at(-1);
+  }
+
+  /**
+   * Le décor exact du ticket : la manche 1 saisie **puis supprimée**.
+   *
+   * C'est le seul état où le journal porte une histoire et où la liste bouge
+   * encore — le gel se déduit des manches, et il n'y en a plus. Sans ce cas,
+   * une manche 1 ressaisie à six joueurs au lieu de cinq n'aurait aucune ligne
+   * disant que Paul est arrivé.
+   */
+  async function apresLeDegel(): Promise<PartieDeTest> {
+    const partie = await ouvrirUnePartieDeTest(base);
+    const marie = joueurDeLaPartie(partie, 0);
+    const ouverte = await ouvrirLaMancheSuivante(base, partie.partieId);
+
+    await ecrireLaCase(base, {
+      mancheId: ouverte.id,
+      joueurConcerneId: marie,
+      valeurMontree: null,
+      valeur: 8,
+      agissant: { joueurId: marie, appareilId: partie.idAppareil },
+    });
+
+    await supprimerLaManche(base, partie.partieId, {
+      numero: ouverte.numero,
+      agissant: { joueurId: marie, appareilId: partie.idAppareil },
+    });
+
+    return partie;
+  }
+
+  it("consigne le retrait d'un participant, journal non vide et liste rouverte", async () => {
+    const partie = await apresLeDegel();
+    const paul = joueurDeLaPartie(partie, 1);
+
+    await retirerParticipant(base, partie.partieId, {
+      idAppareil: partie.idAppareil,
+      joueurId: String(paul),
+    });
+
+    expect(await derniereLigne(partie.partieId)).toEqual({
+      geste: "participantRetire",
+      agissant: joueurDeLaPartie(partie, 0),
+      concerne: paul,
+      appareilId: partie.idAppareil,
+      mancheNumero: null,
+      detail: null,
+    });
+  });
+
+  it("consigne l'ajout d'un joueur sans téléphone", async () => {
+    const partie = await apresLeDegel();
+
+    await ajouterParticipant(base, partie.partieId, {
+      idAppareil: partie.idAppareil,
+      identite: { mode: "nouveau", nom: "Zoé" },
+    });
+
+    const ligne = await derniereLigne(partie.partieId);
+
+    expect(ligne?.geste).toBe("participantAjoute");
+    expect(ligne?.agissant).toBe(joueurDeLaPartie(partie, 0));
+    expect(ligne?.concerne).not.toBe(joueurDeLaPartie(partie, 0));
+  });
+
+  it("consigne l'arrivée de qui rejoint par le code", async () => {
+    // C'est l'autre façon dont Paul arrive : il ouvre le lien lui-même. Le
+    // journal doit le dire aussi, sans quoi la tablée grandit sans trace.
+    const partie = await apresLeDegel();
+    const telephoneDeZoe = creerIdAppareil();
+
+    await rejoindrePartie(base, partie.partieId, {
+      idAppareil: telephoneDeZoe,
+      identite: { mode: "nouveau", nom: "Zoé" },
+    });
+
+    const ligne = await derniereLigne(partie.partieId);
+
+    expect(ligne?.geste).toBe("participantAjoute");
+    // Celui qui arrive est sa propre main : personne d'autre n'a appuyé.
+    expect(ligne?.agissant).toBe(ligne?.concerne ?? -1);
+    expect(ligne?.appareilId).toBe(telephoneDeZoe);
+  });
+
+  it("ne consigne rien tant que le journal est vide : c'est encore la salle d'attente", async () => {
+    // « Journal non vide, on journalise » : avant la première case saisie,
+    // bouger la liste *est* la salle d'attente et n'a rien à tracer. Une
+    // partie dont le journal reste vide se supprime encore.
+    const partie = await ouvrirUnePartieDeTest(base);
+
+    await retirerParticipant(base, partie.partieId, {
+      idAppareil: partie.idAppareil,
+      joueurId: String(joueurDeLaPartie(partie, 1)),
+    });
+    await ajouterParticipant(base, partie.partieId, {
+      idAppareil: partie.idAppareil,
+      identite: { mode: "nouveau", nom: "Zoé" },
+    });
+
+    expect(await gestesDuJournal(partie.partieId)).toEqual([]);
+  });
+
+  it("ne consigne rien pour un retrait qui ne bouge personne", async () => {
+    // Retirer quelqu'un qui n'est déjà plus là ne fait rien, ligne comprise :
+    // une seconde ligne raconterait deux départs pour un seul.
+    const partie = await apresLeDegel();
+    const paul = joueurDeLaPartie(partie, 1);
+    const retirer = async (): Promise<void> => {
+      await retirerParticipant(base, partie.partieId, {
+        idAppareil: partie.idAppareil,
+        joueurId: String(paul),
+      });
+    };
+
+    await retirer();
+    const apresLePremier = await gestesDuJournal(partie.partieId);
+
+    await retirer();
+
+    expect(await gestesDuJournal(partie.partieId)).toEqual(apresLePremier);
+  });
+
+  it("ne consigne rien quand réclamer sa place ne change pas la liste", async () => {
+    // Réclamer lie un appareil à une place **déjà là** : la tablée ne bouge
+    // pas, et une ligne « Paul est arrivé » serait fausse.
+    const partie = await apresLeDegel();
+    const avant = await gestesDuJournal(partie.partieId);
+
+    await rejoindrePartie(base, partie.partieId, {
+      idAppareil: creerIdAppareil(),
+      identite: { mode: "roster", joueurId: String(joueurDeLaPartie(partie, 1)) },
+    });
+
+    expect(await gestesDuJournal(partie.partieId)).toEqual(avant);
   });
 });
