@@ -4,6 +4,7 @@ import {
   abandonnerLaPartieAction,
   ouvrirLaMancheSuivanteAction,
   partirDeLaPartieAction,
+  rejouerLaTableeAction,
   reprendreLaPartieAction,
   supprimerLaPartieAction,
 } from "@/app/p/[code]/actions";
@@ -13,6 +14,7 @@ import {
   retirerParticipantAction,
 } from "@/app/p/actions";
 import { TropDeTentatives } from "@/components/code-inconnu";
+import { ConfettisDeFin } from "@/components/confettis-de-fin";
 import { Ecran } from "@/components/ecran";
 import { EcranDePartie } from "@/components/ecran-de-partie";
 import { FicheDePartie } from "@/components/fiche-partie";
@@ -22,8 +24,10 @@ import { cleDeLaRequete, lireLAppareil } from "@/lib/appareil/requete";
 import { lireLeTiroir } from "@/lib/journal/lecture";
 import { lireLaGrille } from "@/lib/manche/lecture";
 import { journalEstVide, sortiesDePartie } from "@/lib/partie/cycle";
+import { feteDeLaFin } from "@/lib/partie/fete";
 import { lireLaFin } from "@/lib/partie/fin";
 import { messageDeRefusSchema, premierParametre } from "@/lib/partie/identite-url";
+import { estVainqueur, marchesDuClassement } from "@/lib/partie/podium";
 import { chercherPartieParCode, limiteDeRecherche } from "@/lib/partie/recherche";
 import { estDeLaPartie, lireSalleDAttente } from "@/lib/partie/salle-attente";
 import { listerLeRoster } from "@/lib/roster/lecture";
@@ -121,13 +125,41 @@ export default async function PageDePartie(props: PageProps<"/p/[code]">): Promi
   // partie et que les liens du tiroir du journal visent `/p/<code>` : une fiche
   // ailleurs ferait quitter la page en ouvrant le journal.
   if (fin !== null) {
+    // Calculées **une fois**, pour les deux lectures qu'en fait cet écran : le
+    // podium les dessine, la fête demande si celui qui regarde est sur la
+    // marche de tête. Deux appels diraient la même chose, et ce serait alors un
+    // invariant tenu par accident plutôt que par construction.
+    const marches = marchesDuClassement(grille.etat, partie.participants);
+    const deLaPartie = estDeLaPartie(salle);
+
     return (
       <FicheDePartie
         partie={partie}
         grille={grille}
         fin={fin}
+        marches={marches}
         tiroir={await lireLeTiroir(db, partie.id, await props.searchParams)}
         gestesDuTiroir={gestesDuTiroir}
+        // Le code donne la lecture : le passant voit le podium, il ne rouvre
+        // pas une soirée entre des gens qu'il ne connaît pas. Le serveur le
+        // revérifie — `rejouerLaTablee` refuse — mais un bouton mort ne ferait
+        // que faire douter de l'application plutôt que du geste.
+        rejouer={deLaPartie ? rejouerLaTableeAction.bind(null, partie.code) : undefined}
+        // L'horloge du rendu, prise ici : `feteDeLaFin` la reçoit en paramètre
+        // pour que la décision se rejoue à n'importe quelle date dans un test.
+        confettis={
+          <ConfettisDeFin
+            fete={feteDeLaFin({
+              fin,
+              deLaPartie,
+              vainqueur: estVainqueur(
+                marches,
+                salle.arrivee.statut === "participant" ? salle.arrivee.joueur.id : null,
+              ),
+              maintenant: Date.now(),
+            })}
+          />
+        }
         // Une partie terminée ne changera plus : la sonder serait une requête
         // toutes les trois secondes pour une réponse connue d'avance. Une
         // partie abandonnée, elle, se reprend — et les quatre autres doivent

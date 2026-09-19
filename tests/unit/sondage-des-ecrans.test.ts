@@ -75,3 +75,28 @@ describe("la passe avant reste sans poll", () => {
     });
   }
 });
+
+describe("les confettis de la fin", () => {
+  const ecran = "src/components/confettis-de-fin.tsx";
+
+  it("tire la salve que `fete.ts` a décidée, et ne la redécide pas", async () => {
+    // Le seam existe précisément pour que « ils tombent, et à quelle densité »
+    // se vérifie sur des nombres : une condition écrite dans le `useEffect` ne
+    // s'atteste qu'à l'œil, et une fête ne se rejoue pas pour vérifier.
+    const code = await codeDe(ecran);
+
+    expect(code).toContain("canvas-confetti");
+    expect(code).toContain("fete");
+    expect(code).toContain("pieces");
+    // Qui est sur la marche de tête ne se relit pas ici : la densité arrive
+    // déjà choisie, et une seconde lecture divergerait de la première.
+    expect(code).not.toContain("vainqueur");
+  });
+
+  it("n'emporte ni la base ni le classement dans le navigateur", async () => {
+    const code = await codeDe(ecran);
+
+    expect(code).not.toContain("@/lib/partie/podium");
+    expect(code).not.toContain("@/db");
+  });
+});

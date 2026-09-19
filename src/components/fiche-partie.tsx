@@ -1,13 +1,16 @@
 import type { ReactElement, ReactNode } from "react";
 import { BandeauDeRefus } from "@/components/bandeau-de-refus";
+import type { Action } from "@/components/champs";
 import { Ecran } from "@/components/ecran";
 import { GrilleDeScore } from "@/components/grille-score";
+import { PodiumDeFin } from "@/components/podium-de-fin";
 import { type GestesDuTiroir, TiroirDuJournal } from "@/components/tiroir-journal";
 import { horodatage, type VueDuTiroir } from "@/lib/journal/tiroir";
 import type { VueDeGrille } from "@/lib/manche/lecture";
 import type { FinDePartie } from "@/lib/partie/fin";
 import { ADRESSE_HISTORIQUE } from "@/lib/partie/historique-url";
 import type { VueDePartie } from "@/lib/partie/lecture";
+import type { Marche } from "@/lib/partie/podium";
 
 /**
  * Ce qui est arrivé à la partie, dit au participe et non par un statut.
@@ -51,23 +54,48 @@ const SORT_DE_LA_PARTIE: Record<FinDePartie["cause"], string> = {
  * parce que le tiroir y vit et qu'une fiche ailleurs y renverrait en quittant la
  * page qu'on est en train de lire.
  *
- * Aucun vainqueur n'est nommé ici : le classement se lit dans les totaux au pied
- * de la grille, et le nommer une seconde fois ferait deux endroits à garder
- * d'accord — c'est la ligne d'historique qui a ce métier, parce qu'elle n'a pas
- * la grille à montrer.
+ * **Une partie régulièrement terminée porte son podium**, au-dessus de la
+ * grille : le classement en marches, puis le classement complet, puis « rejouer
+ * la même tablée ». Il **compose** avec cette fiche et ne la précède pas —
+ * rouvrir le lien trois jours plus tard donne le même écran moins les
+ * confettis, parce que le podium est ce à quoi une partie finie ressemble, et
+ * non un interstitiel qu'on traverse une fois.
+ *
+ * Une partie **abandonnée** garde exactement la fiche qu'elle a toujours eue :
+ * elle n'a pas de vainqueur — même décision de domaine que l'historique, qui
+ * n'en nomme aucun — et un podium vide au-dessus de sa grille serait une
+ * moquerie plutôt qu'une information.
  */
 export function FicheDePartie({
   partie,
   grille,
   fin,
+  marches,
   tiroir,
   gestesDuTiroir,
   sondage,
+  confettis,
+  rejouer,
   erreur,
 }: {
   partie: VueDePartie;
   grille: VueDeGrille;
   fin: FinDePartie;
+  /**
+   * Le classement en marches, calculé par la page.
+   *
+   * Passé plutôt que recalculé ici, alors que `grille.etat` et
+   * `partie.participants` suffiraient : la page en a besoin de son côté pour
+   * décider de la fête — qui regarde est-il sur la marche de tête ? — et deux
+   * appels au même endroit vaudraient mieux qu'un seul mal placé, mais un seul
+   * vaut mieux que deux.
+   *
+   * Exigé même sur une partie abandonnée, qui n'en montrera rien : la page ne
+   * sait pas encore, au moment où elle les calcule, laquelle des deux fiches
+   * elle rend, et un prop optionnel ferait croire qu'il y a un cas où le
+   * classement n'existe pas.
+   */
+  marches: readonly Marche[];
   tiroir: VueDuTiroir;
   /**
    * Ce que le tiroir offre de ranger — ici, **la reprise et rien d'autre**.
@@ -101,6 +129,23 @@ export function FicheDePartie({
    * explique quelque chose.
    */
   erreur: string | undefined;
+  /**
+   * `<ConfettisDeFin>`, passé par la page — ou `null`.
+   *
+   * Passé et non monté ici, pour la même raison que le sondage : la salve est
+   * un composant client, et la **décision** qui l'arme vit dans `fete.ts`, où
+   * elle se vérifie sur des nombres. Un `useEffect` qui la reprendrait ne
+   * s'atteste qu'à l'œil, et une fête ne se rejoue pas pour vérifier.
+   */
+  confettis: ReactNode;
+  /**
+   * « Rejouer la même tablée », la sortie principale de l'écran de fin — ou
+   * rien.
+   *
+   * `undefined` pour qui regarde sans avoir joué, et sur une partie abandonnée :
+   * le podium ne se montre pas là, et la sortie qu'il porte non plus.
+   */
+  rejouer: Action | undefined;
 }): ReactElement {
   return (
     <Ecran>
@@ -117,6 +162,10 @@ export function FicheDePartie({
         </p>
       </div>
 
+      {fin.cause === "terminee" ? (
+        <PodiumDeFin marches={marches} unite={partie.jeu.unite} rejouer={rejouer} />
+      ) : null}
+
       <GrilleDeScore partie={partie} grille={grille} />
 
       <TiroirDuJournal code={partie.code} tiroir={tiroir} gestes={gestesDuTiroir} />
@@ -126,6 +175,8 @@ export function FicheDePartie({
       </a>
 
       {sondage}
+
+      {confettis}
     </Ecran>
   );
 }

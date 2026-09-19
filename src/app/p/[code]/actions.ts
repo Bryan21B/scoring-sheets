@@ -13,6 +13,7 @@ import { ouvrirLaMancheSuivante } from "@/lib/manche/ouverture";
 import { type RefusDEcriture, refusDe } from "@/lib/manche/refus";
 import { ecrireLaCase } from "@/lib/manche/saisie";
 import { adresseDePartie } from "@/lib/partie/adresse";
+import { RefusDeCreation } from "@/lib/partie/creation";
 import {
   abandonnerLaPartie,
   RefusDeCycle,
@@ -23,6 +24,7 @@ import { RefusDeDepart, retirerDeLaPartie } from "@/lib/partie/depart";
 import { PartieScellee, RepriseImpossible } from "@/lib/partie/fin";
 import type { VueDePartie } from "@/lib/partie/lecture";
 import { lirePartieParCode } from "@/lib/partie/lecture";
+import { RefusDeRejeu, rejouerLaTablee } from "@/lib/partie/rejouer";
 import { PAS_DE_LA_PARTIE } from "@/lib/partie/salle-attente";
 import type { JoueurConnu } from "@/lib/roster/noms";
 
@@ -262,25 +264,62 @@ function avecRefus(code: string, message: string): string {
 /**
  * Ce qui s'affiche quand un geste de cette page est refusé.
  *
- * Les quatre classes qui se montrent, et rien d'autre : `RefusDeCycle` pour le
+ * Les classes qui se montrent, et rien d'autre : `RefusDeCycle` pour le
  * spectateur et le journal non vide, `PartieScellee` et `RepriseImpossible`
  * pour les deux sens de la fin, `RefusDeDepart` pour qui fait sortir quelqu'un
- * d'une table dont il n'est pas. Tout le reste est interne — un rapport de
- * champs Zod, une contrainte SQLite — et l'afficher n'aiderait personne tout en
- * racontant la base.
+ * d'une table dont il n'est pas, `RefusDeRejeu` et `RefusDeCreation` pour la
+ * soirée suivante qu'on n'arrive pas à ouvrir. Tout le reste est interne — un
+ * rapport de champs Zod, une contrainte SQLite — et l'afficher n'aiderait
+ * personne tout en racontant la base.
  *
- * Une seule fonction pour le cycle de vie **et** le départ, alors que ce ne
- * sont pas les mêmes gestes : ce qui se partage ici est la phrase de repli, et
- * en écrire une deuxième copie dans le même fichier la ferait diverger le jour
- * où l'une est reformulée.
+ * Une seule fonction pour tous les gestes de cette page, alors que ce ne sont
+ * pas les mêmes : ce qui se partage ici est la phrase de repli, et en écrire
+ * une deuxième copie dans le même fichier la ferait diverger le jour où l'une
+ * est reformulée.
  */
 function refusMontrable(erreur: unknown): string {
   return erreur instanceof RefusDeCycle ||
     erreur instanceof PartieScellee ||
     erreur instanceof RepriseImpossible ||
-    erreur instanceof RefusDeDepart
+    erreur instanceof RefusDeDepart ||
+    erreur instanceof RefusDeRejeu ||
+    erreur instanceof RefusDeCreation
     ? erreur.message
     : "Le geste n’a pas abouti. Recharge la partie et recommence.";
+}
+
+/**
+ * **Rejouer la même tablée** : ouvre la soirée suivante et y emmène.
+ *
+ * Le succès change d'adresse — c'est une autre partie, sous un autre code — là
+ * où les autres gestes de cette page reviennent sur la leur. Le refus, lui,
+ * revient bien ici : la fiche qu'on regardait est encore la bonne page pour
+ * lire pourquoi rien ne s'est ouvert.
+ *
+ * La partie modèle est **relue** plutôt que reçue du formulaire : c'est elle qui
+ * dicte le jeu, les règles et la tablée, et un envoi qui les porterait laisserait
+ * choisir ses propres adversaires.
+ *
+ * `redirect` est appelé **hors** du `try` : il fonctionne en levant, et
+ * l'attraper transformerait chaque navigation réussie en erreur.
+ */
+export async function rejouerLaTableeAction(code: string): Promise<void> {
+  const partie = await exigerLaPartie(code);
+  const bocal = await cookies();
+  const idAppareil = bocal.get(NOM_COOKIE_APPAREIL)?.value;
+  let destination: string;
+
+  if (idAppareil === undefined) {
+    return redirect(avecRefus(partie.code, PAS_DE_LA_PARTIE));
+  }
+
+  try {
+    destination = adresseDePartie(await rejouerLaTablee(db, partie, { idAppareil }));
+  } catch (erreur) {
+    destination = avecRefus(partie.code, refusMontrable(erreur));
+  }
+
+  redirect(destination);
 }
 
 /**
