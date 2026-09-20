@@ -5,7 +5,7 @@ import { createClient } from "@libsql/client";
 import { drizzle } from "drizzle-orm/libsql";
 import * as schema from "@/db/schema";
 import { toLibsqlUrl } from "@/db/url";
-import { env } from "@/lib/env";
+import { env, urlDeLaBase } from "@/lib/env";
 import { logger } from "@/lib/logger";
 
 /**
@@ -35,11 +35,14 @@ function applyPragma(client: Client, pragma: string): void {
  * URL moves the same queries to Turso without touching this module.
  */
 function createConnection(): Client {
-  const url = toLibsqlUrl(env.DATABASE_PATH);
+  // Le nom sous lequel la base arrive dépend d'où l'on tourne : l'intégration
+  // Turso de Vercel pose le sien, le dev garde le nôtre. `urlDeLaBase` tranche.
+  const chemin = urlDeLaBase(env);
+  const url = toLibsqlUrl(chemin);
   const isLocalFile = url.startsWith("file:");
 
   if (isLocalFile) {
-    mkdirSync(dirname(env.DATABASE_PATH), { recursive: true });
+    mkdirSync(dirname(chemin), { recursive: true });
   }
 
   const client = createClient({

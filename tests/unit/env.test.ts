@@ -1,5 +1,5 @@
 import { describe, expect, it } from "bun:test";
-import { parseEnv } from "@/lib/env";
+import { parseEnv, urlDeLaBase } from "@/lib/env";
 
 /**
  * Exercises `parseEnv` directly rather than re-importing the module with a
@@ -54,5 +54,43 @@ describe("parseEnv", () => {
 
   it("names the offending variable in the error", () => {
     expect(() => parseEnv({ PORT: "-1" })).toThrow(/PORT/);
+  });
+});
+
+/**
+ * Là où l'intégration Turso de Vercel et le schéma de l'app se rencontrent.
+ *
+ * L'intégration pose `TURSO_DATABASE_URL`, l'app lisait `DATABASE_PATH`. Les
+ * deux noms coexistent donc, et c'est cette fonction qui tranche — plutôt que de
+ * recopier l'URL dans une seconde variable, qui pointerait dans le vide le jour
+ * où l'intégration reprovisionne la base.
+ */
+describe("urlDeLaBase", () => {
+  it("prend l'URL de l'intégration quand elle est là", () => {
+    const env = parseEnv({ TURSO_DATABASE_URL: "libsql://une-base.turso.io" });
+
+    expect(urlDeLaBase(env)).toBe("libsql://une-base.turso.io");
+  });
+
+  it("garde le fichier local quand l'intégration n'a rien posé", () => {
+    expect(urlDeLaBase(parseEnv({}))).toBe("./data/app.db");
+  });
+
+  it("fait passer l'intégration avant un DATABASE_PATH qui traînerait", () => {
+    // Le cas qui décide de l'ordre : une variable oubliée dans le projet Vercel
+    // ne doit pas renvoyer la production sur un fichier éphémère.
+    const env = parseEnv({
+      TURSO_DATABASE_URL: "libsql://une-base.turso.io",
+      DATABASE_PATH: "./data/app.db",
+    });
+
+    expect(urlDeLaBase(env)).toBe("libsql://une-base.turso.io");
+  });
+
+  it("traite une URL d'intégration vide comme absente, et retombe sur le fichier", () => {
+    // `.env.example` livre la clé sans valeur pour rester copiable tel quel vers
+    // `.env.local`, comme TURSO_AUTH_TOKEN. La préférer au fichier renverrait le
+    // dev sur une URL vide au premier `bun run dev`.
+    expect(urlDeLaBase(parseEnv({ TURSO_DATABASE_URL: "" }))).toBe("./data/app.db");
   });
 });

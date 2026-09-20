@@ -22,7 +22,11 @@ import { migrate } from "drizzle-orm/libsql/migrator";
  * creating it, so this stays idempotent and the file remains the single
  * description of what the database should hold.
  */
-const databasePath = process.env.DATABASE_PATH ?? "./data/app.db";
+// Même arbitrage que `urlDeLaBase` dans src/lib/env.ts : l'intégration Turso
+// de Vercel pose `TURSO_DATABASE_URL`, le dev garde `DATABASE_PATH`. Migrer
+// la mauvaise des deux laisserait la prod sans tables et sans déclencheurs.
+// `||` et non `??`, comme `urlDeLaBase` : une valeur vide compte pour absente.
+const databasePath = process.env.TURSO_DATABASE_URL || process.env.DATABASE_PATH || "./data/app.db";
 const url = /^(file|libsql|https?|ws|wss):/.test(databasePath)
   ? databasePath
   : `file:${databasePath}`;
