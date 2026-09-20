@@ -35,7 +35,26 @@ if (url.startsWith("file:")) {
   mkdirSync(dirname(databasePath), { recursive: true });
 }
 
-const client = createClient({ url });
+// Le jeton n'existe que pour une base distante ; en local il n'y a rien à
+// présenter. Spread plutôt qu'`authToken: …` : une chaîne vide serait envoyée
+// comme une vraie crédence, exactement comme dans `src/db/index.ts`.
+const authToken = process.env.TURSO_AUTH_TOKEN || undefined;
+
+// Une base distante sans jeton échoue à la première écriture, sur une erreur de
+// requête qui ne dit pas un mot du jeton manquant — on a mis un moment à la
+// lire. Autant refuser tout de suite, en nommant la cause.
+if (!url.startsWith("file:") && authToken === undefined) {
+  process.stderr.write(
+    `${JSON.stringify({
+      level: "error",
+      message: "migration refusée : base distante sans TURSO_AUTH_TOKEN",
+      url,
+    })}\n`,
+  );
+  process.exit(1);
+}
+
+const client = createClient({ url, ...(authToken ? { authToken } : {}) });
 
 try {
   await migrate(drizzle(client), {
