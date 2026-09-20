@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.15.2](https://github.com/Bryan21B/scoring-sheets/compare/v0.15.1...v0.15.2) (2026-09-20)
+
+### Corrections
+
+* **migrations:** Présenter le jeton Turso, que le script n'envoyait jamais ([4f3f9de](https://github.com/Bryan21B/scoring-sheets/commit/4f3f9de9c9ce4539dc66c117b180ba7e6b369ab3))
+
 ## [0.15.1](https://github.com/Bryan21B/scoring-sheets/compare/v0.15.0...v0.15.1) (2026-09-20)
 
 ### Corrections
