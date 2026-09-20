@@ -143,19 +143,29 @@ jobs:
     environment: production
     permissions:
       contents: read
-      deployments: write
+    # Le pull/build/deploy se fait avec la CLI officielle, pas une action tierce.
+    # `amondnet/vercel-action@v25` épinglait `vercel@25.1.0` — juin 2022, 34
+    # majeures de retard — et échouait sur « Could not retrieve Project Settings » :
+    # cette CLI-là ne sait plus lire les réglages d'un projet créé aujourd'hui.
+    # La majeure est épinglée pour que le déploiement ne change pas tout seul ;
+    # la bouger est un commit, pas une surprise un lundi matin.
+    #
+    # Le projet est lié par variables d'environnement plutôt que par un `.vercel`
+    # commité : les deux identifiants sont des secrets GitHub (voir AGENTS.md,
+    # « Security considerations ») et `.vercel` est gitignoré.
+    env:
+      VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+      VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+      VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
     steps:
       - uses: actions/checkout@v5
 
-      - uses: oven-sh/setup-bun@v2
+      - uses: actions/setup-node@v4
         with:
-          bun-version-file: package.json
+          node-version: 22
 
-      - run: bun install --frozen-lockfile
-
-      - uses: amondnet/vercel-action@v25
-        with:
-          vercel-token: ${{ secrets.VERCEL_TOKEN }}
-          vercel-org-id: ${{ secrets.VERCEL_ORG_ID }}
-          vercel-project-id: ${{ secrets.VERCEL_PROJECT_ID }}
-          vercel-args: "--prod"
+      # Pas de `bun install` ici : le build tourne chez Vercel, pas sur le runner.
+      # La CLI n'envoie que les sources — `node_modules` n'est jamais téléversé.
+      # C'est le job `check` qui vérifie que le lockfile installe.
+      - name: Deploy to Vercel
+        run: npx --yes vercel@59 deploy --prod --yes --token="$VERCEL_TOKEN"

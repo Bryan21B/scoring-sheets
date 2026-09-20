@@ -220,7 +220,7 @@ CHANGELOG, la release GitHub et le déploiement sur Vercel. Le pipeline est dans
 `.github/workflows/ci.yml`, seul fichier de CI/CD.
 - `**deploy` ne dépend pas de `release`.** Un `chore:` ou un `docs:` ne produit
 aucune version mais part quand même en prod — c'est voulu. Les deux jobs ont le
-même `needs: [check, e2e]` : c'est lui, et rien d'autre, qui empêche un commit
+même `needs: [check]` : c'est lui, et rien d'autre, qui empêche un commit
 rouge d'atteindre la prod.
 - **Le préfixe du commit est du code, pas de la décoration.** semantic-release
 en dérive la version : `feat:` → mineur, `fix:` → patch, `BREAKING CHANGE:` →
