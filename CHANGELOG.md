@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.15.1](https://github.com/Bryan21B/scoring-sheets/compare/v0.15.0...v0.15.1) (2026-09-20)
+
+### Corrections
+
+* **env:** Lire l'URL de base sous le nom que l'intégration Vercel lui donne ([a3f79ca](https://github.com/Bryan21B/scoring-sheets/commit/a3f79ca0aae7f8d804a1e5ac6ce2984e8e33e1d2))
+
 ## [0.15.0](https://github.com/Bryan21B/scoring-sheets/compare/v0.14.0...v0.15.0) (2026-09-19)
 
 ### Fonctionnalités
