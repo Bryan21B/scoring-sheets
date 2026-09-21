@@ -1,5 +1,5 @@
 import type { ReactElement, ReactNode } from "react";
-import type { Action } from "@/components/champs";
+import { type Action, ALERTE } from "@/components/champs";
 import { Ecran } from "@/components/ecran";
 import { GrilleDeScore } from "@/components/grille-score";
 import { MancheSuivante } from "@/components/manche-suivante";
@@ -116,7 +116,7 @@ export function EcranDePartie({
   return (
     <Ecran>
       {erreur === undefined ? null : (
-        <p role="alert" className="rounded-lg bg-destructive/10 p-3 text-destructive text-sm">
+        <p role="alert" className={`${ALERTE} font-medium text-sm`}>
           {erreur}
         </p>
       )}

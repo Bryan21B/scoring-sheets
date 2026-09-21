@@ -1,7 +1,9 @@
 import type { ReactElement } from "react";
-import type { Action } from "@/components/champs";
+import { type Action, TRAIT } from "@/components/champs";
+import { Pastille } from "@/components/pastille";
 import { Button } from "@/components/ui/button";
 import type { EntreeCatalogue } from "@/lib/jeux/catalogue";
+import type { JoueurId } from "@/lib/jeux/moteur";
 import { type Marche, marchesDuPodium, podiumSeDresse } from "@/lib/partie/podium";
 
 /**
@@ -32,7 +34,21 @@ export const PLACE_VACANTE = "—";
 const ORDRE_VISUEL = ["order-2", "order-1", "order-3"] as const;
 
 /** La hauteur de chaque marche, dans l'ordre des rangs : la tête est la plus haute. */
-const HAUTEUR_DE_MARCHE = ["h-20", "h-14", "h-10"] as const;
+const HAUTEUR_DE_MARCHE = ["h-33", "h-22", "h-15"] as const;
+
+/**
+ * La couleur d'une marche, dans l'ordre des rangs.
+ *
+ * **Par le rang, et non par le joueur** — contrairement à la colonne de la
+ * grille et à la ligne du classement. C'est le seul endroit où la règle
+ * s'inverse, et pour une raison de domaine : une marche peut porter deux noms.
+ * Un rang partagé n'a pas de couleur de joueur à prendre, et en choisir une des
+ * deux rangerait silencieusement Marie devant Paul.
+ *
+ * La troisième marche reste neutre : elle est souvent vide, et une marche vide
+ * de la couleur d'un aplat se lirait comme occupée.
+ */
+const COULEUR_DE_MARCHE = ["bg-primary", "bg-lagon", "bg-muted"] as const;
 
 /**
  * Un rang **dit à la française** : premier, puis les ordinaux courts.
@@ -83,10 +99,20 @@ function nomsDeLaMarche(marche: Marche): string {
  */
 export function PodiumDeFin({
   marches,
+  places,
   unite,
   rejouer,
 }: {
   marches: readonly Marche[];
+  /**
+   * Où chacun est assis, d'où sort sa couleur — voir `placesDeLaTablee`.
+   *
+   * Passée et non dérivée du classement : la fiche d'une partie montre le
+   * classement **et** la feuille de score, et les deux doivent colorer Paul
+   * pareil. Le classement range par rang, la feuille par tablée ; seule la
+   * tablée fait autorité.
+   */
+  places: ReadonlyMap<JoueurId, number>;
   /** L'unité du jeu, pour dire ce que les totaux comptent — têtes de bœuf, points. */
   unite: EntreeCatalogue["unite"];
   /**
@@ -102,7 +128,7 @@ export function PodiumDeFin({
     <section className="flex flex-col gap-6">
       {podiumSeDresse(marches) ? <Marches marches={marches} /> : null}
 
-      <Classement marches={marches} unite={unite} />
+      <Classement marches={marches} places={places} unite={unite} />
 
       {rejouer === undefined ? null : (
         <form action={rejouer} method="post">
@@ -124,13 +150,19 @@ export function PodiumDeFin({
 function Marches({ marches }: { marches: readonly Marche[] }): ReactElement {
   return (
     <ol aria-label="Podium" className="flex items-end justify-center gap-2">
-      {placesDuPodium(marches).map(({ rang, marche, ordre, hauteur }) => (
-        <li key={rang} className={`flex w-24 flex-col items-center gap-1 ${ordre}`}>
-          <span className="text-center font-medium text-sm">
+      {placesDuPodium(marches).map(({ rang, marche, ordre, hauteur, couleur }) => (
+        <li key={rang} className={`flex w-28 flex-col items-center gap-2 ${ordre}`}>
+          <span
+            className={`text-center text-sm ${
+              marche === undefined ? "text-muted-foreground" : "font-semibold"
+            }`}
+          >
             {marche === undefined ? PLACE_VACANTE : nomsDeLaMarche(marche)}
           </span>
+          {/* Cerclée sur trois côtés : une marche est posée sur le sol du
+              podium, pas flottante au-dessus de lui. */}
           <span
-            className={`flex w-full items-center justify-center rounded-t-lg bg-muted font-mono font-semibold text-lg ${hauteur}`}
+            className={`flex w-full items-center justify-center rounded-t-lg border-b-0 font-bold font-mono text-xl ${TRAIT} ${couleur} ${hauteur}`}
           >
             {rangEnMots(rang)}
           </span>
@@ -148,14 +180,19 @@ function Marches({ marches }: { marches: readonly Marche[] }): ReactElement {
  * même tout ce qu'elle a. Le tour de liste séparé existe pour que le rang soit
  * une donnée avant d'être une position, et non l'indice d'un rendu.
  */
-function placesDuPodium(
-  marches: readonly Marche[],
-): { rang: number; marche: Marche | undefined; ordre: string; hauteur: string }[] {
+function placesDuPodium(marches: readonly Marche[]): {
+  rang: number;
+  marche: Marche | undefined;
+  ordre: string;
+  hauteur: string;
+  couleur: string;
+}[] {
   return marchesDuPodium(marches).map((marche, index) => ({
     rang: index + 1,
     marche,
     ordre: ORDRE_VISUEL[index] ?? "",
     hauteur: HAUTEUR_DE_MARCHE[index] ?? "",
+    couleur: COULEUR_DE_MARCHE[index] ?? "",
   }));
 }
 
@@ -168,21 +205,37 @@ function placesDuPodium(
  */
 function Classement({
   marches,
+  places,
   unite,
 }: {
   marches: readonly Marche[];
+  places: ReadonlyMap<JoueurId, number>;
   unite: EntreeCatalogue["unite"];
 }): ReactElement {
   return (
     <div className="flex flex-col gap-2">
-      <ol aria-label="Classement" className="-mx-4 flex w-auto flex-col divide-y divide-border">
+      {/* Des lignes détachées et non une liste continue : chaque rang est un
+          résultat, et le kit les pose comme des cartons posés côte à côte. */}
+      <ol aria-label="Classement" className="flex flex-col gap-2">
         {marches.map((marche) => (
-          <li key={marche.rang} className="flex items-baseline gap-3 px-4 py-2">
-            <span className="w-8 shrink-0 font-mono text-muted-foreground text-sm">
+          <li
+            key={marche.rang}
+            className={`flex items-center gap-3 rounded-md bg-card px-3.5 py-2.5 ${TRAIT}`}
+          >
+            <span className="w-9 shrink-0 font-bold font-mono text-[13px]">
               {rangEnMots(marche.rang)}
             </span>
-            <span className="grow text-base">{nomsDeLaMarche(marche)}</span>
-            <span className="font-mono font-semibold text-lg tabular-nums">{marche.total}</span>
+            <span className="flex shrink-0 gap-1">
+              {marche.joueurs.map((joueur) => (
+                <Pastille
+                  key={joueur.id}
+                  nom={joueur.nom}
+                  index={places.get(joueur.id) ?? marche.rang - 1}
+                />
+              ))}
+            </span>
+            <span className="grow font-semibold text-base">{nomsDeLaMarche(marche)}</span>
+            <span className="font-bold font-mono text-[22px] tabular-nums">{marche.total}</span>
           </li>
         ))}
       </ol>

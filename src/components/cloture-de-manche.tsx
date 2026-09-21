@@ -2,7 +2,7 @@
 
 import type { ReactElement } from "react";
 import { useActionState } from "react";
-import type { Action, ActionServeur } from "@/components/champs";
+import { type Action, type ActionServeur, ALERTE, CARTE } from "@/components/champs";
 import { Button } from "@/components/ui/button";
 import type { EtatDeCloture } from "@/lib/manche/annonce";
 import type { FinDePartie } from "@/lib/partie/fin";
@@ -50,7 +50,7 @@ export function VueDeCloture({
 }): ReactElement {
   if (etat?.statut === "finie") {
     return (
-      <section role="alert" className="flex flex-col gap-3 rounded-lg bg-muted p-4">
+      <section role="alert" className={`flex flex-col gap-3 p-5 ${CARTE}`}>
         <p className="font-semibold text-lg">{FIN_DE_PARTIE[etat.cause]}</p>
         <a href={partie} className="text-muted-foreground text-sm underline">
           Voir la partie
@@ -62,7 +62,7 @@ export function VueDeCloture({
   return (
     <div className="flex flex-col gap-3">
       {etat === null ? null : (
-        <p role="alert" className="rounded-lg bg-destructive/10 p-3 text-destructive text-sm">
+        <p role="alert" className={`${ALERTE} font-medium text-sm`}>
           {etat.message}
         </p>
       )}

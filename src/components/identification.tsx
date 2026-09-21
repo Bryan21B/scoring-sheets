@@ -1,5 +1,5 @@
 import type { ReactElement } from "react";
-import { CHAMP_NOM, LISTE } from "@/components/champs";
+import { CARTE, CHAMP_NOM, LISTE, TITRE } from "@/components/champs";
 import { Button } from "@/components/ui/button";
 import type { JeuId } from "@/lib/jeux/catalogue";
 import type { JoueurConnu } from "@/lib/roster/noms";
@@ -31,7 +31,7 @@ export function Identification({
 
   return (
     <div className="flex flex-col gap-8">
-      <h1 className="font-semibold text-2xl tracking-tight">Qui es-tu ?</h1>
+      <h1 className={TITRE}>Qui es-tu ?</h1>
 
       {aTrancher ? (
         <Desambiguisation destination={destination} nomPropose={nomPropose} homonymes={homonymes} />
@@ -42,7 +42,7 @@ export function Identification({
           <ul className={LISTE}>
             {roster.map((joueur) => (
               <li key={joueur.id}>
-                <label className="flex w-full cursor-pointer items-center gap-3 px-4 py-3 text-base">
+                <label className="flex w-full cursor-pointer items-center gap-3 px-4 py-3.5 font-medium text-[17px]">
                   <input type="radio" name="joueurId" value={joueur.id} required />
                   {joueur.nom}
                 </label>
@@ -56,7 +56,7 @@ export function Identification({
       ) : null}
 
       <form action={destination} method="get" className="flex flex-col gap-3">
-        <label htmlFor="nom" className="font-medium text-sm">
+        <label htmlFor="nom" className="font-semibold text-sm">
           {aTrancher ? "Un nom distinctif" : "Un nouveau nom"}
         </label>
         <input
@@ -96,8 +96,8 @@ function Desambiguisation({
   homonymes: readonly JoueurConnu[];
 }): ReactElement {
   return (
-    <div className="flex flex-col gap-3 rounded-lg border border-border bg-muted/40 p-4">
-      <p className="font-medium text-base">{`${nomPropose} existe déjà.`}</p>
+    <div className={`flex flex-col gap-3 p-4 ${CARTE}`}>
+      <p className="font-semibold text-base">{`${nomPropose} existe déjà.`}</p>
       <p className="text-muted-foreground text-sm">
         {`C’est elle, ou une autre ${nomPropose} ? Si c’est une autre, donne-lui un nom distinctif.`}
       </p>

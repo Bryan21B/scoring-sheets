@@ -1,6 +1,6 @@
 import type { ReactElement, ReactNode } from "react";
 import { CatalogueListe } from "@/components/catalogue-liste";
-import type { Action } from "@/components/champs";
+import { type Action, SURTITRE, TITRE } from "@/components/champs";
 import { Ecran } from "@/components/ecran";
 import { GrilleDeScore } from "@/components/grille-score";
 import { MancheSuivante } from "@/components/manche-suivante";
@@ -59,7 +59,7 @@ export function Accueil({
   if (enCours === null) {
     return (
       <Ecran>
-        <h1 className="font-semibold text-2xl tracking-tight">On joue à quoi ?</h1>
+        <h1 className={TITRE}>On joue à quoi ?</h1>
         <CatalogueListe entrees={entrees} />
         <RejoindreParCode />
         <LienVersLHistorique />
@@ -72,10 +72,15 @@ export function Accueil({
 
   return (
     <Ecran>
-      <div className="flex flex-col gap-1">
-        <h1 className="font-semibold text-2xl tracking-tight">{partie.jeu.nom}</h1>
+      <div className="flex flex-col gap-2">
+        <p className={SURTITRE}>Partie en cours</p>
+        <h1 className={TITRE}>{partie.jeu.nom}</h1>
         <p className="text-muted-foreground text-sm">
-          {`On s’arrête à ${libelleDeFin(partie.regles.fin, partie.jeu.unite)} · code ${partie.code}`}
+          {`On s’arrête à ${libelleDeFin(partie.regles.fin, partie.jeu.unite)} · code `}
+          {/* Le code en monospace espacé, ici comme partout : il se dicte. */}
+          <span className="font-mono font-bold text-foreground tracking-[0.18em]">
+            {partie.code}
+          </span>
         </p>
       </div>
 

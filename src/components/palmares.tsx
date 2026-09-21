@@ -1,6 +1,6 @@
 import type { ReactElement } from "react";
 import { CatalogueListe } from "@/components/catalogue-liste";
-import { LISTE } from "@/components/champs";
+import { LIGNE_TOUCHABLE, LISTE, SOUS_TITRE, TITRE } from "@/components/champs";
 import { Ecran } from "@/components/ecran";
 import type { EntreeCatalogue } from "@/lib/jeux/catalogue";
 import { adresseDeFicheDeJoueur } from "@/lib/palmares/adresse";
@@ -32,7 +32,7 @@ export function Palmares({
 
   return (
     <Ecran>
-      <h1 className="font-semibold text-2xl tracking-tight">Palmarès</h1>
+      <h1 className={TITRE}>Palmarès</h1>
 
       {personne ? (
         <RenvoiAuCatalogue entrees={entrees} />
@@ -104,13 +104,13 @@ function LigneClassee({ ligne }: { ligne: JoueurClasse }): ReactElement {
     <li>
       <a
         href={adresseDeFicheDeJoueur(ligne.joueur.id)}
-        className="flex w-full items-baseline gap-3 px-4 py-4 hover:bg-muted active:bg-muted"
+        className={`flex w-full items-baseline gap-3 px-4 py-4 ${LIGNE_TOUCHABLE}`}
       >
-        <span className="w-6 shrink-0 text-muted-foreground text-sm tabular-nums">
+        <span className="w-7 shrink-0 font-bold font-mono text-[13px] tabular-nums">
           <span className="sr-only">Rang </span>
           {ligne.rang}
         </span>
-        <span className="flex-1 font-medium text-base">{ligne.joueur.nom}</span>
+        <span className="flex-1 font-semibold text-[17px]">{ligne.joueur.nom}</span>
         <span className="text-muted-foreground text-sm tabular-nums">
           {`${pourcentage(ligne.taux)} · ${parties(ligne.parties)}`}
         </span>
@@ -149,7 +149,7 @@ function HorsClassement({
   return (
     <section className="flex flex-col gap-3">
       <div className="flex flex-col gap-1">
-        <h2 className="font-semibold text-base tracking-tight">
+        <h2 className={SOUS_TITRE}>
           {personneNEstClasse ? "Personne n’est encore classé" : "Hors classement"}
         </h2>
         <p className="text-muted-foreground text-sm">
@@ -184,9 +184,9 @@ function LigneHorsClassement({
     <li>
       <a
         href={adresseDeFicheDeJoueur(joueur.id)}
-        className="flex w-full items-baseline gap-3 px-4 py-4 hover:bg-muted active:bg-muted"
+        className={`flex w-full items-baseline gap-3 px-4 py-4 ${LIGNE_TOUCHABLE}`}
       >
-        <span className="flex-1 font-medium text-base">{joueur.nom}</span>
+        <span className="flex-1 font-semibold text-[17px]">{joueur.nom}</span>
         <span className="text-muted-foreground text-sm tabular-nums">{parties(combien)}</span>
       </a>
     </li>

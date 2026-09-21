@@ -1,5 +1,6 @@
 import type { ReactElement } from "react";
-import { type Action, CHAMP_NOM, LISTE } from "@/components/champs";
+import { type Action, CARTE, CHAMP_NOM, LISTE, SOUS_TITRE } from "@/components/champs";
+import { Pastille } from "@/components/pastille";
 import { Button } from "@/components/ui/button";
 import type { VueDePartie } from "@/lib/partie/lecture";
 import {
@@ -130,13 +131,19 @@ function Tablee({
 }): ReactElement {
   return (
     <div className="flex flex-col gap-2">
-      <h2 className="font-medium text-sm">
+      <h2 className={SOUS_TITRE}>
         {partie.participants.length === 1 ? "1 joueur" : `${partie.participants.length} joueurs`}
       </h2>
       <ul className={LISTE}>
-        {partie.participants.map((joueur) => (
+        {partie.participants.map((joueur, place) => (
           <li key={joueur.id} className="flex items-center justify-between gap-3 px-4 py-3">
-            <span className="text-base">{joueur.nom}</span>
+            {/* La pastille est posée ici parce que c'est ici que la place se
+                décide : la feuille de score et le podium relisent le même
+                ordre. Voir `placesDeLaTablee`. */}
+            <span className="flex items-center gap-2.5 font-semibold text-[17px]">
+              <Pastille nom={joueur.nom} index={place} />
+              {joueur.nom}
+            </span>
             {sortie === undefined ? null : (
               <form action={sortie.action} method="post">
                 <input type="hidden" name="code" value={partie.code} />
@@ -190,7 +197,7 @@ function AjouterSansTelephone({
       <form action={ajouter} method="post" className="flex flex-col gap-3">
         <input type="hidden" name="code" value={partie.code} />
         <input type="hidden" name="mode" value="nouveau" />
-        <label htmlFor="ajout" className="font-medium text-sm">
+        <label htmlFor="ajout" className="font-semibold text-sm">
           Ajouter un joueur sans téléphone
         </label>
         <input
@@ -259,9 +266,7 @@ function Arriver({
  * l'app est cassée.
  */
 function Spectateur(): ReactElement {
-  return (
-    <p className="rounded-lg bg-muted p-3 text-muted-foreground text-sm">{PAS_DE_LA_PARTIE}</p>
-  );
+  return <p className={`p-4 text-muted-foreground text-sm ${CARTE}`}>{PAS_DE_LA_PARTIE}</p>;
 }
 
 /**
@@ -284,12 +289,12 @@ function Proposition({
   children: ReactElement;
 }): ReactElement {
   return (
-    <div className="flex flex-col gap-4 rounded-lg border border-border bg-muted/40 p-4">
+    <div className={`flex flex-col gap-4 p-4 ${CARTE}`}>
       <form action={rejoindre} method="post" className="flex flex-col gap-3">
         <input type="hidden" name="code" value={code} />
         <input type="hidden" name="mode" value="roster" />
         <input type="hidden" name="joueurId" value={arrivee.joueur.id} />
-        <Button type="submit" size="lg">
+        <Button type="submit" size="lg" className="w-full">
           {`Rejoindre en tant que ${arrivee.joueur.nom}`}
         </Button>
       </form>
@@ -362,7 +367,7 @@ function Choisir({
         <form action={rejoindre} method="post" className="flex flex-col gap-3">
           <input type="hidden" name="code" value={partie.code} />
           <input type="hidden" name="mode" value="nouveau" />
-          <label htmlFor="nom" className="font-medium text-sm">
+          <label htmlFor="nom" className="font-semibold text-sm">
             Un nouveau nom
           </label>
           <input
@@ -401,12 +406,18 @@ function ChoixDeJoueurs({
     <form action={action} method="post" className="flex flex-col gap-3">
       <input type="hidden" name="code" value={code} />
       <input type="hidden" name="mode" value="roster" />
-      <p className="font-medium text-sm">{titre}</p>
+      <p className="font-semibold text-sm">{titre}</p>
       <ul className={LISTE}>
         {joueurs.map((joueur) => (
           <li key={joueur.id}>
-            <label className="flex w-full cursor-pointer items-center gap-3 px-4 py-3 text-base">
-              <input type="radio" name="joueurId" value={joueur.id} required />
+            <label className="flex w-full cursor-pointer items-center gap-3 px-4 py-3.5 font-medium text-[17px]">
+              <input
+                type="radio"
+                name="joueurId"
+                value={joueur.id}
+                required
+                className="size-5 accent-primary"
+              />
               {joueur.nom}
             </label>
           </li>

@@ -1,5 +1,5 @@
 import type { ReactElement } from "react";
-import { LISTE } from "@/components/champs";
+import { LISTE, SOUS_TITRE, TITRE } from "@/components/champs";
 import { Ecran } from "@/components/ecran";
 import { horodatage } from "@/lib/journal/tiroir";
 import { ADRESSE_PALMARES } from "@/lib/palmares/adresse";
@@ -20,7 +20,7 @@ import { parties, victoires } from "@/lib/palmares/mots";
 export function FicheJoueur({ fiche }: { fiche: FicheDeJoueur }): ReactElement {
   return (
     <Ecran>
-      <h1 className="font-semibold text-2xl tracking-tight">{fiche.joueur.nom}</h1>
+      <h1 className={TITRE}>{fiche.joueur.nom}</h1>
 
       {fiche.familles.map((famille) => (
         <Famille key={famille.famille} famille={famille} />
@@ -48,7 +48,7 @@ export function FicheJoueur({ fiche }: { fiche: FicheDeJoueur }): ReactElement {
 function Famille({ famille }: { famille: GroupeDeFamille }): ReactElement {
   return (
     <section className="flex flex-col gap-3">
-      <h2 className="font-semibold text-base tracking-tight">{famille.nom}</h2>
+      <h2 className={SOUS_TITRE}>{famille.nom}</h2>
       <ul className={LISTE}>
         {famille.compteurs.map((compteur) => (
           <LigneDeCompteur key={compteur.jeu.id} compteur={compteur} />
@@ -63,7 +63,7 @@ function Famille({ famille }: { famille: GroupeDeFamille }): ReactElement {
 function LigneDeCompteur({ compteur }: { compteur: Compteur }): ReactElement {
   return (
     <li className="flex flex-col gap-0.5 px-4 py-4">
-      <span className="font-medium text-base">{compteur.jeu.nom}</span>
+      <span className="font-semibold text-[17px]">{compteur.jeu.nom}</span>
       <Faits compteur={compteur} />
     </li>
   );
@@ -78,9 +78,9 @@ function LigneDeCompteur({ compteur }: { compteur: Compteur }): ReactElement {
  */
 function LigneDeSousTotal({ sousTotal }: { sousTotal: SousTotal }): ReactElement {
   return (
-    <li className="flex items-baseline justify-between gap-3 bg-muted/50 px-4 py-3">
-      <span className="text-muted-foreground text-sm">Total</span>
-      <span className="font-medium text-sm tabular-nums">
+    <li className="flex items-baseline justify-between gap-3 bg-accent px-4 py-3.5">
+      <span className="font-bold font-mono text-[11px] uppercase tracking-[0.14em]">Total</span>
+      <span className="font-semibold text-sm tabular-nums">
         {`${parties(sousTotal.partiesJouees)} · ${victoires(sousTotal.victoires)}`}
       </span>
     </li>

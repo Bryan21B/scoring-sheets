@@ -1,8 +1,9 @@
 import type { ReactElement, ReactNode } from "react";
 import { BandeauDeRefus } from "@/components/bandeau-de-refus";
-import type { Action } from "@/components/champs";
+import { type Action, TITRE } from "@/components/champs";
 import { Ecran } from "@/components/ecran";
 import { GrilleDeScore } from "@/components/grille-score";
+import { placesDeLaTablee } from "@/components/pastille";
 import { PodiumDeFin } from "@/components/podium-de-fin";
 import { type GestesDuTiroir, TiroirDuJournal } from "@/components/tiroir-journal";
 import { horodatage, type VueDuTiroir } from "@/lib/journal/tiroir";
@@ -151,8 +152,8 @@ export function FicheDePartie({
     <Ecran>
       <BandeauDeRefus message={erreur} />
 
-      <div className="flex flex-col gap-1">
-        <h1 className="font-semibold text-2xl tracking-tight">{partie.jeu.nom}</h1>
+      <div className="flex flex-col gap-2">
+        <h1 className={TITRE}>{partie.jeu.nom}</h1>
         <p className="text-muted-foreground text-sm">
           {`${SORT_DE_LA_PARTIE[fin.cause]} le `}
           {/* L'horodatage du journal, et non un second formateur : c'est la même
@@ -163,7 +164,12 @@ export function FicheDePartie({
       </div>
 
       {fin.cause === "terminee" ? (
-        <PodiumDeFin marches={marches} unite={partie.jeu.unite} rejouer={rejouer} />
+        <PodiumDeFin
+          marches={marches}
+          places={placesDeLaTablee(partie.participants)}
+          unite={partie.jeu.unite}
+          rejouer={rejouer}
+        />
       ) : null}
 
       <GrilleDeScore partie={partie} grille={grille} />

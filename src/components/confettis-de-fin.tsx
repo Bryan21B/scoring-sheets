@@ -14,6 +14,34 @@ const DEPART = { y: 0.35 } as const;
 const OUVERTURE = 90;
 
 /**
+ * Les aplats du kit dont la gerbe se colore, nommés et non recopiés.
+ *
+ * `canvas-confetti` peint sur un canevas : il lui faut des couleurs résolues,
+ * là où le reste de l'app ne manipule que des variables CSS. Les **lire** au
+ * moment de tirer plutôt que réécrire les six hexadécimaux ici garde
+ * `globals.css` seule source — et fait suivre la gerbe au mode sombre, où les
+ * aplats montent en clarté.
+ */
+const APLATS_DE_LA_GERBE = ["--framboise", "--lagon", "--mandarine", "--raisin"] as const;
+
+/**
+ * Les couleurs de la gerbe, telles que la feuille de style les donne à
+ * l'instant du tir.
+ *
+ * `undefined` si aucune ne se résout — hors navigateur, ou avant que la
+ * feuille ne soit là. `canvas-confetti` retombe alors sur ses couleurs à lui,
+ * ce qui vaut mieux qu'une gerbe transparente.
+ */
+function couleursDeLaGerbe(): string[] | undefined {
+  const feuille = getComputedStyle(document.documentElement);
+  const couleurs = APLATS_DE_LA_GERBE.map((nom) => feuille.getPropertyValue(nom).trim()).filter(
+    (couleur) => couleur !== "",
+  );
+
+  return couleurs.length === 0 ? undefined : couleurs;
+}
+
+/**
  * La salve de fin de partie — **l'animation, et jamais la décision**.
  *
  * Ce composant ne sait pas qui a gagné, ni depuis quand la partie est finie, ni
@@ -47,7 +75,12 @@ export function ConfettisDeFin({ fete }: { fete: Fete }): null {
 
     // Fire-and-forget : la promesse se résout à la fin de l'animation, et
     // l'attendre ne servirait qu'à retenir un effet qui n'a rien à ranger.
-    void confetti({ particleCount: salve, spread: OUVERTURE, origin: DEPART });
+    void confetti({
+      particleCount: salve,
+      spread: OUVERTURE,
+      origin: DEPART,
+      colors: couleursDeLaGerbe(),
+    });
   }, [salve]);
 
   return null;

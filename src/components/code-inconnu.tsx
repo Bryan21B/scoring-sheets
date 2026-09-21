@@ -1,4 +1,5 @@
 import type { ReactElement } from "react";
+import { TITRE } from "@/components/champs";
 import { RejoindreParCode } from "@/components/rejoindre-par-code";
 
 /** L'enveloppe commune aux deux impasses : un titre, une phrase, une sortie. */
@@ -6,7 +7,7 @@ function Impasse({ titre, phrase }: { titre: string; phrase: string }): ReactEle
   return (
     <section className="flex flex-col gap-6">
       <div className="flex flex-col gap-2">
-        <h1 className="font-semibold text-2xl tracking-tight">{titre}</h1>
+        <h1 className={TITRE}>{titre}</h1>
         <p className="text-muted-foreground text-sm">{phrase}</p>
       </div>
       <RejoindreParCode />

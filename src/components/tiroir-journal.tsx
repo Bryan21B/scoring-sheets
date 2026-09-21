@@ -1,5 +1,5 @@
 import type { ReactElement } from "react";
-import type { Action } from "@/components/champs";
+import { type Action, LISTE, SOUS_TITRE, TRAIT } from "@/components/champs";
 import { Button } from "@/components/ui/button";
 import {
   adresseDuTiroir,
@@ -144,7 +144,7 @@ function EntreeDeMenu({ code }: { code: string }): ReactElement {
       <a
         href={adresseDuTiroir(code, "corrections")}
         aria-label="Ouvrir le journal de la partie"
-        className="rounded-lg px-4 py-2 text-muted-foreground text-xl leading-none hover:text-foreground"
+        className="rounded-full px-5 py-2 font-mono text-2xl text-muted-foreground leading-none hover:text-foreground"
       >
         ⋯
       </a>
@@ -173,7 +173,7 @@ function Panneau({
 }): ReactElement {
   return (
     <>
-      <a href={adresseDuTiroir(code, null)} className="fixed inset-0 z-40 bg-foreground/20">
+      <a href={adresseDuTiroir(code, null)} className="fixed inset-0 z-40 bg-foreground/35">
         {/* Le geste naturel sur un tiroir est de toucher à côté. Le libellé
             n'est caché qu'à l'œil : un lien pleine page sans nom accessible
             serait une zone morte pour qui ne voit pas le voile. */}
@@ -181,10 +181,10 @@ function Panneau({
       </a>
       <section
         aria-label="Journal de la partie"
-        className="fixed inset-x-0 bottom-0 z-50 flex max-h-[85svh] flex-col gap-4 overflow-y-auto rounded-t-2xl border-border border-t bg-background px-4 pt-4 pb-8"
+        className={`fixed inset-x-0 bottom-0 z-50 flex max-h-[85svh] flex-col gap-4 overflow-y-auto rounded-t-2xl border-b-0 bg-background px-4 pt-5 pb-8 ${TRAIT}`}
       >
         <div className="flex flex-col gap-2">
-          <h2 className="font-semibold text-lg tracking-tight">Journal de la partie</h2>
+          <h2 className={SOUS_TITRE}>Journal de la partie</h2>
           <p className="text-muted-foreground text-sm">{AVERTISSEMENT}</p>
         </div>
 
@@ -193,7 +193,7 @@ function Panneau({
         {lignes.length === 0 ? (
           <p className="text-muted-foreground text-sm">{RIEN_A_MONTRER[portee]}</p>
         ) : (
-          <ul className="-mx-4 flex w-auto flex-col divide-y divide-border border-border border-y">
+          <ul className={LISTE}>
             {lignes.map((ligne) => (
               <Ligne key={ligne.id} ligne={ligne} />
             ))}
@@ -234,7 +234,7 @@ function Sorties({ gestes }: { gestes: GestesDuTiroir }): ReactElement | null {
   }
 
   return (
-    <div className="flex flex-col gap-3 border-border border-t pt-4">
+    <div className={`flex flex-col gap-3 border-t-[3px] border-t-trait-doux pt-4`}>
       {gestes.reprendre === undefined ? null : (
         <form action={gestes.reprendre} method="post">
           <Button type="submit" size="lg" className="w-full">
@@ -328,12 +328,15 @@ function Bascule({ code, portee }: { code: string; portee: Portee }): ReactEleme
  */
 function Ligne({ ligne }: { ligne: LigneDuTiroir }): ReactElement {
   return (
-    <li className="flex flex-col gap-0.5 px-4 py-3">
-      <p className="font-medium text-base">{LIBELLE_DU_GESTE[ligne.geste]}</p>
+    <li className="flex flex-col gap-0.5 px-4 py-3.5">
+      <p className="font-semibold text-base">{LIBELLE_DU_GESTE[ligne.geste]}</p>
       <Agissant nom={ligne.agissant.nom} appareil={ligne.appareil} />
       <p className="text-muted-foreground text-sm">{cibleDeLaLigne(ligne)}</p>
       <Valeurs detail={ligne.detail} />
-      <time dateTime={ligne.ecritLe.toISOString()} className="text-muted-foreground text-xs">
+      <time
+        dateTime={ligne.ecritLe.toISOString()}
+        className="font-mono text-muted-foreground text-xs"
+      >
         {horodatage(ligne.ecritLe)}
       </time>
     </li>
@@ -396,7 +399,7 @@ function Valeurs({ detail }: { detail: DetailDuTiroir }): ReactElement | null {
   }
 
   return (
-    <p className="font-mono text-base tabular-nums">
+    <p className="font-mono font-medium text-base tabular-nums">
       {detail.forme === "correction"
         ? `${detail.ancienne ?? VIDE} → ${detail.nouvelle ?? VIDE}`
         : (detail.valeur ?? VIDE)}
@@ -423,7 +426,7 @@ function ValeursEffacees({ valeurs }: { valeurs: readonly CaseEffacee[] }): Reac
   }
 
   return (
-    <ul className="font-mono text-base tabular-nums">
+    <ul className="font-mono font-medium text-base tabular-nums">
       {valeurs.map(({ joueur, valeur }) => (
         <li key={joueur.id}>{`${joueur.nom} ${valeur ?? VIDE}`}</li>
       ))}

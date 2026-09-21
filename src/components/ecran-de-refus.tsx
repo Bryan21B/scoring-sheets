@@ -1,5 +1,12 @@
 import type { ReactElement } from "react";
-import type { Action } from "@/components/champs";
+import {
+  type Action,
+  AFFICHEUR,
+  AFFICHEUR_UNITE,
+  AFFICHEUR_VALEUR,
+  SURTITRE,
+  TITRE,
+} from "@/components/champs";
 import { Button } from "@/components/ui/button";
 import type { EntreeCatalogue } from "@/lib/jeux/catalogue";
 import type { Regles } from "@/lib/jeux/regles";
@@ -100,17 +107,15 @@ export function EcranDeRefus({
   return (
     <section className="flex flex-1 flex-col gap-8">
       <div className="flex flex-col gap-1">
-        <p className="text-muted-foreground text-sm">Quelqu’un a été plus rapide</p>
-        <h1 className="font-semibold text-3xl tracking-tight">
-          {phraseDeLaCase(regles, refus.joueur.nom, refus.valeurArrivee)}
-        </h1>
+        <p className={SURTITRE}>Quelqu’un a été plus rapide</p>
+        <h1 className={TITRE}>{phraseDeLaCase(regles, refus.joueur.nom, refus.valeurArrivee)}</h1>
       </div>
 
-      <div className="flex flex-col items-center gap-1">
-        <p className="font-mono text-6xl tabular-nums">
+      <div className={AFFICHEUR}>
+        <p className={AFFICHEUR_VALEUR}>
           {refus.valeurArrivee === null ? "—" : valeurEnMots(regles, refus.valeurArrivee)}
         </p>
-        <p className="text-muted-foreground text-sm">
+        <p className={AFFICHEUR_UNITE}>
           {refus.valeurArrivee === null ? "case vide" : unite.plusieurs}
         </p>
       </div>

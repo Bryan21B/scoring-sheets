@@ -1,4 +1,5 @@
 import type { ReactElement } from "react";
+import { ALERTE } from "@/components/champs";
 
 /**
  * Le refus qu'une écriture a renvoyé par l'adresse, montré au-dessus du reste.
@@ -25,7 +26,7 @@ export function BandeauDeRefus({ message }: { message: string | undefined }): Re
   }
 
   return (
-    <p role="alert" className="rounded-lg bg-destructive/10 p-3 text-destructive text-sm">
+    <p role="alert" className={`${ALERTE} font-medium text-sm`}>
       {message}
     </p>
   );

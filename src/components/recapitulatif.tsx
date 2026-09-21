@@ -1,5 +1,5 @@
 import type { ReactElement } from "react";
-import { LISTE } from "@/components/champs";
+import { LIGNE_TOUCHABLE, LISTE, SURTITRE, TITRE } from "@/components/champs";
 import type { EntreeCatalogue } from "@/lib/jeux/catalogue";
 import type { JoueurId } from "@/lib/jeux/moteur";
 import type { Regles } from "@/lib/jeux/regles";
@@ -47,7 +47,8 @@ export function Recapitulatif({
   return (
     <section className="flex flex-col gap-6">
       <div className="flex flex-col gap-1">
-        <h1 className="font-semibold text-2xl tracking-tight">Manche {manche.numero}</h1>
+        <p className={SURTITRE}>Récapitulatif</p>
+        <h1 className={TITRE}>Manche {manche.numero}</h1>
         <p className="text-muted-foreground text-sm">
           Touche une ligne pour la retaper : corriger est le même geste que saisir.
         </p>
@@ -72,9 +73,9 @@ export function Recapitulatif({
             <li key={rang}>
               <a
                 href={adresseDeLaManche}
-                className="flex items-baseline justify-between gap-3 px-4 py-3"
+                className={`flex items-baseline justify-between gap-3 px-4 py-3.5 ${LIGNE_TOUCHABLE}`}
               >
-                <span className="text-base">{libelle}</span>
+                <span className="font-medium text-base">{libelle}</span>
                 <span className="text-muted-foreground text-sm">à désigner</span>
               </a>
             </li>
@@ -107,14 +108,14 @@ function Ligne({
 }): ReactElement {
   const contenu = (
     <>
-      <span className="text-base">{nom}</span>
+      <span className="font-medium text-base">{nom}</span>
       <span className="flex items-baseline gap-3">
         {marque === null ? null : (
           <span
             className={
               marque === A_SAISIR
                 ? "text-muted-foreground text-sm"
-                : "font-mono text-xl tabular-nums"
+                : "font-bold font-mono text-[22px] tabular-nums"
             }
           >
             {marque}
@@ -125,12 +126,12 @@ function Ligne({
     </>
   );
 
-  const classe = "flex items-baseline justify-between gap-3 px-4 py-3";
+  const classe = "flex items-baseline justify-between gap-3 px-4 py-3.5";
 
   return adresse === null ? (
     <div className={classe}>{contenu}</div>
   ) : (
-    <a href={adresse} className={classe}>
+    <a href={adresse} className={`${classe} ${LIGNE_TOUCHABLE}`}>
       {contenu}
     </a>
   );

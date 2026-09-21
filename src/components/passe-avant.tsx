@@ -2,7 +2,16 @@
 
 import type { ReactElement } from "react";
 import { useState } from "react";
-import type { Action } from "@/components/champs";
+import {
+  type Action,
+  AFFICHEUR,
+  AFFICHEUR_UNITE,
+  AFFICHEUR_VALEUR,
+  SURTITRE,
+  TITRE,
+  TOUCHE_DE_CHIFFRE,
+  TOUCHE_EFFACER,
+} from "@/components/champs";
 import { Button } from "@/components/ui/button";
 import type { EntreeCatalogue } from "@/lib/jeux/catalogue";
 import type { CaseDeManche } from "@/lib/manche/lecture";
@@ -13,10 +22,6 @@ import {
   enTapee,
   valeurDuPave,
 } from "@/lib/manche/pave";
-
-/** Une touche du pavé : haute, pleine largeur de colonne, tapée sans regarder. */
-const TOUCHE =
-  "h-16 rounded-lg border border-border bg-background font-mono text-2xl outline-none active:bg-muted focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50";
 
 /**
  * La passe avant : **une case, un écran**, pavé maison toujours ouvert.
@@ -81,21 +86,21 @@ export function PasseAvant({
       <input type="hidden" name="valeur" value={tapee} />
 
       <div className="flex flex-col gap-1">
-        <p className="text-muted-foreground text-sm">Manche {mancheNumero}</p>
-        <h1 className="font-semibold text-3xl tracking-tight">{caseASaisir.joueur.nom}</h1>
+        <p className={SURTITRE}>Manche {mancheNumero}</p>
+        <h1 className={TITRE}>{caseASaisir.joueur.nom}</h1>
       </div>
 
-      <div className="flex flex-col items-center gap-1">
-        <p className="font-mono text-6xl tabular-nums">{tapee === "" ? "—" : tapee}</p>
-        <p className="text-muted-foreground text-sm">{enCours ? "Enregistré" : unite.plusieurs}</p>
+      <div className={AFFICHEUR}>
+        <p className={AFFICHEUR_VALEUR}>{tapee === "" ? "—" : tapee}</p>
+        <p className={AFFICHEUR_UNITE}>{enCours ? "Enregistré" : unite.plusieurs}</p>
       </div>
 
-      <div className="grid grid-cols-3 gap-2">
+      <div className="grid grid-cols-3 gap-2.5">
         {CHIFFRES.map((chiffre) => (
           <button
             key={chiffre}
             type="button"
-            className={TOUCHE}
+            className={TOUCHE_DE_CHIFFRE}
             disabled={enCours}
             onClick={() => setTapee((avant) => appuyerUnChiffre(avant, chiffre, max))}
           >
@@ -104,7 +109,7 @@ export function PasseAvant({
         ))}
         <button
           type="button"
-          className={TOUCHE}
+          className={TOUCHE_EFFACER}
           aria-label="Effacer un chiffre"
           disabled={enCours}
           onClick={() => setTapee(effacerUnChiffre)}
@@ -114,7 +119,7 @@ export function PasseAvant({
       </div>
 
       <div className="mt-auto flex flex-col gap-3">
-        <Button type="submit" size="lg" disabled={valeur === null || enCours}>
+        <Button type="submit" size="lg" className="w-full" disabled={valeur === null || enCours}>
           Valider
         </Button>
         <a href={recapitulatif} className="text-center text-muted-foreground text-sm underline">

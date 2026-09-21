@@ -1,6 +1,6 @@
 import type { ReactElement } from "react";
 import { CatalogueListe } from "@/components/catalogue-liste";
-import { LISTE } from "@/components/champs";
+import { LIGNE_TOUCHABLE, LISTE, TITRE, TRAIT } from "@/components/champs";
 import { Ecran } from "@/components/ecran";
 import { type EntreeCatalogue, type JeuId, trouverEntree } from "@/lib/jeux/catalogue";
 import { horodatage } from "@/lib/journal/tiroir";
@@ -45,7 +45,7 @@ export function Historique({
 
   return (
     <Ecran>
-      <h1 className="font-semibold text-2xl tracking-tight">Historique</h1>
+      <h1 className={TITRE}>Historique</h1>
 
       {aFiltrer ? <FiltreParJeu entrees={entrees} choisi={filtre.jeuId} /> : null}
 
@@ -173,7 +173,9 @@ function Onglet({
     <a
       href={adresse}
       aria-current={courant ? "page" : undefined}
-      className={`shrink-0 rounded-full px-3 py-1.5 text-sm ${courant ? "bg-foreground font-medium text-background" : "bg-muted text-muted-foreground"}`}
+      className={`shrink-0 rounded-full px-3.5 py-2 font-semibold text-sm ${TRAIT} ${
+        courant ? "bg-primary text-primary-foreground shadow-touche" : "bg-card text-foreground"
+      }`}
     >
       {libelle}
     </a>
@@ -192,14 +194,17 @@ function Ligne({ ligne }: { ligne: LigneDHistorique }): ReactElement {
     <li>
       <a
         href={adresseDePartie(ligne.code)}
-        className="flex w-full flex-col gap-0.5 px-4 py-4 hover:bg-muted active:bg-muted"
+        className={`flex w-full flex-col gap-0.5 px-4 py-4 ${LIGNE_TOUCHABLE}`}
       >
-        <span className="font-medium text-base">{ligne.jeu.nom}</span>
+        <span className="font-semibold text-[17px]">{ligne.jeu.nom}</span>
         <Denouement ligne={ligne} />
         {/* L'horodatage du journal, et non un second formateur : c'est la même
             horloge de serveur, lue dans le même fuseau fixe. Deux mises en forme
             de la même date divergeraient le jour où l'une est corrigée. */}
-        <time dateTime={ligne.finLe.toISOString()} className="text-muted-foreground text-xs">
+        <time
+          dateTime={ligne.finLe.toISOString()}
+          className="font-mono text-muted-foreground text-xs"
+        >
           {horodatage(ligne.finLe)}
         </time>
       </a>
@@ -232,7 +237,9 @@ function Denouement({ ligne }: { ligne: LigneDHistorique }): ReactElement {
     case "abandonnee":
       return (
         <span className="flex items-center gap-2 text-muted-foreground text-sm">
-          <span className="rounded-full bg-muted px-2 py-0.5 font-medium text-foreground text-xs">
+          <span
+            className={`rounded-full bg-mandarine px-2.5 py-0.5 font-semibold text-foreground text-xs ${TRAIT}`}
+          >
             Abandonnée
           </span>
           {effectif(ligne.nombreDeJoueurs)}

@@ -1,6 +1,7 @@
 import { notFound, redirect } from "next/navigation";
 import type { ReactElement } from "react";
 import { creerPartieAction } from "@/app/creer/actions";
+import { ALERTE } from "@/components/champs";
 import { TableeFormulaire } from "@/components/tablee-formulaire";
 import { jeuIdSchema, trouverEntree } from "@/lib/jeux/catalogue";
 import {
@@ -39,7 +40,7 @@ export default async function Tablee(
   return (
     <main className="mx-auto flex w-full max-w-2xl flex-1 flex-col gap-6 px-4 py-8">
       {erreur.success ? (
-        <p role="alert" className="rounded-lg bg-destructive/10 p-3 text-destructive text-sm">
+        <p role="alert" className={`${ALERTE} font-medium text-sm`}>
           {erreur.data}
         </p>
       ) : null}

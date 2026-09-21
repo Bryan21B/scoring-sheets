@@ -2,15 +2,13 @@
 
 import type { ComponentProps, ReactElement } from "react";
 import { useState } from "react";
+import { CHAMP_NOMBRE, TITRE } from "@/components/champs";
 import { Button } from "@/components/ui/button";
 import type { EntreeCatalogue } from "@/lib/jeux/catalogue";
 import type { IdentiteChoisie } from "@/lib/partie/identite";
 import { finImprimee, libelleDeFin } from "@/lib/partie/tablee";
 
 /** Classes des deux champs numériques de la tablée : gros, centrés, dictables. */
-const CHAMP_NOMBRE =
-  "h-12 w-full rounded-lg border border-border bg-background px-3 text-center font-mono text-xl outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50";
-
 /**
  * L'écran de la tablée : combien vous êtes, et jusqu'où vous allez.
  *
@@ -66,7 +64,7 @@ export function TableeFormulaire({
       )}
 
       <div className="flex flex-col gap-3">
-        <label htmlFor="nombreDeJoueurs" className="font-semibold text-2xl tracking-tight">
+        <label htmlFor="nombreDeJoueurs" className={TITRE}>
           Vous êtes combien ?
         </label>
         <input
@@ -87,7 +85,7 @@ export function TableeFormulaire({
       </div>
 
       <div className="flex flex-col gap-3">
-        <label htmlFor="finValeur" className="font-medium text-sm">
+        <label htmlFor="finValeur" className="font-semibold text-sm">
           On s’arrête à
         </label>
         <input

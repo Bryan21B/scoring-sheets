@@ -1,10 +1,7 @@
 import type { ReactElement } from "react";
+import { CHAMP_CODE } from "@/components/champs";
 import { Button } from "@/components/ui/button";
 import { LONGUEUR_CODE } from "@/lib/partie/code";
-
-/** Classes du champ : gros, espacé, en capitales — un code se dicte et se retape. */
-const CHAMP_CODE =
-  "h-12 w-full rounded-lg border border-border bg-background px-3 text-center font-mono text-xl uppercase tracking-[0.3em] outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50";
 
 /**
  * « J'ai un code » — l'autre bout de la même chaîne que le lien partagé.
@@ -21,7 +18,7 @@ const CHAMP_CODE =
 export function RejoindreParCode(): ReactElement {
   return (
     <form action="/rejoindre" method="get" className="flex flex-col gap-3">
-      <label htmlFor="code" className="font-medium text-sm">
+      <label htmlFor="code" className="font-semibold text-sm">
         On t’a donné un code ?
       </label>
       <input
@@ -38,7 +35,7 @@ export function RejoindreParCode(): ReactElement {
         placeholder="A1B2C3"
         className={CHAMP_CODE}
       />
-      <Button type="submit" size="lg" variant="outline">
+      <Button type="submit" size="lg" variant="outline" className="w-full">
         Rejoindre la partie
       </Button>
     </form>

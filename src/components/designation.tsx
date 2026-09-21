@@ -1,13 +1,9 @@
 import type { ReactElement } from "react";
-import type { Action } from "@/components/champs";
+import { type Action, SURTITRE, TITRE, TOUCHE_DE_NOM } from "@/components/champs";
 import type { DepartDePasseAvant } from "@/lib/manche/passe-avant";
 
 /** Ce que l'écran de désignation demande : la question, et qui l'on peut nommer. */
 export type DesignationADemander = Extract<DepartDePasseAvant, { ecran: "designation" }>;
-
-/** Une touche de nom : haute, pleine largeur, tapée sans regarder, comme le pavé. */
-const TOUCHE =
-  "h-16 w-full rounded-lg border border-border bg-background px-4 text-left text-xl outline-none active:bg-muted focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50";
 
 /**
  * L'écran qui **nomme un joueur** : « qui est sorti ? », « deuxième sorti ? ».
@@ -56,18 +52,18 @@ export function Designation({
   return (
     <section className="flex flex-1 flex-col gap-8">
       <div className="flex flex-col gap-1">
-        <p className="text-muted-foreground text-sm">Manche {mancheNumero}</p>
-        <h1 className="font-semibold text-3xl tracking-tight">{designation.question}</h1>
+        <p className={SURTITRE}>Manche {mancheNumero}</p>
+        <h1 className={TITRE}>{designation.question}</h1>
       </div>
 
-      <div className="flex flex-col gap-2">
+      <div className="flex flex-col gap-2.5">
         {designation.candidats.map((joueur) => (
           <form key={joueur.id} action={action} method="post">
             <input type="hidden" name="mancheId" value={mancheId} />
             <input type="hidden" name="joueurConcerneId" value={joueur.id} />
             <input type="hidden" name="valeurMontree" value="" />
             <input type="hidden" name="valeur" value={designation.valeur} />
-            <button type="submit" className={TOUCHE} disabled={enCours}>
+            <button type="submit" className={TOUCHE_DE_NOM} disabled={enCours}>
               {joueur.nom}
             </button>
           </form>

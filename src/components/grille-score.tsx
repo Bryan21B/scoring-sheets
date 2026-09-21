@@ -1,4 +1,6 @@
-import type { ReactElement } from "react";
+import type { CSSProperties, ReactElement } from "react";
+import { CARTE } from "@/components/champs";
+import { couleurDeJoueur } from "@/components/pastille";
 import type { JoueurId } from "@/lib/jeux/moteur";
 import type { LigneDeGrille, VueDeGrille } from "@/lib/manche/lecture";
 import type { VueDePartie } from "@/lib/partie/lecture";
@@ -58,59 +60,75 @@ export function GrilleDeScore({
 
   return (
     <section className="flex flex-col gap-2">
-      <div className="-mx-4 overflow-x-auto px-4">
-        <table className="w-full min-w-max border-collapse text-right tabular-nums">
-          <thead>
-            <tr className="border-border border-b">
-              <th
-                scope="col"
-                className="py-2 pr-3 text-left font-medium text-muted-foreground text-sm"
-              >
-                Manche
-              </th>
-              {joueurs.map((joueur) => (
+      {/* La carte déborde en dedans, jamais le document : c'est ce cadre-ci qui
+          défile sous le pouce à cinq joueurs, pas toute la page. */}
+      <div className={`overflow-hidden ${CARTE}`}>
+        <div className="overflow-x-auto">
+          <table className="w-full min-w-max border-collapse text-right tabular-nums">
+            <thead>
+              <tr>
                 <th
-                  key={joueur.id}
                   scope="col"
-                  className="min-w-16 py-2 pl-3 font-medium text-base"
+                  className="bg-foreground px-3.5 py-3 text-left font-bold font-mono text-[11px] text-background uppercase tracking-[0.14em]"
                 >
-                  {joueur.nom}
+                  Manche
                 </th>
-              ))}
-            </tr>
-          </thead>
+                {joueurs.map((joueur, place) => (
+                  <th
+                    key={joueur.id}
+                    scope="col"
+                    style={enTeteDe(place)}
+                    className="min-w-22 border-border border-l-[3px] px-3.5 py-2.5 font-bold text-base"
+                  >
+                    {joueur.nom}
+                  </th>
+                ))}
+              </tr>
+            </thead>
 
-          <tbody>
-            {manches.map((manche) => (
-              <tr key={manche.numero} className="border-border/60 border-b">
+            <tbody>
+              {manches.map((manche, rang) => (
+                <tr
+                  key={manche.numero}
+                  /* La première manche est bordée de plein, les suivantes de
+                     doux : dix traits pleins feraient une grille de barreaux. */
+                  className={
+                    rang === 0 ? "border-border border-t-[3px]" : "border-trait-doux border-t-[3px]"
+                  }
+                >
+                  <th
+                    scope="row"
+                    className="px-3.5 py-3 text-left font-bold font-mono text-[15px] text-muted-foreground"
+                  >
+                    {manche.numero}
+                  </th>
+                  {joueurs.map((joueur) => (
+                    <Case key={joueur.id} valeur={valeurDe(manche, joueur.id)} />
+                  ))}
+                </tr>
+              ))}
+            </tbody>
+
+            <tfoot>
+              <tr className="border-border border-t-[3px] bg-accent">
                 <th
                   scope="row"
-                  className="py-2 pr-3 text-left font-mono font-normal text-muted-foreground text-sm"
+                  className="px-3.5 py-3.5 text-left font-bold font-mono text-[11px] uppercase tracking-[0.14em]"
                 >
-                  {manche.numero}
+                  Total
                 </th>
                 {joueurs.map((joueur) => (
-                  <td key={joueur.id} className="py-2 pl-3 font-mono text-lg">
-                    {valeurDe(manche, joueur.id)}
+                  <td
+                    key={joueur.id}
+                    className="border-border border-l-[3px] px-3.5 py-3.5 font-bold font-mono text-[30px] leading-none"
+                  >
+                    {totaux.get(joueur.id) ?? 0}
                   </td>
                 ))}
               </tr>
-            ))}
-          </tbody>
-
-          <tfoot>
-            <tr className="border-border border-t-2">
-              <th scope="row" className="py-2 pr-3 text-left font-medium text-sm">
-                Total
-              </th>
-              {joueurs.map((joueur) => (
-                <td key={joueur.id} className="py-2 pl-3 font-mono font-semibold text-xl">
-                  {totaux.get(joueur.id) ?? 0}
-                </td>
-              ))}
-            </tr>
-          </tfoot>
-        </table>
+            </tfoot>
+          </table>
+        </div>
       </div>
 
       <p className="text-muted-foreground text-sm">{`Totaux en ${unite.plusieurs}.`}</p>
@@ -119,6 +137,37 @@ export function GrilleDeScore({
         <p className="text-muted-foreground text-sm">{phraseDesPartis(partis)}</p>
       )}
     </section>
+  );
+}
+
+/**
+ * L'en-tête d'une colonne : **l'aplat du joueur, l'encre par-dessus**.
+ *
+ * C'est le premier endroit où la couleur d'un joueur se pose, et celui d'où
+ * elle vient pour tous les autres — la place vaut pour toute la partie, voir
+ * `placesDeLaTablee`. Le texte reste de l'encre sur les six teintes : c'est la
+ * règle du kit, et c'est ce qui tient le contraste sans avoir à vérifier
+ * chaque paire.
+ */
+function enTeteDe(place: number): CSSProperties {
+  return { backgroundColor: couleurDeJoueur(place) };
+}
+
+/**
+ * Une case de la feuille.
+ *
+ * Le trou est plus pâle que le chiffre : il **est** une absence, et lui donner
+ * l'encre pleine ferait lire un tiret comme une valeur marquée.
+ */
+function Case({ valeur }: { valeur: string }): ReactElement {
+  return (
+    <td
+      className={`border-border border-l-[3px] px-3.5 py-3 font-medium font-mono text-[22px] ${
+        valeur === TROU ? "text-muted-foreground/70" : ""
+      }`}
+    >
+      {valeur}
+    </td>
   );
 }
 

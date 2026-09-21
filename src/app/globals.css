@@ -4,12 +4,53 @@
 
 @custom-variant dark (&:is(.dark *));
 
+/*
+  Le design system Memphis — docs/specs/2026-09-20-design-system-memphis.md.
+
+  Les noms sémantiques de shadcn sont conservés et rebranchés sur la palette du
+  kit : `ui/button.tsx` est un fichier régénérable par `bunx shadcn add`, et le
+  couper de ses jetons rendrait chaque régénération conflictuelle. Ce que shadcn
+  n'a pas — les quatre aplats, les six pastilles, l'ombre dure — s'ajoute à côté.
+*/
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-sans);
-  --font-mono: var(--font-geist-mono);
-  --font-heading: var(--font-sans);
+
+  /*
+    Work Sans pour l'interface, Azeret Mono pour tous les nombres, Darker
+    Grotesque pour les titres. Les trois variables viennent de `next/font` dans
+    `layout.tsx`, qui auto-héberge les fichiers au build.
+  */
+  --font-sans: var(--font-work-sans), system-ui, sans-serif;
+  --font-mono: var(--font-azeret-mono), ui-monospace, monospace;
+  --font-heading: var(--font-darker-grotesque), var(--font-work-sans), sans-serif;
+
+  /*
+    Les quatre aplats du kit, sous leur nom à eux.
+
+    Ils gardent leur nom de couleur et non un nom de rôle : le kit leur en donne
+    un — geste, info, attente, fin — mais `--primary` porte déjà le geste, et
+    deux noms pour la même valeur divergeraient. Ceux-ci servent au décor et aux
+    accents, là où aucun jeton sémantique ne dit ce qu'on veut.
+  */
+  --color-framboise: var(--framboise);
+  --color-lagon: var(--lagon);
+  --color-mandarine: var(--mandarine);
+  --color-raisin: var(--raisin);
+
+  /*
+    L'ombre dure, la signature du kit : un aplat décalé, jamais un flou.
+
+    Elle pointe sur `--ombre`, qui passe à `transparent` en sombre — une ombre
+    noire sur un fond noir ne détache rien, et c'est le liseré qui prend le
+    relais. C'est aussi pourquoi elle est déclarée `inline` : une valeur figée
+    ici ne pourrait plus suivre le mode.
+  */
+  --shadow-touche: 3px 3px 0 var(--ombre);
+  --shadow-dure: 4px 4px 0 var(--ombre);
+  --shadow-carte: 5px 5px 0 var(--ombre);
+  --shadow-ecran: 7px 7px 0 var(--ombre);
+
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
@@ -26,6 +67,9 @@
   --color-ring: var(--ring);
   --color-input: var(--input);
   --color-border: var(--border);
+  --color-trait-doux: var(--trait-doux);
+  --color-effacer: var(--effacer);
+  --color-effacer-encre: var(--effacer-encre);
   --color-destructive: var(--destructive);
   --color-accent-foreground: var(--accent-foreground);
   --color-accent: var(--accent);
@@ -48,83 +92,201 @@
   --radius-4xl: calc(var(--radius) * 2.6);
 }
 
+/* Encre sur papier : le mode clair est celui pour lequel le kit est dessiné. */
 :root {
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.205 0 0);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.97 0 0);
-  --secondary-foreground: oklch(0.205 0 0);
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.97 0 0);
-  --accent-foreground: oklch(0.205 0 0);
-  --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
-  --ring: oklch(0.708 0 0);
-  --chart-1: oklch(0.87 0 0);
-  --chart-2: oklch(0.556 0 0);
-  --chart-3: oklch(0.439 0 0);
-  --chart-4: oklch(0.371 0 0);
-  --chart-5: oklch(0.269 0 0);
-  --radius: 0.625rem;
-  --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: oklch(0.205 0 0);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.97 0 0);
-  --sidebar-accent-foreground: oklch(0.205 0 0);
-  --sidebar-border: oklch(0.922 0 0);
-  --sidebar-ring: oklch(0.708 0 0);
+  --background: #faf5ea;
+  --foreground: #17141f;
+  --card: #fffdf6;
+  --card-foreground: #17141f;
+  --popover: #fffdf6;
+  --popover-foreground: #17141f;
+
+  /* Le geste. L'encre dessus, jamais du blanc — c'est ce qui tient 5:1. */
+  --primary: #f2337f;
+  --primary-foreground: #17141f;
+
+  /* Le second geste : une carte posée sur le papier, cerclée comme le reste. */
+  --secondary: #fffdf6;
+  --secondary-foreground: #17141f;
+
+  --muted: #f4eedf;
+  --muted-foreground: #5b5568;
+
+  /* La surface d'appoint : pied de totaux, afficheur du pavé, ligne survolée. */
+  --accent: #fff0d9;
+  --accent-foreground: #17141f;
+
+  /* Framboise profonde : ce qui refuse, et ce que survole un lien. */
+  --destructive: #c2185b;
+
+  /* Le trait de 3 px, la façon dont ce kit détache une surface. */
+  --border: #17141f;
+  --input: #17141f;
+
+  /*
+    Le trait entre deux lignes d'une même feuille : même épaisseur, moins
+    d'encre. La feuille de score sépare d'un trait plein ce qui borde la
+    première manche, et de celui-ci les manches entre elles — sans quoi un
+    tableau de dix manches serait une grille de barreaux.
+  */
+  --trait-doux: #e6dfce;
+
+  /*
+    La seule touche colorée du pavé : celle qui efface. Rose pâle plutôt que
+    rouge — on annule un chiffre, on ne détruit rien.
+  */
+  --effacer: #ffd1e3;
+  --effacer-encre: #17141f;
+
+  /* Le lagon, et rien d'autre : le focus est une information, pas une alerte. */
+  --ring: #14bfd1;
+
+  --ombre: #17141f;
+
+  --framboise: #f2337f;
+  --lagon: #14bfd1;
+  --mandarine: #ff8a1f;
+  --raisin: #7a4ce0;
+
+  /*
+    Les six pastilles, « puis on recycle ». Voir `components/pastille.tsx`.
+
+    Les quatre premières sont les aplats ; les deux dernières n'existent que
+    pour une tablée de cinq ou six et n'ont donc pas de rôle sémantique.
+  */
+  --joueur-1: #f2337f;
+  --joueur-2: #14bfd1;
+  --joueur-3: #ff8a1f;
+  --joueur-4: #7a4ce0;
+  --joueur-5: #9be016;
+  --joueur-6: #6c8cff;
+
+  --chart-1: #f2337f;
+  --chart-2: #14bfd1;
+  --chart-3: #ff8a1f;
+  --chart-4: #7a4ce0;
+  --chart-5: #17141f;
+
+  /* 14 px : le rayon d'une carte du kit. Le bouton, lui, est une pilule. */
+  --radius: 0.875rem;
+
+  --sidebar: #fffdf6;
+  --sidebar-foreground: #17141f;
+  --sidebar-primary: #f2337f;
+  --sidebar-primary-foreground: #17141f;
+  --sidebar-accent: #fff0d9;
+  --sidebar-accent-foreground: #17141f;
+  --sidebar-border: #17141f;
+  --sidebar-ring: #14bfd1;
 }
 
+/*
+  La table allumée à la bougie.
+
+  Rien ne pose `.dark` aujourd'hui — c'était déjà le cas du thème d'avant. Le
+  bloc existe pour que le jour où un réglage arrive, la palette sombre du kit
+  soit celle qui s'applique, et non un gris deviné.
+
+  Deux changements de fond par rapport au clair : **l'ombre dure disparaît** —
+  un aplat noir sur un fond noir ne détache rien, c'est le liseré `#3a3350` qui
+  s'en charge — et **les aplats montent en clarté**, pour garder l'encre lisible
+  dessus.
+*/
 .dark {
-  --background: oklch(0.145 0 0);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.205 0 0);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.205 0 0);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.922 0 0);
-  --primary-foreground: oklch(0.205 0 0);
-  --secondary: oklch(0.269 0 0);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.269 0 0);
-  --accent-foreground: oklch(0.985 0 0);
-  --destructive: oklch(0.704 0.191 22.216);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.556 0 0);
-  --chart-1: oklch(0.87 0 0);
-  --chart-2: oklch(0.556 0 0);
-  --chart-3: oklch(0.439 0 0);
-  --chart-4: oklch(0.371 0 0);
-  --chart-5: oklch(0.269 0 0);
-  --sidebar: oklch(0.205 0 0);
-  --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.488 0.243 264.376);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.269 0 0);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.556 0 0);
+  --background: #151220;
+  --foreground: #f7f2e8;
+  --card: #201b2e;
+  --card-foreground: #f7f2e8;
+  --popover: #201b2e;
+  --popover-foreground: #f7f2e8;
+
+  --primary: #ff5a9b;
+  --primary-foreground: #17141f;
+
+  --secondary: #201b2e;
+  --secondary-foreground: #f7f2e8;
+
+  --muted: #201b2e;
+  --muted-foreground: #a29cb4;
+
+  --accent: #2c2540;
+  --accent-foreground: #f7f2e8;
+
+  --destructive: #ff5a9b;
+
+  --border: #3a3350;
+  --input: #3a3350;
+  --trait-doux: #2c2540;
+  --effacer: #3a2436;
+  --effacer-encre: #ff5a9b;
+  --ring: #2fd9e8;
+
+  --ombre: transparent;
+
+  --framboise: #ff5a9b;
+  --lagon: #2fd9e8;
+  --mandarine: #ffa24d;
+  --raisin: #a184ff;
+
+  /*
+    Le kit ne donne que quatre équivalents sombres — ceux des aplats. Les deux
+    dernières pastilles sont extrapolées dans le même geste que les quatre
+    autres : monter en clarté, garder la teinte.
+  */
+  --joueur-1: #ff5a9b;
+  --joueur-2: #2fd9e8;
+  --joueur-3: #ffa24d;
+  --joueur-4: #a184ff;
+  --joueur-5: #b6f04a;
+  --joueur-6: #93a9ff;
+
+  --chart-1: #ff5a9b;
+  --chart-2: #2fd9e8;
+  --chart-3: #ffa24d;
+  --chart-4: #a184ff;
+  --chart-5: #f7f2e8;
+
+  --sidebar: #201b2e;
+  --sidebar-foreground: #f7f2e8;
+  --sidebar-primary: #ff5a9b;
+  --sidebar-primary-foreground: #17141f;
+  --sidebar-accent: #2c2540;
+  --sidebar-accent-foreground: #f7f2e8;
+  --sidebar-border: #3a3350;
+  --sidebar-ring: #2fd9e8;
 }
 
 @layer base {
   * {
     @apply border-border outline-ring/50;
   }
+
   body {
     @apply bg-background text-foreground;
+    /* Du kit : aucune ligne ne doit finir sur un mot seul à la ligne suivante. */
+    text-wrap: pretty;
+    -webkit-font-smoothing: antialiased;
   }
+
   html {
     @apply font-sans;
+  }
+
+  /*
+    Un lien du kit est souligné épais et décollé du texte : à un mètre, un
+    soulignement d'un pixel collé à la ligne de base disparaît.
+  */
+  a {
+    text-decoration-thickness: 2px;
+    text-underline-offset: 3px;
+  }
+
+  a:hover {
+    @apply text-destructive;
+  }
+
+  /* Tous les nombres de l'app sont tabulaires : une colonne de scores s'aligne. */
+  :is(th, td) {
+    font-variant-numeric: tabular-nums;
   }
 }

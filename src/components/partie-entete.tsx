@@ -1,4 +1,5 @@
 import type { ReactElement } from "react";
+import { AFFICHEUR, SURTITRE } from "@/components/champs";
 import type { VueDePartie } from "@/lib/partie/lecture";
 import { libelleDeFin } from "@/lib/partie/tablee";
 
@@ -21,21 +22,27 @@ export function PartieEntete({ partie }: { partie: VueDePartie }): ReactElement 
   return (
     <section className="flex flex-col gap-6">
       <div className="flex flex-col gap-2">
-        <p className="text-muted-foreground text-sm">Le code de la partie</p>
-        <p className="font-mono text-4xl tracking-[0.3em]">{partie.code}</p>
+        <div className={AFFICHEUR}>
+          {/* Le code prend la place du grand nombre : sur cet écran-là, c'est
+              lui qu'on vient chercher et qu'on lit à voix haute. */}
+          <p className="font-bold font-mono text-[clamp(1.75rem,9vw,2.5rem)] leading-none tracking-[0.3em]">
+            {partie.code}
+          </p>
+          <p className={SURTITRE}>Le code de la partie</p>
+        </div>
         <p className="text-muted-foreground text-sm">
           Dicte-le, ou envoie le lien : c’est la même chaîne.
         </p>
       </div>
 
-      <dl className="flex flex-col gap-1 text-sm">
+      <dl className="flex flex-col gap-2 text-sm">
         <div className="flex gap-2">
           <dt className="text-muted-foreground">Jeu</dt>
-          <dd>{partie.jeu.nom}</dd>
+          <dd className="font-semibold">{partie.jeu.nom}</dd>
         </div>
         <div className="flex gap-2">
           <dt className="text-muted-foreground">On s’arrête à</dt>
-          <dd>{libelleDeFin(partie.regles.fin, partie.jeu.unite)}</dd>
+          <dd className="font-semibold">{libelleDeFin(partie.regles.fin, partie.jeu.unite)}</dd>
         </div>
       </dl>
     </section>
