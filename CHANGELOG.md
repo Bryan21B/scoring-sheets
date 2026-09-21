@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.16.0](https://github.com/Bryan21B/scoring-sheets/compare/v0.15.2...v0.16.0) (2026-09-21)
+
+### Fonctionnalités
+
+* **design:** Implémenter le kit Memphis, que le thème shadcn par défaut n'était pas ([b513533](https://github.com/Bryan21B/scoring-sheets/commit/b513533431b924598329fb4a655f084ede26ee05))
+
 ## [0.15.2](https://github.com/Bryan21B/scoring-sheets/compare/v0.15.1...v0.15.2) (2026-09-20)
 
 ### Corrections
