@@ -2,7 +2,25 @@
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
 
-@custom-variant dark (&:is(.dark *));
+/*
+  `dark:` suit le **réglage du système**, et se laisse forcer par une classe.
+
+  Deux règles et non une : la première prend le mode de l'appareil tant que
+  personne n'a tranché — `.light` la désarme —, la seconde laisse `.dark` poser
+  le mode de force. Aucun utilitaire `dark:` n'est écrit aujourd'hui ; la
+  variante est juste, pour que le premier qui s'écrira le soit aussi.
+*/
+@custom-variant dark {
+  @media (prefers-color-scheme: dark) {
+    &:where(:not(.light, .light *)) {
+      @slot;
+    }
+  }
+
+  &:where(.dark, .dark *) {
+    @slot;
+  }
+}
 
 /*
   Le design system Memphis — docs/specs/2026-09-20-design-system-memphis.md.
@@ -68,6 +86,7 @@
   --color-input: var(--input);
   --color-border: var(--border);
   --color-trait-doux: var(--trait-doux);
+  --color-voile: var(--voile);
   --color-effacer: var(--effacer);
   --color-effacer-encre: var(--effacer-encre);
   --color-destructive: var(--destructive);
@@ -92,36 +111,55 @@
   --radius-4xl: calc(var(--radius) * 2.6);
 }
 
-/* Encre sur papier : le mode clair est celui pour lequel le kit est dessiné. */
-:root {
-  --background: #faf5ea;
-  --foreground: #17141f;
-  --card: #fffdf6;
-  --card-foreground: #17141f;
-  --popover: #fffdf6;
-  --popover-foreground: #17141f;
+/*
+  **Une seule déclaration par jeton, les deux valeurs dedans.**
 
-  /* Le geste. L'encre dessus, jamais du blanc — c'est ce qui tient 5:1. */
-  --primary: #f2337f;
+  `light-dark()` choisit selon le `color-scheme` de l'élément — donc, ici,
+  selon le réglage du système. Écrire les deux palettes en deux blocs séparés
+  (`:root` et `.dark`) obligerait à répéter la liste entière une troisième fois
+  sous un `@media (prefers-color-scheme: dark)`, et trois listes de trente-cinq
+  jetons divergent le jour où l'une est corrigée seule.
+
+  Le mode clair est celui pour lequel le kit est dessiné ; le sombre est la
+  table allumée à la bougie. Deux différences de fond entre les deux :
+  **l'ombre dure disparaît** — un aplat noir sur fond noir ne détache rien,
+  c'est le liseré `#3a3350` qui s'en charge — et **les aplats montent en
+  clarté**, pour garder l'encre lisible dessus.
+*/
+:root {
+  /* Sans ça, `light-dark()` resterait bloqué sur le clair. C'est aussi ce qui
+     fait suivre les barres de défilement et les contrôles natifs. */
+  color-scheme: light dark;
+
+  --background: light-dark(#faf5ea, #151220);
+  --foreground: light-dark(#17141f, #f7f2e8);
+  --card: light-dark(#fffdf6, #201b2e);
+  --card-foreground: light-dark(#17141f, #f7f2e8);
+  --popover: light-dark(#fffdf6, #201b2e);
+  --popover-foreground: light-dark(#17141f, #f7f2e8);
+
+  /* Le geste. L'encre dessus dans les deux modes, jamais du blanc — c'est ce
+     qui tient 5:1 sur les quatre aplats sans avoir à vérifier chaque paire. */
+  --primary: light-dark(#f2337f, #ff5a9b);
   --primary-foreground: #17141f;
 
   /* Le second geste : une carte posée sur le papier, cerclée comme le reste. */
-  --secondary: #fffdf6;
-  --secondary-foreground: #17141f;
+  --secondary: light-dark(#fffdf6, #201b2e);
+  --secondary-foreground: light-dark(#17141f, #f7f2e8);
 
-  --muted: #f4eedf;
-  --muted-foreground: #5b5568;
+  --muted: light-dark(#f4eedf, #201b2e);
+  --muted-foreground: light-dark(#5b5568, #a29cb4);
 
   /* La surface d'appoint : pied de totaux, afficheur du pavé, ligne survolée. */
-  --accent: #fff0d9;
-  --accent-foreground: #17141f;
+  --accent: light-dark(#fff0d9, #2c2540);
+  --accent-foreground: light-dark(#17141f, #f7f2e8);
 
   /* Framboise profonde : ce qui refuse, et ce que survole un lien. */
-  --destructive: #c2185b;
+  --destructive: light-dark(#c2185b, #ff5a9b);
 
   /* Le trait de 3 px, la façon dont ce kit détache une surface. */
-  --border: #17141f;
-  --input: #17141f;
+  --border: light-dark(#17141f, #3a3350);
+  --input: light-dark(#17141f, #3a3350);
 
   /*
     Le trait entre deux lignes d'une même feuille : même épaisseur, moins
@@ -129,131 +167,81 @@
     première manche, et de celui-ci les manches entre elles — sans quoi un
     tableau de dix manches serait une grille de barreaux.
   */
-  --trait-doux: #e6dfce;
+  --trait-doux: light-dark(#e6dfce, #2c2540);
 
   /*
     La seule touche colorée du pavé : celle qui efface. Rose pâle plutôt que
     rouge — on annule un chiffre, on ne détruit rien.
   */
-  --effacer: #ffd1e3;
-  --effacer-encre: #17141f;
+  --effacer: light-dark(#ffd1e3, #3a2436);
+  --effacer-encre: light-dark(#17141f, #ff5a9b);
 
   /* Le lagon, et rien d'autre : le focus est une information, pas une alerte. */
-  --ring: #14bfd1;
+  --ring: light-dark(#14bfd1, #2fd9e8);
 
-  --ombre: #17141f;
+  /* Transparente en sombre : c'est le liseré qui détache là-bas. */
+  --ombre: light-dark(#17141f, transparent);
 
-  --framboise: #f2337f;
-  --lagon: #14bfd1;
-  --mandarine: #ff8a1f;
-  --raisin: #7a4ce0;
+  /*
+    Le voile sous le tiroir du journal. **Il assombrit dans les deux modes.**
+
+    Il ne peut pas être tiré de `--foreground` : l'encre devient crème en
+    sombre, et le voile éclaircirait la page au lieu de l'enfoncer. Il monte en
+    opacité là-bas parce qu'un noir sur un fond déjà noir sépare moins.
+  */
+  --voile: light-dark(rgb(23 20 31 / 0.35), rgb(0 0 0 / 0.6));
+
+  --framboise: light-dark(#f2337f, #ff5a9b);
+  --lagon: light-dark(#14bfd1, #2fd9e8);
+  --mandarine: light-dark(#ff8a1f, #ffa24d);
+  --raisin: light-dark(#7a4ce0, #a184ff);
 
   /*
     Les six pastilles, « puis on recycle ». Voir `components/pastille.tsx`.
 
-    Les quatre premières sont les aplats ; les deux dernières n'existent que
-    pour une tablée de cinq ou six et n'ont donc pas de rôle sémantique.
+    Les quatre premières sont les aplats. Le kit ne donne que ces quatre-là en
+    sombre : les deux dernières y sont extrapolées du même geste — monter en
+    clarté, garder la teinte.
   */
-  --joueur-1: #f2337f;
-  --joueur-2: #14bfd1;
-  --joueur-3: #ff8a1f;
-  --joueur-4: #7a4ce0;
-  --joueur-5: #9be016;
-  --joueur-6: #6c8cff;
+  --joueur-1: light-dark(#f2337f, #ff5a9b);
+  --joueur-2: light-dark(#14bfd1, #2fd9e8);
+  --joueur-3: light-dark(#ff8a1f, #ffa24d);
+  --joueur-4: light-dark(#7a4ce0, #a184ff);
+  --joueur-5: light-dark(#9be016, #b6f04a);
+  --joueur-6: light-dark(#6c8cff, #93a9ff);
 
-  --chart-1: #f2337f;
-  --chart-2: #14bfd1;
-  --chart-3: #ff8a1f;
-  --chart-4: #7a4ce0;
-  --chart-5: #17141f;
+  --chart-1: light-dark(#f2337f, #ff5a9b);
+  --chart-2: light-dark(#14bfd1, #2fd9e8);
+  --chart-3: light-dark(#ff8a1f, #ffa24d);
+  --chart-4: light-dark(#7a4ce0, #a184ff);
+  --chart-5: light-dark(#17141f, #f7f2e8);
 
   /* 14 px : le rayon d'une carte du kit. Le bouton, lui, est une pilule. */
   --radius: 0.875rem;
 
-  --sidebar: #fffdf6;
-  --sidebar-foreground: #17141f;
-  --sidebar-primary: #f2337f;
+  --sidebar: light-dark(#fffdf6, #201b2e);
+  --sidebar-foreground: light-dark(#17141f, #f7f2e8);
+  --sidebar-primary: light-dark(#f2337f, #ff5a9b);
   --sidebar-primary-foreground: #17141f;
-  --sidebar-accent: #fff0d9;
-  --sidebar-accent-foreground: #17141f;
-  --sidebar-border: #17141f;
-  --sidebar-ring: #14bfd1;
+  --sidebar-accent: light-dark(#fff0d9, #2c2540);
+  --sidebar-accent-foreground: light-dark(#17141f, #f7f2e8);
+  --sidebar-border: light-dark(#17141f, #3a3350);
+  --sidebar-ring: light-dark(#14bfd1, #2fd9e8);
 }
 
 /*
-  La table allumée à la bougie.
+  Trancher, quand le réglage du système n'est pas ce qu'on veut.
 
-  Rien ne pose `.dark` aujourd'hui — c'était déjà le cas du thème d'avant. Le
-  bloc existe pour que le jour où un réglage arrive, la palette sombre du kit
-  soit celle qui s'applique, et non un gris deviné.
-
-  Deux changements de fond par rapport au clair : **l'ombre dure disparaît** —
-  un aplat noir sur un fond noir ne détache rien, c'est le liseré `#3a3350` qui
-  s'en charge — et **les aplats montent en clarté**, pour garder l'encre lisible
-  dessus.
+  Une ligne chacune : `light-dark()` lit `color-scheme`, si bien que forcer un
+  mode ne redéclare aucun jeton. C'est ce qui rend la bascule possible sans
+  recopier la palette une troisième fois.
 */
+.light {
+  color-scheme: light;
+}
+
 .dark {
-  --background: #151220;
-  --foreground: #f7f2e8;
-  --card: #201b2e;
-  --card-foreground: #f7f2e8;
-  --popover: #201b2e;
-  --popover-foreground: #f7f2e8;
-
-  --primary: #ff5a9b;
-  --primary-foreground: #17141f;
-
-  --secondary: #201b2e;
-  --secondary-foreground: #f7f2e8;
-
-  --muted: #201b2e;
-  --muted-foreground: #a29cb4;
-
-  --accent: #2c2540;
-  --accent-foreground: #f7f2e8;
-
-  --destructive: #ff5a9b;
-
-  --border: #3a3350;
-  --input: #3a3350;
-  --trait-doux: #2c2540;
-  --effacer: #3a2436;
-  --effacer-encre: #ff5a9b;
-  --ring: #2fd9e8;
-
-  --ombre: transparent;
-
-  --framboise: #ff5a9b;
-  --lagon: #2fd9e8;
-  --mandarine: #ffa24d;
-  --raisin: #a184ff;
-
-  /*
-    Le kit ne donne que quatre équivalents sombres — ceux des aplats. Les deux
-    dernières pastilles sont extrapolées dans le même geste que les quatre
-    autres : monter en clarté, garder la teinte.
-  */
-  --joueur-1: #ff5a9b;
-  --joueur-2: #2fd9e8;
-  --joueur-3: #ffa24d;
-  --joueur-4: #a184ff;
-  --joueur-5: #b6f04a;
-  --joueur-6: #93a9ff;
-
-  --chart-1: #ff5a9b;
-  --chart-2: #2fd9e8;
-  --chart-3: #ffa24d;
-  --chart-4: #a184ff;
-  --chart-5: #f7f2e8;
-
-  --sidebar: #201b2e;
-  --sidebar-foreground: #f7f2e8;
-  --sidebar-primary: #ff5a9b;
-  --sidebar-primary-foreground: #17141f;
-  --sidebar-accent: #2c2540;
-  --sidebar-accent-foreground: #f7f2e8;
-  --sidebar-border: #3a3350;
-  --sidebar-ring: #2fd9e8;
+  color-scheme: dark;
 }
 
 @layer base {

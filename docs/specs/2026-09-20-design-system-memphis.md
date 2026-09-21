@@ -154,11 +154,41 @@ feraient une grille de barreaux. `--effacer` porte le rose pâle de la touche
 d'effacement, seule touche colorée du pavé. Les deux ont leur équivalent sombre,
 comme le reste.
 
-**Le mode sombre reste porté par `.dark`, que rien ne pose.** C'était déjà vrai
-du thème d'avant : le bloc existait, inatteignable. On le remplit de la palette
-du kit sans lui ajouter de déclencheur — brancher `prefers-color-scheme` serait
-un changement de comportement que personne n'a demandé, et le kit est dessiné
-clair d'abord. Le jour où un réglage arrive, la palette est là.
+**Le mode sombre suit le réglage de l'appareil**, et se laisse forcer.
+
+La palette sombre du kit était d'abord restée derrière `.dark`, que rien ne
+posait — un bloc inatteignable, comme dans le thème d'avant. Elle est désormais
+branchée sur `prefers-color-scheme` : la table allumée à la bougie, c'est le
+téléphone qui sait qu'il y est, pas l'app.
+
+L'implémentation évite la duplication que la façon évidente impose. Écrire la
+palette sombre sous `.dark` **et** sous `@media (prefers-color-scheme: dark)`
+ferait trois listes de trente-cinq jetons — et trois listes divergent le jour où
+l'une est corrigée seule, exactement ce que `AGENTS.md` interdit. À la place,
+chaque jeton est déclaré **une fois, avec ses deux valeurs** :
+
+```css
+--background: light-dark(#faf5ea, #151220);
+```
+
+`light-dark()` lit le `color-scheme` de l'élément. `:root` porte
+`color-scheme: light dark` — donc le réglage système — et les deux classes
+d'échappement se réduisent chacune à une ligne :
+
+```css
+.light { color-scheme: light; }
+.dark  { color-scheme: dark; }
+```
+
+Aucun jeton n'y est redéclaré. Lightning CSS, que Tailwind v4 embarque,
+transpile `light-dark()` vers une bascule de variables plus un
+`@media (prefers-color-scheme: dark)` — ce qui règle du même coup la question
+des navigateurs antérieurs à Safari 17.5, où la fonction n'existe pas.
+
+**Un jeton ne pouvait pas être dérivé de l'encre** : le voile sous le tiroir du
+journal. `bg-foreground/35` assombrit en clair, mais l'encre devient crème en
+sombre, et le voile y éclaircirait la page au lieu de l'enfoncer. `--voile`
+porte donc ses deux valeurs, toutes deux sombres.
 
 **`text-wrap: pretty` et l'anti-aliasing** viennent du kit et vont dans la
 couche base, pas dans un composant.
@@ -178,3 +208,6 @@ couche base, pas dans un composant.
   la feuille de style produite par le build : un design system qu'on n'a pas vu
   n'est pas implémenté. C'est cette relecture qui a rattrapé la touche
   d'effacement, restée large d'une colonne et sans son aplat.
+- Le mode sombre est vérifié **sans aucune classe dans le balisage**, en
+  émulant `prefers-color-scheme` au navigateur : c'est le seul contrôle qui
+  prouve que le réglage de l'appareil suffit.

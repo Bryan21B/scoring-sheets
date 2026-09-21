@@ -173,7 +173,7 @@ function Panneau({
 }): ReactElement {
   return (
     <>
-      <a href={adresseDuTiroir(code, null)} className="fixed inset-0 z-40 bg-foreground/35">
+      <a href={adresseDuTiroir(code, null)} className="fixed inset-0 z-40 bg-voile">
         {/* Le geste naturel sur un tiroir est de toucher à côté. Le libellé
             n'est caché qu'à l'œil : un lien pleine page sans nom accessible
             serait une zone morte pour qui ne voit pas le voile. */}
