@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.17.0](https://github.com/Bryan21B/scoring-sheets/compare/v0.16.0...v0.17.0) (2026-09-21)
+
+### Fonctionnalités
+
+* **design:** Prendre le mode sombre de l'appareil, que seule une classe absente déclenchait ([c26701b](https://github.com/Bryan21B/scoring-sheets/commit/c26701bad544f022c14d7ab3ab668bef7bb0c073))
+
 ## [0.16.0](https://github.com/Bryan21B/scoring-sheets/compare/v0.15.2...v0.16.0) (2026-09-21)
 
 ### Fonctionnalités
